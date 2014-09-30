@@ -1,0 +1,19 @@
+{
+    "name": "backbone.conduit",
+    "version": "0.0.1",
+    "private": true,
+    "scripts": {
+        "start": "node ./perf"
+    },
+    "dependencies": {
+        "debug": "~0.7.4",
+        "underscore": "*",
+        "backbone": "*",
+        "requirejs": "*",
+        "sinon": "*",
+        "jquery": "*",
+        "jsdom": "*",
+        "fake-xml-http-request": "*",
+        "when": "*"
+    }
+}
