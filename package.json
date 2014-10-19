@@ -1,19 +1,23 @@
 {
-    "name": "backbone.conduit",
-    "version": "0.0.1",
-    "private": true,
-    "scripts": {
-        "start": "node ./perf"
-    },
-    "dependencies": {
-        "debug": "~0.7.4",
-        "underscore": "*",
-        "backbone": "*",
-        "requirejs": "*",
-        "sinon": "*",
-        "jquery": "*",
-        "jsdom": "*",
-        "fake-xml-http-request": "*",
-        "when": "*"
-    }
+  "name": "backbone.conduit",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "start": "node ./perf"
+  },
+  "dependencies": {
+    "underscore": "*",
+    "backbone": "*",
+    "requirejs": "*",
+    "jquery": "*",
+    "jsdom": "*",
+    "when": "*",
+    "fake-xml-http-request": "*"
+  },
+  "devDependencies": {
+    "gulp": "^3.8.8",
+    "gulp-help": "^1.2.0",
+    "gulp-nodemon": "*",
+    "gulp-qunit": "*"
+  }
 }

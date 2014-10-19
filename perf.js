@@ -4,7 +4,7 @@
 
 // This is the test data we're going to use
 
-var dataFilePath = "./test-data/2008-20K.json";
+var dataFilePath = "./test/data/2008-20K.json";
 var data = require(dataFilePath);
 var dataStr = JSON.stringify(data);
 var NUM_ITERATIONS = 50;
