@@ -1,38 +1,36 @@
 {
   "name": "backbone.conduit",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
-    "test": "gulp test"
+    "test": "gulp test",
+    "perf": "gulp test:performance",
+    "dist": "gulp dist"
   },
   "dependencies": {
     "underscore": "*",
-    "backbone": "*",
-    "requirejs": "*",
-    "jquery": "*",
-    "jsdom": "*",
-    "when": "*",
-    "fake-xml-http-request": "*"
+    "backbone": "*"
   },
   "devDependencies": {
     "chai": "^1.9.1",
     "chai-as-promised": "^4.1.1",
     "del": "^0.1.3",
     "es6-promise": "^1.0.0",
+    "fake-xml-http-request": "*",
     "gulp": "^3.8.8",
     "gulp-help": "^1.2.0",
     "gulp-json-editor": "^2.1.1",
     "gulp-mocha": "^1.0.0",
-    "gulp-nodemon": "*",
-    "gulp-qunit": "*",
     "gulp-rename": "^1.2.0",
     "gulp-webpack": "^0.4.1",
     "jquery": "^2.1.1",
+    "jsdom": "*",
     "karma": "^0.12.28",
     "karma-chrome-launcher": "^0.1.5",
     "karma-mocha": "^0.1.9",
     "mocha": "^1.21.4",
     "sinon": "^1.10.3",
-    "sinon-chai": "^2.5.0"
+    "sinon-chai": "^2.5.0",
+    "when": "^3.6.4"
   }
 }

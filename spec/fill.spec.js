@@ -3,7 +3,7 @@
 var Backbone = require('backbone');
 
 // TODO:  why can't this be 'lib/fill'?
-var fillMixin = require('./../src/fill');
+var fill = require('./../src/fill');
 
 describe("The fill module", function() {
 
@@ -11,7 +11,7 @@ describe("The fill module", function() {
         var Collection;
         beforeEach(function() {
             Collection = Backbone.Collection.extend({ });
-            Collection = fillMixin.mixin(Collection);
+            Collection = fill.mixin(Collection);
         });
 
         it('returns a Constructor', function() {

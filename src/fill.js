@@ -97,13 +97,16 @@ function fill(models, options) {
     return result;
 }
 
-module.exports = {
-    mixinObject: {
-        fill: fill
-    },
+// The object that will be added to any prototype when mixing this
+// module.
+var mixinObj = {
+    fill: fill
+};
 
+
+module.exports = {
     mixin: function(Collection) {
-        _.extend(Collection.prototype, this.mixinObject);
+        _.extend(Collection.prototype, mixinObj );
         return Collection;
     }
 };
