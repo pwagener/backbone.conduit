@@ -11,6 +11,7 @@ var when = require("when");
 // Wiring up Backbone with a usable jQuery is a bit of a mess....
 var wiring = require('./wiring');
 var Backbone = wiring.Backbone;
+var BackboneLodash = wiring.BackboneLodash;
 
 var timer = require("./eventTimer");
 var Conduit = require("./../src/backbone.conduit");
@@ -49,6 +50,10 @@ function runTests(options, callback) {
 
     promises.push(makeTestPromise(Backbone.Collection, 'reset', _.extend({
         testName: "Backbone..reset"
+    }, options)));
+
+    promises.push(makeTestPromise(BackboneLodash.Collection, 'reset', _.extend({
+        testName: 'Backbone-Lodash..reset'
     }, options)));
 
     when.all(promises).then(function(results) {

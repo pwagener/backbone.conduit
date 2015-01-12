@@ -91,6 +91,31 @@ return /******/ (function(modules) { // webpackBootstrap
 	var _ = __webpack_require__(4);
 
 	/**
+	 * This method is used as a replacement for the Backbone.Model constructor.  It allows
+	 * us to only calculate default values when requested.
+	 */
+	var QuickModelConstructor = function(attributes, options) {
+	    var attrs = attributes || {};
+	    options || (options = {});
+	    //noinspection JSUnusedGlobalSymbols
+	    this.cid = _.uniqueId('c');
+	    this.attributes = {};
+	    if (options.collection) this.collection = options.collection;
+	    if (options.parse) attrs = this.parse(attrs, options) || {};
+
+	    // One significant change from Backbone.Model: only do defaults if necessary
+	    var defaults = _.result(this, 'defaults');
+	    if (defaults) {
+	        attrs = _.defaults({}, attrs, _.result(this, 'defaults'));
+	    }
+
+	    this.set(attrs, options);
+	    //noinspection JSUnusedGlobalSymbols
+	    this.changed = {};
+	    this.initialize.apply(this, arguments);
+	};
+
+	/**
 	 * This function is swapped into a Backbone.Model's prototype when models are going to be
 	 * added to a collection in order to not do unnecessary work.
 	 */
@@ -133,10 +158,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @returns {*}
 	 */
 	function quickCollectionSet(models, options) {
-	    // Force silence
-	    var needEvents = !options.silent;
-	    options.silent = true;
-
 	    // Force no-sort up front
 	    var needsSort = options.sort;
 	    if (options.sort) {
@@ -151,12 +172,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	        returnedModels = _.clone(this.models);
 	    }
 
-	    // TODO:  handle events after the fact
-
 	    return returnedModels;
 	}
 
 	function fill(models, options) {
+
+	    // Re-assign the Backbone.Model constructor with whatever prototypes exist on the
+	    // original model Constructor
+	    var originalModelConstructor = this.model;
+	    QuickModelConstructor.prototype  = _.extend({}, originalModelConstructor.prototype);
+	    this.model = QuickModelConstructor;
 
 	    // Re-assign the Backbone.Model.set method
 	    var originalModelSet = this.model.prototype.set;
@@ -173,9 +198,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.trigger('fill', this);
 
 	    // Clean up
-	    this.model.prototype.set = originalModelSet;
 	    this.set = this._originalCollectionSet;
-	    delete this._originalCollectionSet;
+	    this.model.prototype.set = originalModelSet;
+	    this.model = originalModelConstructor;
 
 	    // Return the result
 	    return result;

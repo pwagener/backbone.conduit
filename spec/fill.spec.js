@@ -142,6 +142,17 @@ describe("The fill module", function() {
                     expect(addSpy.callCount).to.equal(0);
                 });
             });
+
+            describe('and a custom Backbone.Model is used with "fill"', function() {
+                beforeEach(function() {
+
+                });
+
+                it('calls parse on the model', function() {
+                    // TODO:  validate this behavior
+                    expect(false).to.equal(true);
+                })
+            });
         });
     });
 });

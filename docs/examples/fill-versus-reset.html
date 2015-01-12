@@ -9,9 +9,9 @@
     -->
     <script type="application/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js">
     </script>
-    <script type="application/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.7.0/underscore-min.js">
+    <script type="application/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.7.0/underscore.js">
     </script>
-    <script type="application/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/backbone.js/1.1.2/backbone-min.js">
+    <script type="application/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/backbone.js/1.1.2/backbone.js">
     </script>
 
     <!--
@@ -38,9 +38,6 @@
     <p>
         This page demonstrates adding large amounts of data to a <code>Backbone.Collection</code>.
         The first section loads a Backbone.Collection by calling <code>reset(...)</code>.
-        Press the button to run the demo.
-    </p>
-    <p>
         The second section uses a Backbone.Conduit.Collection, which has one additional
         method: <code>fill(...)</code>.  This is an alternative to <code>reset(...)</code>
         designed to better handle large data sets by intentionally not doing some work.
@@ -51,10 +48,9 @@
 
 <div>
     <h2>
-        Backbone.Collection:
+        Backbone.Collection.reset(...):
     </h2>
     <div>
-        Click this to load a Backbone.Collection via 'Backbone..reset()': <br/>
         <button id="bbLoadButton">Load Data</button>
     </div>
     <ul id="bbResults">
@@ -65,10 +61,9 @@
 
 <div>
     <h2>
-        Conduit.Collection:
+        Conduit.Collection.fill(...):
     </h2>
     <div>
-        Click this to load a Backbone.Collection via 'Conduit..reset()': <br/>
         <button id="coLoadButton">Load Data</button>
     </div>
     <ul id="coResults">
@@ -78,6 +73,8 @@
 
 <script type="application/javascript">
     var bbCollection = new Backbone.Collection();
+    // TODO:  is this sort even being applied?
+    bbCollection.comparator = 'TailNum';
     $('#bbLoadButton').on('click', function() {
         var $results = $('#bbResults');
         $results.append('<li>Starting load of Backbone Collection</li>');
@@ -90,6 +87,7 @@
     });
 
     var coCollection = new Backbone.Conduit.Collection();
+    coCollection.comparator = 'TailNum';
     $('#coLoadButton').on('click', function() {
         var $results = $('#coResults');
         $results.append('<li>Starting load of Backbone Collection</li>');

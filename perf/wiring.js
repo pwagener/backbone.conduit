@@ -9,7 +9,10 @@ var jQuery = require("jquery")(doc.parentWindow);
 var Backbone = require("backbone");
 Backbone.$ = jQuery;
 
+var BackboneLodash = require("backbone-lodash");
+BackboneLodash.$ = jQuery;
 module.exports = {
     Backbone: Backbone,
+    BackboneLodash: BackboneLodash,
     jQuery: jQuery
 };

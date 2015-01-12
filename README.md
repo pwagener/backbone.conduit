@@ -16,7 +16,7 @@ var MyCollection = Conduit.Collection.extend({
 });
 
 var collection = new MyCollection();
-collection.fill(aBigArray, opts);
+collection.fill(aBigArray);
 // ... and so on
 ```
 
@@ -33,11 +33,17 @@ listeners; etc.  The Model creation is very expensive; the more models you need,
 Conduit provides an alternative way to create & instantiate these models when adding to a Collection:  
 `Collection.fill(data, options)`.  This short-circuits much of the model creation logic, allowing us to get the data into
 the collection faster.  See `docs/examples/fill-versus-reset.html` for a working comparison.  A purely Node JS performance 
-comparison shows an improvement of ~ 30%.
+comparison shows an improvement of ~ 45%.
 
 The `fill(...)` method fires a `reset` event, matching the behavior of `Backbone.Collection.reset(...)`, so it can be used as a
-drop-in replacement.
+drop-in replacement.  If you are bootstrapping your collections on page load, it's a great fit.  Note however, that
+the improvement comes with less features:
+* No data validation on Model creation
+* No previous attributes are tracked with `fill(...)`
+* If the Model in question specifies `defaults`, the performance improvements will be greatly reduced
+* If you've overwritten the Backbone.Model Constructor, the performance improvements will be greatly reduced
+(overriding `initialize(...)` is just fine though)
 
 
 # Even More Detail
-... is coming in the `docs` directory shortly.
+... is coming in `docs` shortly.
