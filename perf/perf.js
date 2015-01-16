@@ -3,7 +3,7 @@
  * and Conduit Collections.
  */
 // Default test data
-var DEFAULT_DATA_FILE = "./data/2008-100K.json";
+var DEFAULT_DATA_FILE = "./data/2008-20K.json";
 var DEFAULT_NUM_ITERATIONS = 5;
 
 var _ = require("underscore");
