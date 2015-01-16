@@ -39,7 +39,7 @@ can result in a lot of unnecessary work:  recording non-existent previous attrib
 listeners; etc.  The Model creation is very expensive; the more models you need, the longer your JS thread will hang.
 
 Conduit provides an alternative way to create & instantiate these models when adding to a Collection:  
-`Collection.fill(data, options)`.  This short-circuits much of the model creation logic, allowing us to get the data into
+`Collection.refill(data, options)`.  This short-circuits much of the model creation logic, allowing us to get the data into
 the collection faster.  See `docs/examples/refill-versus-reset.html` for a working comparison.  A purely Node JS performance
 comparison shows an improvement of ~ 45%.
 
