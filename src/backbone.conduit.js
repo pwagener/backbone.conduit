@@ -2,7 +2,7 @@
 
 var Backbone = require('backbone');
 
-var fill = require('./fill');
+var refill = require('./refill');
 var Collection = require('./Collection');
 
 Backbone.Conduit = module.exports = {
@@ -10,7 +10,7 @@ Backbone.Conduit = module.exports = {
         throw new TypeError('An ES6-compliant Promise implementation must be provided');
     },
 
-    fill: fill,
+    fill: refill,
 
     Collection: Collection
 };

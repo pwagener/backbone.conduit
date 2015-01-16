@@ -58,7 +58,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var Backbone = __webpack_require__(1);
 
-	var fill = __webpack_require__(2);
+	var refill = __webpack_require__(2);
 	var Collection = __webpack_require__(3);
 
 	Backbone.Conduit = module.exports = {
@@ -66,7 +66,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        throw new TypeError('An ES6-compliant Promise implementation must be provided');
 	    },
 
-	    fill: fill,
+	    fill: refill,
 
 	    Collection: Collection
 	};
@@ -89,6 +89,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	 */
 
 	var _ = __webpack_require__(4);
+	var Backbone = __webpack_require__(1);
 
 	/**
 	 * This method is used as a replacement for the Backbone.Model constructor.  It allows
@@ -114,6 +115,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.changed = {};
 	    this.initialize.apply(this, arguments);
 	};
+	_.extend(QuickModelConstructor.prototype, Backbone.Model.prototype);
 
 	/**
 	 * This function is swapped into a Backbone.Model's prototype when models are going to be
@@ -175,12 +177,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return returnedModels;
 	}
 
-	function fill(models, options) {
+	function refill(models, options) {
 
 	    // Re-assign the Backbone.Model constructor with whatever prototypes exist on the
 	    // original model Constructor
 	    var originalModelConstructor = this.model;
-	    QuickModelConstructor.prototype  = _.extend({}, originalModelConstructor.prototype);
+	    if (_.isFunction(this.model.parse)) {
+	        QuickModelConstructor.prototype.parse = this.model.prototype.parse;
+	    } else {
+	        QuickModelConstructor.prototype.parse = Backbone.Model.prototype.parse;
+	    }
 	    this.model = QuickModelConstructor;
 
 	    // Re-assign the Backbone.Model.set method
@@ -195,7 +201,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var result = this.reset(models, options);
 
 	    // Trigger the other event
-	    this.trigger('fill', this);
+	    this.trigger('refill', this);
 
 	    // Clean up
 	    this.set = this._originalCollectionSet;
@@ -209,7 +215,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	// The object that will be added to any prototype when mixing this
 	// module.
 	var mixinObj = {
-	    fill: fill
+	    refill: refill
 	};
 
 
@@ -235,7 +241,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var conduitFill = __webpack_require__(2);
 
-	// Extend Backbone.Collection and provide the 'fill' method
+	// Extend Backbone.Collection and provide the 'refill' method
 	var Collection = Backbone.Collection.extend({ });
 	conduitFill.mixin(Collection);
 

@@ -2,8 +2,7 @@
 
 var Backbone = require('backbone');
 
-// TODO:  why can't this be 'lib/fill'?
-var fill = require('./../src/fill');
+var refill = require('./../src/refill');
 
 describe("The fill module", function() {
 
@@ -11,7 +10,7 @@ describe("The fill module", function() {
         var Collection;
         beforeEach(function() {
             Collection = Backbone.Collection.extend({ });
-            Collection = fill.mixin(Collection);
+            Collection = refill.mixin(Collection);
         });
 
         it('returns a Constructor', function() {
@@ -20,9 +19,9 @@ describe("The fill module", function() {
 
         describe('and instantiated', function() {
             var sampleData = [
-                { id: 2, name: "two" },
-                { id: 1, name: "one" },
-                { id: 3, name: "three" }
+                { id: 2, name: "two", first: 0, second: 2 },
+                { id: 1, name: "one", first: 1, second: 0 },
+                { id: 3, name: "three", first: 1, second: 2 }
             ];
 
             var instance;
@@ -38,8 +37,8 @@ describe("The fill module", function() {
                 expect(instance).to.be.an.instanceOf(Backbone.Collection);
             });
 
-            it('provides a "fill" method', function() {
-                expect(instance.fill).to.be.a('function');
+            it('provides a "refill" method', function() {
+                expect(instance.refill).to.be.a('function');
             });
 
             describe('and provided data via "reset"', function() {
@@ -58,14 +57,14 @@ describe("The fill module", function() {
                 });
 
                 it('can empty itself with the "fill" method', function() {
-                    instance.fill();
+                    instance.refill();
                     expect(instance.length).to.equal(0);
                 });
             });
 
             describe('and provided data via "fill"', function() {
                 beforeEach(function() {
-                    instance.fill(sampleData);
+                    instance.refill(sampleData);
                 });
 
                 it('contains the right data', function() {
@@ -79,12 +78,12 @@ describe("The fill module", function() {
                 });
 
                 it('can empty itself with the "fill" method', function() {
-                    instance.fill();
+                    instance.refill();
                     expect(instance.length).to.equal(0);
                 });
 
                 it('replaces any existing models', function() {
-                    instance.fill([ { id: 4, name: "four" }]);
+                    instance.refill([ { id: 4, name: "four" }]);
                     expect(instance.length).to.equal(1);
                 });
             });
@@ -96,7 +95,7 @@ describe("The fill module", function() {
 
                 it('can handle natural sorting', function() {
                     instance.comparator = "id";
-                    instance.fill(sampleData, { sort: true });
+                    instance.refill(sampleData, { sort: true });
                     var first = instance.at(0);
                     expect(first.id).to.equal(1);
                 });
@@ -106,7 +105,7 @@ describe("The fill module", function() {
                         return -1 * item.id;
                     };
 
-                    instance.fill(sampleData, { sort: true });
+                    instance.refill(sampleData, { sort: true });
                     var first = instance.at(0);
                     expect(first.id).to.equal(3);
                 });
@@ -120,15 +119,15 @@ describe("The fill module", function() {
                 it('fires a "reset" event', function() {
                     var resetSpy = this.sinon.spy();
                     instance.on('reset', resetSpy);
-                    instance.fill(sampleData);
+                    instance.refill(sampleData);
 
                     expect(resetSpy.callCount).to.equal(1);
                 });
 
-                it('fires a "fill" event', function() {
+                it('fires a "refill" event', function() {
                     var fillSpy = this.sinon.spy();
-                    instance.on('fill', fillSpy);
-                    instance.fill(sampleData);
+                    instance.on('refill', fillSpy);
+                    instance.refill(sampleData);
                     expect(fillSpy.callCount).to.equal(1);
                     //noinspection BadExpressionStatementJS
                     expect(fillSpy.calledWith(instance)).to.be.true;
@@ -137,21 +136,33 @@ describe("The fill module", function() {
                 it('does not fire an "add" for each model', function() {
                     var addSpy = this.sinon.spy();
                     instance.on('add', addSpy);
-                    instance.fill(sampleData);
+                    instance.refill(sampleData);
 
                     expect(addSpy.callCount).to.equal(0);
                 });
             });
 
-            describe('and a custom Backbone.Model is used with "fill"', function() {
-                beforeEach(function() {
+            describe('and a custom Backbone.Model with a "parse" is used with "refill"', function() {
+                var CustomModel = Backbone.Model.extend({
+                    parse: function(results) {
+                        results.calculated = results.first + results.second;
+                        return results;
+                    }
+                });
 
+                var CustomCollection = refill.mixin(Backbone.Collection.extend({
+                    model: CustomModel
+                }));
+
+                var customInstance;
+                beforeEach(function() {
+                    customInstance = new CustomCollection();
                 });
 
                 it('calls parse on the model', function() {
-                    // TODO:  validate this behavior
-                    expect(false).to.equal(true);
-                })
+                    customInstance.refill(sampleData);
+                    expect(customInstance.at(0).has('calculated'));
+                });
             });
         });
     });

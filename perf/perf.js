@@ -3,7 +3,7 @@
  * and Conduit Collections.
  */
 // Default test data
-var DEFAULT_DATA_FILE = "./data/2008-20K.json";
+var DEFAULT_DATA_FILE = "./data/2008-100K.json";
 var DEFAULT_NUM_ITERATIONS = 5;
 
 var _ = require("underscore");
@@ -44,8 +44,8 @@ function runTests(options, callback) {
 
     var promises = [];
 
-    promises.push(makeTestPromise(Conduit.Collection, "fill", _.extend({
-        testName: "Conduit..fill"
+    promises.push(makeTestPromise(Conduit.Collection, "refill", _.extend({
+        testName: "Conduit..refill"
     }, options)));
 
     promises.push(makeTestPromise(Backbone.Collection, 'reset', _.extend({
