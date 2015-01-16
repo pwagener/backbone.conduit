@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/pwagener/backbone.conduit.svg?branch=master)](https://travis-ci.org/pwagener/backbone.conduit)
+
 # Conduit:  Moving Data Through Backbone
 Conduit is a Backbone plugin that improves the ability of Backbone to handle large scale data sets.  
 Backbone is intentionally a small-scale, event-driven framework; this is one of its greatest attributes.  
