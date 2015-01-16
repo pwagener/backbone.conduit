@@ -13,7 +13,7 @@ var wiring = require('./wiring');
 var Backbone = wiring.Backbone;
 var BackboneLodash = wiring.BackboneLodash;
 
-var timer = require("./eventTimer");
+var timer = require("./EventTimer");
 var Conduit = require("./../src/backbone.conduit");
 
 // The test we will run
