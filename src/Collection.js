@@ -6,9 +6,9 @@
 var Backbone = require('backbone');
 var _ = require('underscore');
 
-var conduitFill = require('./fill');
+var conduitFill = require('./refill');
 
-// Extend Backbone.Collection and provide the 'fill' method
+// Extend Backbone.Collection and provide the 'refill' method
 var Collection = Backbone.Collection.extend({ });
 conduitFill.mixin(Collection);
 

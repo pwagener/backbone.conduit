@@ -3,7 +3,7 @@
  * and Conduit Collections.
  */
 // Default test data
-var DEFAULT_DATA_FILE = "./data/2008-20K.json";
+var DEFAULT_DATA_FILE = "./data/2008-100K.json";
 var DEFAULT_NUM_ITERATIONS = 5;
 
 var _ = require("underscore");
@@ -11,6 +11,7 @@ var when = require("when");
 // Wiring up Backbone with a usable jQuery is a bit of a mess....
 var wiring = require('./wiring');
 var Backbone = wiring.Backbone;
+var BackboneLodash = wiring.BackboneLodash;
 
 var timer = require("./eventTimer");
 var Conduit = require("./../src/backbone.conduit");
@@ -43,12 +44,16 @@ function runTests(options, callback) {
 
     var promises = [];
 
-    promises.push(makeTestPromise(Conduit.Collection, "fill", _.extend({
-        testName: "Conduit..fill"
+    promises.push(makeTestPromise(Conduit.Collection, "refill", _.extend({
+        testName: "Conduit..refill"
     }, options)));
 
     promises.push(makeTestPromise(Backbone.Collection, 'reset', _.extend({
         testName: "Backbone..reset"
+    }, options)));
+
+    promises.push(makeTestPromise(BackboneLodash.Collection, 'reset', _.extend({
+        testName: 'Backbone-Lodash..reset'
     }, options)));
 
     when.all(promises).then(function(results) {

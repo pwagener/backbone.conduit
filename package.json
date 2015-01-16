@@ -12,6 +12,7 @@
     "backbone": "*"
   },
   "devDependencies": {
+    "backbone-lodash": "^1.1.0",
     "chai": "^1.9.1",
     "chai-as-promised": "^4.1.1",
     "del": "^0.1.3",

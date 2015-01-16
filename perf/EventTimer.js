@@ -32,8 +32,8 @@ function logComparison(events) {
         throw new Exception("Provide an array of events to compare");
     }
 
-    var sorted = _.sortBy(events, function(event) { return -1 * event.duration });
-    var fastest = _.last(sorted);
+    var sorted = _.sortBy(events, function(event) { return event.duration });
+    var fastest = _.first(sorted);
 
     var comparisons = [];
     console.log("Results:");
@@ -47,7 +47,7 @@ function logComparison(events) {
     });
 
     console.log("---");
-    console.log(util.format("Fastest: %s at %d ms", fastest.name, fastest.duration));
+    console.log(util.format("Fastest: %s", fastest.name));
     console.log("---");
 
     console.log("Comparisons:");
