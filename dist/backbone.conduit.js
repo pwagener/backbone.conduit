@@ -82,12 +82,102 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 2 */
 /***/ function(module, exports, __webpack_require__) {
 
+	'use strict';
+
 	/**
 	 * This module provides a mixin for a Backbone.Collection to provide a method,
 	 * 'fill(...)' that can be used as a performant replacement for
 	 * 'Collection.reset(...)' in some circumstances.
 	 */
 
+	var _ = __webpack_require__(4);
+	var Backbone = __webpack_require__(1);
+	var shortCircuit = __webpack_require__(5);
+
+	function refill(models, options) {
+
+	    // Re-assign the Backbone.Model constructor with whatever prototypes exist on the
+	    // original model Constructor
+	    var originalModelConstructor = this.model;
+	    if (_.isFunction(this.model.parse)) {
+	        shortCircuit.ModelConstructor.prototype.parse = this.model.prototype.parse;
+	    } else {
+	        shortCircuit.ModelConstructor.prototype.parse = Backbone.Model.prototype.parse;
+	    }
+	    this.model = shortCircuit.ModelConstructor;
+
+	    // Re-assign the Backbone.Model.set method
+	    var originalModelSet = this.model.prototype.set;
+	    this.model.prototype.set = shortCircuit.modelSet;
+
+	    // Re-assign the Backbone.Collection.set method
+	    this._originalCollectionSet = this.set;
+	    this.set = shortCircuit.collectionSet;
+
+	    // Call reset
+	    var result = this.reset(models, options);
+
+	    // Trigger the other event
+	    this.trigger('refill', this);
+
+	    // Clean up
+	    this.set = this._originalCollectionSet;
+	    this.model.prototype.set = originalModelSet;
+	    this.model = originalModelConstructor;
+
+	    // Return the result
+	    return result;
+	}
+
+	// The object that will be added to any prototype when mixing this
+	// module.
+	var mixinObj = {
+	    refill: refill
+	};
+
+	module.exports = {
+	    mixin: function(Collection) {
+	        _.extend(Collection.prototype, mixinObj);
+	        return Collection;
+	    }
+	};
+
+/***/ },
+/* 3 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/**
+	 * This module provides an out-of-the-box Collection implementation that leverages the
+	 * Conduit capabilities to deal with large amounts of data.
+	 */
+
+	var Backbone = __webpack_require__(1);
+	var _ = __webpack_require__(4);
+
+	var conduitFill = __webpack_require__(2);
+
+	// Extend Backbone.Collection and provide the 'refill' method
+	var Collection = Backbone.Collection.extend({ });
+	conduitFill.mixin(Collection);
+
+	module.exports = Collection;
+
+/***/ },
+/* 4 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = __WEBPACK_EXTERNAL_MODULE_4__;
+
+/***/ },
+/* 5 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	/**
+	 * This module is shared between 'fill' and 'refill' as where the short-circuit
+	 * implementations live.
+	 */
 	var _ = __webpack_require__(4);
 	var Backbone = __webpack_require__(1);
 
@@ -177,81 +267,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return returnedModels;
 	}
 
-	function refill(models, options) {
-
-	    // Re-assign the Backbone.Model constructor with whatever prototypes exist on the
-	    // original model Constructor
-	    var originalModelConstructor = this.model;
-	    if (_.isFunction(this.model.parse)) {
-	        QuickModelConstructor.prototype.parse = this.model.prototype.parse;
-	    } else {
-	        QuickModelConstructor.prototype.parse = Backbone.Model.prototype.parse;
-	    }
-	    this.model = QuickModelConstructor;
-
-	    // Re-assign the Backbone.Model.set method
-	    var originalModelSet = this.model.prototype.set;
-	    this.model.prototype.set = quickModelSet;
-
-	    // Re-assign the Backbone.Collection.set method
-	    this._originalCollectionSet = this.set;
-	    this.set = quickCollectionSet;
-
-	    // Call reset
-	    var result = this.reset(models, options);
-
-	    // Trigger the other event
-	    this.trigger('refill', this);
-
-	    // Clean up
-	    this.set = this._originalCollectionSet;
-	    this.model.prototype.set = originalModelSet;
-	    this.model = originalModelConstructor;
-
-	    // Return the result
-	    return result;
-	}
-
-	// The object that will be added to any prototype when mixing this
-	// module.
-	var mixinObj = {
-	    refill: refill
-	};
-
-
 	module.exports = {
-	    mixin: function(Collection) {
-	        _.extend(Collection.prototype, mixinObj );
-	        return Collection;
-	    }
+	    ModelConstructor: QuickModelConstructor,
+	    modelSet: quickModelSet,
+	    collectionSet: quickCollectionSet
 	};
-
-
-/***/ },
-/* 3 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/**
-	 * This module provides an out-of-the-box Collection implementation that leverages the
-	 * Conduit capabilities to deal with large amounts of data.
-	 */
-
-	var Backbone = __webpack_require__(1);
-	var _ = __webpack_require__(4);
-
-	var conduitFill = __webpack_require__(2);
-
-	// Extend Backbone.Collection and provide the 'refill' method
-	var Collection = Backbone.Collection.extend({ });
-	conduitFill.mixin(Collection);
-
-	module.exports = Collection;
-
-/***/ },
-/* 4 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = __WEBPACK_EXTERNAL_MODULE_4__;
 
 /***/ }
 /******/ ])

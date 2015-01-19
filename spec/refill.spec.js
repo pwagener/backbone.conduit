@@ -4,7 +4,7 @@ var Backbone = require('backbone');
 
 var refill = require('./../src/refill');
 
-describe("The fill module", function() {
+describe("The refill module", function() {
 
     describe('when mixed into a Backbone.Collection', function() {
         var Collection;
