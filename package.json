@@ -1,6 +1,7 @@
 {
   "name": "backbone.conduit",
-  "version": "0.1.1",
+  "description": "Moving lots of data through backbone",
+  "version": "0.1.4",
   "scripts": {
     "test": "gulp test",
     "perf": "gulp test:performance",
@@ -10,6 +11,7 @@
     "type": "git",
     "url": "https://github.com/pwagener/backbone.conduit.git"
   },
+  "main": "dist/backbone.conduit.js",
   "keywords": [
     "backbone",
     "performance",
@@ -42,5 +44,9 @@
     "sinon": "^1.10.3",
     "sinon-chai": "^2.5.0",
     "when": "^3.6.4"
-  }
+  },
+  "bugs": {
+    "url": "https://github.com/pwagener/backbone.conduit/issues"
+  },
+  "license": "MIT"
 }

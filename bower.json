@@ -1,0 +1,16 @@
+{
+  "name": "backbone.conduit",
+  "version": "0.1.4",
+  "description": "Moving lots of data through backbone",
+  "main": "dist/backbone.conduit.js",
+  "keywords": [
+    "backbone",
+    "performance",
+    "reset",
+    "bigdata"
+  ],
+  "dependencies": {
+    "underscore": "*",
+    "backbone": "*"
+  }
+}
