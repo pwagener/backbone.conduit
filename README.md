@@ -10,10 +10,6 @@ initialize a Collection with a large amount of data:
 // Conduit can be found via the "Backbone.Conduit" global, or using RequireJS/AMD async
 // loading, or by CommonJS build/loading techniques.
 var Conduit = Backbone.Conduit;
-
-// Extend the Conduit.Collection for out-of-the-box functionality
-// If you have a different superclass for your collection, use
-// Conduit.refill.mixin(YourCollection)
 var MyCollection = Conduit.Collection.extend({
     // Your magic here
 });
@@ -26,8 +22,10 @@ collection.refill(aBigArray);
 // ... and so on
 ```
 
-# Documentation
-See [The Documentation](http://pwagener.github.io/backbone.conduit/) for more info.
+# More, Please
+See [the Documentation](http://pwagener.github.io/backbone.conduit/) for details.
+
+Even more exciting, see a [live demo](http://pwagener.github.io/backbone.conduit/refill-versus-reset.html) of `Conduit.Colleciton.refill(...)` performance versus `Backbone.Collection.reset(...)`.
 
 # Issues
 Have problems?  Please [file an issue](https://github.com/pwagener/backbone.conduit/issues)!
