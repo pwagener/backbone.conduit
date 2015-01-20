@@ -9,6 +9,7 @@
     "reset",
     "bigdata"
   ],
+  "license": "MIT",
   "dependencies": {
     "underscore": "*",
     "backbone": "*"
