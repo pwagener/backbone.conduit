@@ -25,7 +25,7 @@ collection.refill(aBigArray);
 # More, Please
 See [the Documentation](http://pwagener.github.io/backbone.conduit/) for details.
 
-Even more exciting, see a [live demo](http://pwagener.github.io/backbone.conduit/refill-versus-reset.html) of `Conduit.Colleciton.refill(...)` performance versus `Backbone.Collection.reset(...)`.
+Even more exciting, see a [live demo](http://pwagener.github.io/backbone.conduit/refill-versus-reset.html) of `Conduit.Collection.refill(...)` 45% performance improvement versus `Backbone.Collection.reset(...)`.
 
 # Issues
 Have problems?  Please [file an issue](https://github.com/pwagener/backbone.conduit/issues)!
