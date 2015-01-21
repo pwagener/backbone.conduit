@@ -223,11 +223,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	var Backbone = __webpack_require__(1);
 	var _ = __webpack_require__(4);
 
-	var conduitFill = __webpack_require__(2);
+	var refill = __webpack_require__(2);
+	var fill = __webpack_require__(6);
 
 	// Extend Backbone.Collection and provide the 'refill' method
 	var Collection = Backbone.Collection.extend({ });
-	conduitFill.mixin(Collection);
+	refill.mixin(Collection);
+	fill.mixin(Collection);
 
 	module.exports = Collection;
 
@@ -384,6 +386,53 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = {
 	    setup: setup,
 	    teardown: teardown
+	};
+
+/***/ },
+/* 6 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	var _ = __webpack_require__(4);
+	var Backbone = __webpack_require__(1);
+	var shortCircuit = __webpack_require__(5);
+
+	function fill(models, options) {
+	    // Create the short-circuit
+	    shortCircuit.setup(this);
+
+	    // Silence any add/change/remove events
+	    options = options ? _.clone(options) : {};
+	    var requestedEvents = !options.silent;
+	    options.silent = true;
+
+	    // Call set
+	    var result = this.set(models, options);
+
+	    // Trigger the other event
+	    this.trigger('fill', this, result);
+
+	    // Clean up
+	    shortCircuit.teardown(this);
+
+	    if (requestedEvents && this.comparator) {
+	        this.sort();
+	    }
+
+	    // Return the result
+	    return result;
+	}
+
+	var mixinObj = {
+	    fill: fill
+	};
+
+	module.exports = {
+	    mixin: function(Collection) {
+	        _.extend(Collection.prototype, mixinObj);
+	        return Collection;
+	    }
 	};
 
 /***/ }
