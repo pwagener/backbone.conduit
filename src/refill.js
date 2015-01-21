@@ -6,6 +6,7 @@
 
 var _ = require('underscore');
 var Backbone = require('backbone');
+var shortCircuit = require('./shortCircuit');
 
 /**
  * This method is used as a replacement for the Backbone.Model constructor.  It allows
@@ -31,7 +32,7 @@ var QuickModelConstructor = function(attributes, options) {
     this.changed = {};
     this.initialize.apply(this, arguments);
 };
-_.extend(QuickModelConstructor.prototype, Backbone.Model.prototype);
+_.extend(QuickModelConstructor.prototype, { set: quickModelSet }, Backbone.Model.prototype);
 
 /**
  * This function is swapped into a Backbone.Model's prototype when models are going to be
@@ -95,23 +96,8 @@ function quickCollectionSet(models, options) {
 
 function refill(models, options) {
 
-    // Re-assign the Backbone.Model constructor with whatever prototypes exist on the
-    // original model Constructor
-    var originalModelConstructor = this.model;
-    if (_.isFunction(this.model.parse)) {
-        QuickModelConstructor.prototype.parse = this.model.prototype.parse;
-    } else {
-        QuickModelConstructor.prototype.parse = Backbone.Model.prototype.parse;
-    }
-    this.model = QuickModelConstructor;
-
-    // Re-assign the Backbone.Model.set method
-    var originalModelSet = this.model.prototype.set;
-    this.model.prototype.set = quickModelSet;
-
-    // Re-assign the Backbone.Collection.set method
-    this._originalCollectionSet = this.set;
-    this.set = quickCollectionSet;
+    // Short-circuit this collection
+    shortCircuit.setup(this);
 
     // Call reset
     var result = this.reset(models, options);
@@ -120,9 +106,7 @@ function refill(models, options) {
     this.trigger('refill', this);
 
     // Clean up
-    this.set = this._originalCollectionSet;
-    this.model.prototype.set = originalModelSet;
-    this.model = originalModelConstructor;
+    shortCircuit.teardown(this);
 
     // Return the result
     return result;

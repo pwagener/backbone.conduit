@@ -1,10 +1,11 @@
 'use strict';
 
+var _ = require('underscore');
 var Backbone = require('backbone');
 
 var refill = require('./../src/refill');
 
-describe("The fill module", function() {
+describe("The refill module", function() {
 
     describe('when mixed into a Backbone.Collection', function() {
         var Collection;
@@ -23,6 +24,8 @@ describe("The fill module", function() {
                 { id: 1, name: "one", first: 1, second: 0 },
                 { id: 3, name: "three", first: 1, second: 2 }
             ];
+
+            var badData = {id: 6, name: "six", first: 6};
 
             var instance;
             beforeEach(function() {
@@ -56,13 +59,13 @@ describe("The fill module", function() {
                     expect(instance.length).to.equal(0);
                 });
 
-                it('can empty itself with the "fill" method', function() {
+                it('can empty itself with the "refill" method', function() {
                     instance.refill();
                     expect(instance.length).to.equal(0);
                 });
             });
 
-            describe('and provided data via "fill"', function() {
+            describe('and provided data via "refill"', function() {
                 beforeEach(function() {
                     instance.refill(sampleData);
                 });
@@ -77,7 +80,7 @@ describe("The fill module", function() {
                     expect(instance.length).to.equal(0);
                 });
 
-                it('can empty itself with the "fill" method', function() {
+                it('can empty itself with the "refill" method', function() {
                     instance.refill();
                     expect(instance.length).to.equal(0);
                 });
@@ -88,7 +91,7 @@ describe("The fill module", function() {
                 });
             });
 
-            describe('and a sort is requested of "fill"', function() {
+            describe('and a sort is requested of "refill"', function() {
                 beforeEach(function() {
                     instance.reset();
                 });
@@ -111,7 +114,7 @@ describe("The fill module", function() {
                 });
             });
 
-            describe('and a listener is expecting events from "fill"', function() {
+            describe('and a listener is expecting events from "refill"', function() {
                 beforeEach(function() {
                     instance.reset();
                 });
@@ -142,12 +145,19 @@ describe("The fill module", function() {
                 });
             });
 
-            describe('and a custom Backbone.Model with a "parse" is used with "refill"', function() {
+            describe('and a custom Backbone.Model with "parse" & "validate" is used with "refill"', function() {
                 var CustomModel = Backbone.Model.extend({
                     parse: function(results) {
                         results.calculated = results.first + results.second;
                         return results;
+                    },
+                    validate: function(attributes) {
+                        if (_.isUndefined(attributes.first) ||
+                            _.isUndefined(attributes.second)) {
+                            return new Error("Please provide 'first' and 'second'");
+                        }
                     }
+
                 });
 
                 var CustomCollection = refill.mixin(Backbone.Collection.extend({
@@ -162,6 +172,13 @@ describe("The fill module", function() {
                 it('calls parse on the model', function() {
                     customInstance.refill(sampleData);
                     expect(customInstance.at(0).has('calculated'));
+                });
+
+                it('will validate correctly after using "refill"', function() {
+                    // This should not add anything
+                    customInstance.refill(sampleData);
+                    expect(customInstance.add(badData, { validate: true })).to.equal(false);
+                    expect(customInstance.length).to.equal(3);
                 });
             });
         });
