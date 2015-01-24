@@ -107,7 +107,7 @@ describe("The fill module", function() {
                         }
                         firedEvents[event]++;
                     });
-                    instance.fill(sampleData);
+                    instance.fill(sampleData, { sort: true });
                 });
 
                 it('fires a single "fill" event', function() {

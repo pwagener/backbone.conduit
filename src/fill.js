@@ -22,10 +22,6 @@ function fill(models, options) {
     // Clean up
     shortCircuit.teardown(this);
 
-    if (requestedEvents && this.comparator) {
-        this.sort();
-    }
-
     // Return the result
     return result;
 }
