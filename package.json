@@ -1,12 +1,13 @@
 {
   "name": "backbone.conduit",
   "description": "Moving lots of data through backbone",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "scripts": {
     "test": "gulp test",
     "perf": "gulp test:performance",
     "dist": "gulp dist"
   },
+  "homepage": "http://pwagener.github.io/backbone.conduit/",
   "repository": {
     "type": "git",
     "url": "https://github.com/pwagener/backbone.conduit.git"

@@ -127,15 +127,6 @@ describe("The refill module", function() {
                     expect(resetSpy.callCount).to.equal(1);
                 });
 
-                it('fires a "refill" event', function() {
-                    var fillSpy = this.sinon.spy();
-                    instance.on('refill', fillSpy);
-                    instance.refill(sampleData);
-                    expect(fillSpy.callCount).to.equal(1);
-                    //noinspection BadExpressionStatementJS
-                    expect(fillSpy.calledWith(instance)).to.be.true;
-                });
-
                 it('does not fire an "add" for each model', function() {
                     var addSpy = this.sinon.spy();
                     instance.on('add', addSpy);
