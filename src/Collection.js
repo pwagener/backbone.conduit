@@ -8,10 +8,10 @@ var _ = require('underscore');
 
 var refill = require('./refill');
 var fill = require('./fill');
+var fetchJumbo = require('./fetchJumbo');
 
 // Extend Backbone.Collection and provide the 'refill' method
 var Collection = Backbone.Collection.extend({ });
-refill.mixin(Collection);
-fill.mixin(Collection);
+fetchJumbo.mixin(Collection);
 
 module.exports = Collection;
