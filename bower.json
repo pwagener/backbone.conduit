@@ -1,7 +1,7 @@
 {
   "name": "backbone.conduit",
-  "version": "0.2.1",
-  "description": "Moving lots of data through backbone",
+  "version": "0.3.0",
+  "description": "Moving data through backbone",
   "main": "dist/backbone.conduit.js",
   "keywords": [
     "backbone",
