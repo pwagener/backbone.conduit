@@ -1,9 +1,10 @@
-# Backbone.Conduit:  Moving Data Through Backbone
+# Backbone.Conduit
+## Moving Data Through Backbone
 Conduit is a Backbone plugin that improves the ability of Backbone to handle large scale data sets.  
 
 [![Build Status](https://travis-ci.org/pwagener/backbone.conduit.svg?branch=master)](https://travis-ci.org/pwagener/backbone.conduit)
 
-# TL;DR
+## TL;DR
 Use `Conduit.Collection` (an extension of `Backbone.Collection`) if you need to
 initialize a Collection with a large amount of data:
 ```
@@ -24,7 +25,7 @@ collection.refill(aBigArray);
 collection.fetchJumbo();
 ```
 
-# More, Please
+## More, Please
 Please check out [The Documentation](http://pwagener.github.io/backbone.conduit/).
 
 Does documentation bore you?  Well, how about a
@@ -33,5 +34,5 @@ performance improvement versus `Backbone.Collection.reset(...)`.  Or perhaps a
 [live demo of fill(...)](http://pwagener.github.io/backbone.conduit/examples/fill-vs-set.html) allowing you to
 compare it to `Backbone.Collection.set(...)`?
 
-# Issues
+## Issues
 Have problems?  Please [file an issue](https://github.com/pwagener/backbone.conduit/issues)!
