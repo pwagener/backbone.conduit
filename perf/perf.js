@@ -1,72 +1,79 @@
-/**
- * This module reports on performance comparisons between Backbone Collections
- * and Conduit Collections.
- */
+
 // Default test data
 var DEFAULT_DATA_FILE = "./data/2008-20K.json";
-var DEFAULT_NUM_ITERATIONS = 5;
 
-var _ = require("underscore");
-var when = require("when");
 // Wiring up Backbone with a usable jQuery is a bit of a mess....
 var wiring = require('./wiring');
 var Backbone = wiring.Backbone;
 var BackboneLodash = wiring.BackboneLodash;
+var Conduit = require("./../dist/backbone.conduit");
 
-var timer = require("./EventTimer");
-var Conduit = require("./../src/index");
+var Benchmark = require('benchmark');
 
-// The test we will run
-function makeTestPromise(CollectionType, funcName, options) {
-    options = options || {};
-    var dataFile = options.dataFile || DEFAULT_DATA_FILE;
-    var data = require(dataFile);
-    var numIterations = options.numIterations || DEFAULT_NUM_ITERATIONS;
-    var testName = options.testName || (numIterations + " Iteration Test");
-
-    return when.promise(function(resolve) {
-        var testTimer = timer.start(testName);
-        for (var i = 0; i < numIterations; i++) {
-            var collection = new CollectionType();
-            collection[funcName](data);
-        }
-        timer.end(testTimer);
-
-        resolve({
-            name: testName,
-            timer: testTimer
-        });
-    });
-}
-
-function runTests(options, callback) {
+var data = require(DEFAULT_DATA_FILE);
+function makeTestFunction(CollectionType, methodName, options) {
     options = options || {};
 
-    var promises = [];
-
-    promises.push(makeTestPromise(Conduit.Collection, "refill", _.extend({
-        testName: "Conduit..refill"
-    }, options)));
-
-    promises.push(makeTestPromise(Backbone.Collection, 'reset', _.extend({
-        testName: "Backbone..reset"
-    }, options)));
-
-    promises.push(makeTestPromise(BackboneLodash.Collection, 'reset', _.extend({
-        testName: 'Backbone-Lodash..reset'
-    }, options)));
-
-    when.all(promises).then(function(results) {
-        var timers = _.pluck(results, "timer");
-        timer.logComparison(timers);
-        if (callback) {
-            callback();
-        }
-    }).catch(function(err) {
-        console.log("D'oh: ", err);
-    });
+    return function() {
+        var collection = new CollectionType();
+        collection[methodName](data);
+    };
 }
+
+function onSuiteCycle(event) {
+    console.log('  ' + String(event.target));
+
+}
+
+function onSuiteComplete(suite) {
+    var fastest = suite.filter('fastest')[0];
+    var fastestName = fastest.name;
+    console.log('Fastest: ' + fastestName);
+    suite.forEach(function(benchmark) {
+        if (benchmark !== fastest) {
+            var current = benchmark.name;
+            //var percentDiff = Math.round((fastest.hz / benchmark.hz) * 100);
+            var percentDiff = Math.round(((fastest.hz - benchmark.hz) / fastest.hz) * 100);
+            console.log('    --> ' + percentDiff + '% faster than ' + current);
+        }
+    });
+
+    console.log('----');
+}
+
+
+var addOpts = { minSamples: 20 };
+var resetRefillSuite = new Benchmark.Suite();
+resetRefillSuite
+    .add('Backbone..reset', makeTestFunction(Backbone.Collection, 'reset'), addOpts)
+    .add('Backbone w/Lodash..reset', makeTestFunction(BackboneLodash.Collection, 'reset'), addOpts)
+    .add('Conduit..refill', makeTestFunction(Conduit.Collection, 'refill'), addOpts)
+    // add listeners
+    .on('cycle', onSuiteCycle)
+    .on('complete', function() {
+        onSuiteComplete(this);
+    });
+
+var setFillSuite = new Benchmark.Suite();
+setFillSuite
+    .add('Backbone..fill', makeTestFunction(Backbone.Collection, 'set'), addOpts)
+    .add('Backbone w/Lodash..fill', makeTestFunction(BackboneLodash.Collection, 'set'), addOpts)
+    .add('Conduit..fill', makeTestFunction(Conduit.Collection, 'fill'), addOpts)
+    // add listeners
+    .on('cycle', onSuiteCycle)
+    .on('complete', function() {
+        onSuiteComplete(this);
+    });
 
 module.exports = {
-    runTests: runTests
+    runTests: function(done) {
+        console.log("Sit back & relax while we shove large data through small pipes...");
+
+        console.log('... Comparing reset & refill:');
+        resetRefillSuite.run();
+
+        console.log('... Comparing set & fill:');
+        setFillSuite.run();
+        done();
+    }
 };
