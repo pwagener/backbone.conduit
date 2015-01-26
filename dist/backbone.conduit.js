@@ -7,7 +7,7 @@
 		var a = typeof exports === 'object' ? factory(require("backbone"), require("underscore")) : factory(root["Backbone"], root["_"]);
 		for(var i in a) (typeof exports === 'object' ? exports : root)[i] = a[i];
 	}
-})(this, function(__WEBPACK_EXTERNAL_MODULE_1__, __WEBPACK_EXTERNAL_MODULE_4__) {
+})(this, function(__WEBPACK_EXTERNAL_MODULE_1__, __WEBPACK_EXTERNAL_MODULE_6__) {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
@@ -58,16 +58,19 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var Backbone = __webpack_require__(1);
 
-	var refill = __webpack_require__(2);
-	var Collection = __webpack_require__(3);
+	var fill = __webpack_require__(2);
+	var refill = __webpack_require__(3);
+	var Collection = __webpack_require__(4);
+	var fetchJumbo = __webpack_require__(5);
 
 	Backbone.Conduit = module.exports = {
 	    Promise: function () {
 	        throw new TypeError('An ES6-compliant Promise implementation must be provided');
 	    },
 
-	    fill: refill,
-
+	    fill: fill,
+	    refill: refill,
+	    fetchJumbo: fetchJumbo,
 	    Collection: Collection
 	};
 
@@ -82,15 +85,58 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 2 */
 /***/ function(module, exports, __webpack_require__) {
 
+	'use strict';
+
+	var _ = __webpack_require__(6);
+	var Backbone = __webpack_require__(1);
+	var shortCircuit = __webpack_require__(7);
+
+	function fill(models, options) {
+	    // Create the short-circuit
+	    shortCircuit.setup(this);
+
+	    // Silence any add/change/remove events
+	    options = options ? _.clone(options) : {};
+	    var requestedEvents = !options.silent;
+	    options.silent = true;
+
+	    // Call set
+	    var result = this.set(models, options);
+
+	    // Trigger the other event
+	    this.trigger('fill', this, result);
+
+	    // Clean up
+	    shortCircuit.teardown(this);
+
+	    // Return the result
+	    return result;
+	}
+
+	var mixinObj = {
+	    fill: fill
+	};
+
+	module.exports = {
+	    mixin: function(Collection) {
+	        _.extend(Collection.prototype, mixinObj);
+	        return Collection;
+	    }
+	};
+
+/***/ },
+/* 3 */
+/***/ function(module, exports, __webpack_require__) {
+
 	/**
 	 * This module provides a mixin for a Backbone.Collection to provide a method,
 	 * 'fill(...)' that can be used as a performant replacement for
 	 * 'Collection.reset(...)' in some circumstances.
 	 */
 
-	var _ = __webpack_require__(4);
+	var _ = __webpack_require__(6);
 	var Backbone = __webpack_require__(1);
-	var shortCircuit = __webpack_require__(5);
+	var shortCircuit = __webpack_require__(7);
 
 	/**
 	 * Implementation of the refill function as an alternative to Backbone.Collection.reset
@@ -126,7 +172,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 3 */
+/* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
@@ -135,11 +181,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	 */
 
 	var Backbone = __webpack_require__(1);
-	var _ = __webpack_require__(4);
+	var _ = __webpack_require__(6);
 
-	var refill = __webpack_require__(2);
-	var fill = __webpack_require__(6);
-	var fetchJumbo = __webpack_require__(7);
+	var refill = __webpack_require__(3);
+	var fill = __webpack_require__(2);
+	var fetchJumbo = __webpack_require__(5);
 
 	// Extend Backbone.Collection and provide the 'refill' method
 	var Collection = Backbone.Collection.extend({ });
@@ -148,13 +194,78 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = Collection;
 
 /***/ },
-/* 4 */
+/* 5 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = __WEBPACK_EXTERNAL_MODULE_4__;
+	'use strict';
+
+	var _ = __webpack_require__(6);
+	var Backbone = __webpack_require__(1);
+	var fill = __webpack_require__(2);
+	var refill = __webpack_require__(3);
+
+	/**
+	 * This utility method is taken from backbone.js verbatim
+	 */
+	var wrapError = function(model, options) {
+	    var error = options.error;
+	    options.error = function(resp) {
+	        if (error) error(model, resp, options);
+	        model.trigger('error', model, resp, options);
+	    };
+	};
+
+	/**
+	 * This method is a replacement for Backbone.Collection.fetch that will use
+	 * Conduit.Collection.fill/refill instead of Backbone.Collection.set/reset when data
+	 * is successfully returned from the server.
+	 */
+	function fetchJumbo(options) {
+	    options = options ? _.clone(options) : {};
+	    if (options.parse === void 0) options.parse = true;
+	    var success = options.success;
+	    var collection = this;
+	    options.success = function(resp) {
+	        // This is the interesting line:  use refill/fill instead of reset/set
+	        var method = options.reset ? 'refill' : 'fill';
+	        collection[method](resp, options);
+	        if (success) success(collection, resp, options);
+	        collection.trigger('sync', collection, resp, options);
+	    };
+	    wrapError(this, options);
+	    return this.sync('read', this, options);
+	}
+
+	var mixinObj = {
+	    fetchJumbo: fetchJumbo
+	};
+
+
+	module.exports = {
+	    mixin: function(Collection) {
+
+	        if (!_.isFunction(Collection.prototype.refill)) {
+	            refill.mixin(Collection);
+	        }
+
+	        if (!_.isFunction(Collection.prototype.fill)) {
+	            fill.mixin(Collection);
+	        }
+
+	        _.extend(Collection.prototype, mixinObj);
+	        return Collection;
+	    }
+	};
+
 
 /***/ },
-/* 5 */
+/* 6 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = __WEBPACK_EXTERNAL_MODULE_6__;
+
+/***/ },
+/* 7 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -163,7 +274,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * This module is shared between 'fill' and 'refill' as where the short-circuit method
 	 * implementations live.
 	 */
-	var _ = __webpack_require__(4);
+	var _ = __webpack_require__(6);
 	var Backbone = __webpack_require__(1);
 
 
@@ -301,114 +412,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	    setup: setup,
 	    teardown: teardown
 	};
-
-/***/ },
-/* 6 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	var _ = __webpack_require__(4);
-	var Backbone = __webpack_require__(1);
-	var shortCircuit = __webpack_require__(5);
-
-	function fill(models, options) {
-	    // Create the short-circuit
-	    shortCircuit.setup(this);
-
-	    // Silence any add/change/remove events
-	    options = options ? _.clone(options) : {};
-	    var requestedEvents = !options.silent;
-	    options.silent = true;
-
-	    // Call set
-	    var result = this.set(models, options);
-
-	    // Trigger the other event
-	    this.trigger('fill', this, result);
-
-	    // Clean up
-	    shortCircuit.teardown(this);
-
-	    // Return the result
-	    return result;
-	}
-
-	var mixinObj = {
-	    fill: fill
-	};
-
-	module.exports = {
-	    mixin: function(Collection) {
-	        _.extend(Collection.prototype, mixinObj);
-	        return Collection;
-	    }
-	};
-
-/***/ },
-/* 7 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	var _ = __webpack_require__(4);
-	var Backbone = __webpack_require__(1);
-	var fill = __webpack_require__(6);
-	var refill = __webpack_require__(2);
-
-	/**
-	 * This utility method is taken from backbone.js verbatim
-	 */
-	var wrapError = function(model, options) {
-	    var error = options.error;
-	    options.error = function(resp) {
-	        if (error) error(model, resp, options);
-	        model.trigger('error', model, resp, options);
-	    };
-	};
-
-	/**
-	 * This method is a replacement for Backbone.Collection.fetch that will use
-	 * Conduit.Collection.fill/refill instead of Backbone.Collection.set/reset when data
-	 * is successfully returned from the server.
-	 */
-	function fetchJumbo(options) {
-	    options = options ? _.clone(options) : {};
-	    if (options.parse === void 0) options.parse = true;
-	    var success = options.success;
-	    var collection = this;
-	    options.success = function(resp) {
-	        // This is the interesting line:  use refill/fill instead of reset/set
-	        var method = options.reset ? 'refill' : 'fill';
-	        collection[method](resp, options);
-	        if (success) success(collection, resp, options);
-	        collection.trigger('sync', collection, resp, options);
-	    };
-	    wrapError(this, options);
-	    return this.sync('read', this, options);
-	}
-
-	var mixinObj = {
-	    fetchJumbo: fetchJumbo
-	};
-
-
-	module.exports = {
-	    mixin: function(Collection) {
-
-	        if (!_.isFunction(Collection.prototype.refill)) {
-	            refill.mixin(Collection);
-	        }
-
-	        if (!_.isFunction(Collection.prototype.fill)) {
-	            fill.mixin(Collection);
-	        }
-
-	        _.extend(Collection.prototype, mixinObj);
-	        return Collection;
-	    }
-	};
-
 
 /***/ }
 /******/ ])

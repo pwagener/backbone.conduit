@@ -5,7 +5,7 @@ var webpack = require('gulp-webpack');
 var rename = require('gulp-rename');
 
 gulp.task('dist', "Create distribution", ['bower'], function () {
-  return gulp.src('src/backbone.conduit.js')
+  return gulp.src('src/index.js')
     .pipe(webpack({
       output: { libraryTarget: 'umd' },
       externals:  {
