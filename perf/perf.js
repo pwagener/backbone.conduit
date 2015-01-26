@@ -14,7 +14,7 @@ var Backbone = wiring.Backbone;
 var BackboneLodash = wiring.BackboneLodash;
 
 var timer = require("./EventTimer");
-var Conduit = require("./../src/backbone.conduit");
+var Conduit = require("./../src/index");
 
 // The test we will run
 function makeTestPromise(CollectionType, funcName, options) {
