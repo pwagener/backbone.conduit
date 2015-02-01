@@ -12,8 +12,6 @@ var Benchmark = require('benchmark');
 
 var data = require(DEFAULT_DATA_FILE);
 function makeTestFunction(CollectionType, methodName, options) {
-    options = options || {};
-
     return function() {
         var collection = new CollectionType();
         collection[methodName](data);
