@@ -74,6 +74,8 @@ function quickCollectionSet(models, options) {
  * @param OriginalModel The model whose behavior to mimic
  */
 function generateConduitModel(OriginalModel) {
+    var defaults = _.result(OriginalModel.prototype, 'defaults');
+
     var ConduitModel = function(attributes, options) {
         var attrs = attributes || {};
         options || (options = {});
@@ -83,8 +85,7 @@ function generateConduitModel(OriginalModel) {
         if (options.collection) this.collection = options.collection;
         if (options.parse) attrs = this.parse(attrs, options) || {};
 
-        // First significant change from Backbone.Model: only do defaults if necessary
-        var defaults = _.result(this, 'defaults');
+        // Significant change from Backbone.Model: only do defaults if necessary
         if (defaults) {
             attrs = _.defaults({}, attrs, _.result(this, 'defaults'));
         }
