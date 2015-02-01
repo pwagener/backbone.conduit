@@ -51,7 +51,7 @@ describe('The sortAsync module', function() {
                 promise = collection.sortAsync();
             });
 
-            it('resolves the promise to the collection', function() {
+            it('resolves to the collection', function() {
                 expect(promise).to.eventually.equal(collection);
             });
 
@@ -62,7 +62,6 @@ describe('The sortAsync module', function() {
                 });
             });
 
-
             it('the resolved collection is sorted', function(done) {
                 promise.then(function(sorted) {
                     expect(sorted.at(0).get('name'), 'First element').to.equal('one');
@@ -71,7 +70,6 @@ describe('The sortAsync module', function() {
                     done();
                 });
             });
-
         });
     });
 });

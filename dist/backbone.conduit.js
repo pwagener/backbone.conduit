@@ -94,7 +94,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	 */
 
 	var _ = __webpack_require__(8);
-	var _Conduit = __webpack_require__(9);
+	var _Worker = __webpack_require__(9);
 
 	var _values = {};
 
@@ -120,7 +120,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 	function setUnderscorePath(path) {
-	    _Conduit.setUnderscorePath(path);
+	    _Worker.setUnderscorePath(path);
 	    setValue(underscorePathKey, path);
 	}
 
@@ -234,15 +234,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	var Backbone = __webpack_require__(1);
 	var _ = __webpack_require__(8);
 
-	var refill = __webpack_require__(4);
 	var fill = __webpack_require__(3);
-	var fetchJumbo = __webpack_require__(6);
+	var refill = __webpack_require__(4);
 	var sortAsync = __webpack_require__(7);
+	var fetchJumbo = __webpack_require__(6);
 
 	// Extend Backbone.Collection and provide the 'refill' method
 	var Collection = Backbone.Collection.extend({ });
-	fetchJumbo.mixin(Collection);
+
+	// Add all the relevant modules to the new Collection type
+	fill.mixin(Collection);
+	refill.mixin(Collection);
 	sortAsync.mixin(Collection);
+	fetchJumbo.mixin(Collection);
 
 	module.exports = Collection;
 
@@ -254,8 +258,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _ = __webpack_require__(8);
 	var Backbone = __webpack_require__(1);
+	var when = __webpack_require__(12);
+
 	var fill = __webpack_require__(3);
 	var refill = __webpack_require__(4);
+	var sortAsync = __webpack_require__(7);
 
 	/**
 	 * This utility method is taken from backbone.js verbatim
@@ -279,11 +286,33 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var success = options.success;
 	    var collection = this;
 	    options.success = function(resp) {
-	        // This is the interesting line:  use refill/fill instead of reset/set
+	        // This is one change from 'fetch':  use refill/fill instead of reset/set
 	        var method = options.reset ? 'refill' : 'fill';
-	        collection[method](resp, options);
-	        if (success) success(collection, resp, options);
-	        collection.trigger('sync', collection, resp, options);
+
+	        // Function that will finish the fetch operation
+	        var finishFetch = function(data) {
+	            collection[method](data, options);
+	            if (success) success(collection, data, options);
+	            collection.trigger('sync', collection, data, options);
+	        };
+
+	        // If sorting requested, do it asynchronously
+	        var sortable = collection.comparator && (options.at == null) && options.sort !== false;
+	        if (sortable) {
+	            // Ensure we don't do synchronous sort
+	            options.sort = false;
+
+	            // Do the async sort, then set the values.
+	            var sortPromise = collection._useWorkerToSort({
+	                data: resp,
+	                comparator: collection.comparator
+	            });
+	            sortPromise.then(function(sorted) {
+	                finishFetch(sorted);
+	            });
+	        } else {
+	            finishFetch(resp);
+	        }
 	    };
 	    wrapError(this, options);
 	    return this.sync('read', this, options);
@@ -293,16 +322,21 @@ return /******/ (function(modules) { // webpackBootstrap
 	    fetchJumbo: fetchJumbo
 	};
 
-
 	module.exports = {
 	    mixin: function(Collection) {
 
+	        // TODO:  does this really require 'refill'?
 	        if (!_.isFunction(Collection.prototype.refill)) {
 	            refill.mixin(Collection);
 	        }
 
+	        // TODO:  does this really require 'fill'?
 	        if (!_.isFunction(Collection.prototype.fill)) {
 	            fill.mixin(Collection);
+	        }
+
+	        if (!_.isFunction(Collection.prototype.sortAsync)) {
+	            sortAsync.mixin(Collection);
 	        }
 
 	        _.extend(Collection.prototype, mixinObj);
@@ -321,25 +355,32 @@ return /******/ (function(modules) { // webpackBootstrap
 	var when = __webpack_require__(12);
 
 	var config = __webpack_require__(2);
-	var _Conduit = __webpack_require__(9);
+	var _Worker = __webpack_require__(9);
 
-	// TODO:  better detection here
 	var isBrowser = typeof document !== 'undefined';
 
+	function ensureWorker() {
+	    if (!this._worker) {
+	        this._worker = _Worker.create();
+	    }
+	}
 	function sortAsync() {
 	    if (isBrowser) {
 	        config.ensureUnderscore('sortAsync');
 
+	        ensureWorker.call(this);
 	        var self = this;
+	        var data = self.toJSON();
+	        var comparator = self.comparator;
 
-	        //noinspection JSUnresolvedFunction
-	        return when.promise(function(resolve) {
-	            _Conduit.sortAsync({
-	                comparator: self.comparator,
-	                data: self.toJSON()
-	            }).then(function(sorted) {
+	        var sortPromise = this._useWorkerToSort({
+	            data: data,
+	            comparator: comparator
+	        });
+
+	        return when.promise(function(resolve, reject) {
+	            sortPromise.then(function(sorted) {
 	                // Well, this isn't a very good way to get the data back in, but....
-	                var comparator = self.comparator;
 	                self.comparator = null;
 
 	                if (_.isFunction(self.refill)) {
@@ -350,6 +391,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	                self.comparator = comparator;
 	                resolve(self);
+	            }, function(err) {
+	                reject(err);
 	            });
 	        });
 	    } else {
@@ -357,8 +400,25 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	}
 
+	function _useWorkerToSort(sortSpec) {
+	    ensureWorker.call(this);
+	    return wrapWithPromise(this._worker, 'sortAsync', sortSpec);
+	}
+
+	function wrapWithPromise(conduit, method, args) {
+	    return when.promise(function(resolve, reject) {
+	        conduit[method](args).then(function(result) {
+	            resolve(result);
+	        }).catch(function(err) {
+	            reject (err);
+	        });
+	    });
+	}
+
 	var mixinObj = {
-	    sortAsync: sortAsync
+	    sortAsync: sortAsync,
+
+	    _useWorkerToSort: _useWorkerToSort
 	};
 
 	module.exports = {
@@ -379,7 +439,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
-	 * This module provides an extended version of Underscore that provides some
+	 * This module provides an extended version of Underscore that has some
 	 * asynchronous functionality via Workers and Promises.
 	 *
 	 * NOTE:  you must set the path to 'underscore.js' via `setUnderscorePath(pathFromRoot)`
@@ -414,45 +474,60 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	var underscoreJsPath = null;
+	function setUnderscorePath(pathFromRoot) {
+	    underscoreJsPath = pathFromRoot;
+	}
 
-	var _Conduit = _.extend({}, _, {
+	function _ensureUnderscoreJsPath() {
+	    if (!_.isString(underscoreJsPath)) {
+	        throw new Error('Cannot find underscore.js path');
+	    }
+	}
 
-	    setUnderscorePath: function(pathFromRoot) {
-	        underscoreJsPath = pathFromRoot;
-	    },
-
-	    sortAsync: function(sortSpec) {
-	        this._ensureUnderscoreJsPath();
-
-	        if (!_.isObject(sortSpec)) {
-	            throw new Error("You must provide a sort specification");
-	        }
-
-	        if (_.isFunction(sortSpec.comparator)) {
-	            throw new Error("Cannot sort with a function comparator");
-	        }
-
-	        var manager = new WorkerManager({
+	function _ensureManagerCreated() {
+	    if (!this._workerManager) {
+	        this._workerManager = new WorkerManager({
 	            importScripts: [
 	                underscoreJsPath
 	            ]
 	        });
-
-	        return manager.runSingleJob({
-	            job: workerSort,
-	            data: sortSpec
-	        });
-	    },
-
-	    _ensureUnderscoreJsPath: function() {
-	        if (!_.isString(underscoreJsPath)) {
-	            throw new Error('Cannot find underscore.js path');
-	        }
 	    }
-	});
+	}
+
+	function sortAsync(sortSpec) {
+	    _ensureUnderscoreJsPath();
+
+	    this._ensureManagerCreated();
+
+	    if (!_.isObject(sortSpec)) {
+	        throw new Error("You must provide a sort specification");
+	    }
+
+	    if (_.isFunction(sortSpec.comparator)) {
+	        throw new Error("Cannot sort with a function comparator");
+	    }
+
+	    return this._workerManager.runJob({
+	        job: workerSort,
+	        data: sortSpec
+	    });
+	}
+
+	function create() {
+	    return _.extend({}, {
+	        sortAsync: sortAsync,
+
+	        _ensureManagerCreated: _ensureManagerCreated
+	    }, _);
+	}
+
+	module.exports = {
+	    setUnderscorePath: setUnderscorePath,
+
+	    create: create
+	};
 
 
-	module.exports = _Conduit;
 
 /***/ },
 /* 10 */
@@ -514,14 +589,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	    // Force no-sort up front
 	    options = options || {};
 	    var needsSort = options.sort;
-	    if (options.sort) {
+	    var sortable = this.comparator && (options.at == null) && options.sort !== false;
+	    if (sortable) {
 	        options.sort = false;
 	    }
 
 	    var returnedModels = this._originalCollectionSet(models, options);
 
 	    // Handle sorting after we have set everything
-	    if (needsSort && _.isArray(returnedModels)) {
+	    if (needsSort && sortable && _.isArray(returnedModels)) {
 	        this.sort();
 	        returnedModels = _.clone(this.models);
 	    }
@@ -610,7 +686,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	'use strict';
 	/**
-	 * This defines a worker that wraps Underscore functionality
+	 * This defines how we manage a single worker; spinning it up on demand,
+	 * terminating it when necessary, using Promises for communication.
 	 */
 
 	var _ = __webpack_require__(8);
@@ -619,6 +696,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	function WorkerManager(options) {
 	    this.initialize(options);
 	}
+	//noinspection JSUnusedLocalSymbols
 	WorkerManager.prototype = {
 	    initialize: function(options) {
 	        options = options || {};
@@ -626,57 +704,77 @@ return /******/ (function(modules) { // webpackBootstrap
 	            this.scripts = options.importScripts;
 	        }
 
-	        this.url = this._getBlobUrl();
-	        this.worker = options.Worker? new options.Worker(this.url) : new window.Worker(this.url);
+	        this.Worker = options.Worker || window.Worker;
 	    },
 
-	    runSingleJob: function(details) {
-	        this.workerJob = details.job;
+	    /**
+	     * This is the main point to run a job in a worker
+	     * @param details The details of the job to run.  Must provide:
+	     *   o job:  The function to run; must be a worker-friendly function that accepts (global, scriptsToImport)
+	     *   o data: The data to pass to the function, if any
+	     * @return A Promise that is resolved to the result of the job
+	     */
+	    runJob: function(details) {
+	        if (this.timeoutHandle) {
+	            clearTimeout(this.timeoutHandle);
+	            delete this.timeoutHandle;
+	        }
+
+	        if (this._workerJob) {
+	            // See if our job has changed
+	            if (this._workerJob != details.job) {
+	                // We have a different job to run; kill the existing
+	                // worker, if any
+	                this.terminate();
+	            }
+	        }
+
+	        this._workerJob = details.job;
+
+	        if (!this._workerJob) {
+	            throw new Error("You must specify a job for the worker");
+	        }
+
+	        if (!this.worker) {
+	            this._createWorker();
+	        }
 
 	        var self = this;
-	        var worker = this.worker;
-	        return when.promise(function(resolve, reject) {
+	        //noinspection JSUnresolvedFunction
+	        return when.promise(function(resolve) {
+	            var worker = self.worker;
 	            worker.onmessage = function(event) {
 	                resolve(event.data);
 	            };
 
 	            worker.postMessage(details.data);
 	        }).finally(function() {
-	            self.terminate();
+	            // Set a timeout to terminate the worker if it is not used quickly enough
+	            var callTerminate = _.bind(self.terminate, self);
+	            self.timeoutHandle = setTimeout(callTerminate, 1000);
 	        });
 	    },
 
-	    sort: function(sortSpec) {
-	        this._ensureWorker();
-	        if (!_.isObject(sortSpec)) {
-	            throw "You must provide a sort specification";
-	        }
-
-	        if (_.isFunction(sortSpec.comparator)) {
-	            throw "Cannot sort with a function comparator";
-	        }
-
-	        var worker = this.worker;
-	        return when.promise(function(resolve, reject) {
-	            worker.onmessage = function(event) {
-	                resolve(event.data);
-	            };
-
-	            worker.postMessage(sortSpec);
-	        });
-	    },
-
+	    /**
+	     * Explicitly terminate the managed worker, if it hasn't been terminated yet.
+	     */
 	    terminate: function() {
 	        if(this.worker) {
 	            this.worker.terminate();
 	            this.worker = null;
 	        }
+
 	        if(this.url) {
+	            //noinspection JSUnresolvedFunction
 	            URL.revokeObjectURL(this.url);
 	            this.url = null;
 	        }
 	    },
 
+	    _createWorker: function () {
+	        this.url = this._getBlobUrl();
+	        this.worker = new this.Worker(this.url);
+	    },
 
 	    /**
 	     * Create the Blob URL that we use to represent the worker
@@ -698,9 +796,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	            argumentJs += ', [' + fullScripts.join(',') + ']';
 	        }
 
-	        workerJs += '(' + this.workerJob + ')(' + argumentJs + ')';
+	        workerJs += '(' + this._workerJob + ')(' + argumentJs + ')';
 
 	        var blob = new Blob([ workerJs ], { type: 'text/javascript' });
+	        //noinspection JSUnresolvedFunction
 	        return URL.createObjectURL(blob);
 	    },
 
@@ -720,33 +819,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	     */
 	    _ensureWorker: function () {
 	        if (!this.worker) {
-	            throw "The worker has already been killed";
-	        }
-	    },
-
-	    /**
-	     * The implementation of our worker.
-	     */
-	    workerJob: function (global, toImport) {
-
-	        if (toImport && toImport.length) {
-	            for (var i = 0; i < toImport.length; i++) {
-	                global.importScripts(toImport[i]);
-	            }
-	        }
-
-	        global.onmessage = function(event) {
-	            var data = event.data.data;
-	            var comparator = event.data.comparator;
-
-	            function evaluator(item) {
-	                return item[comparator];
-	            }
-	            data = _.sortBy(data, evaluator);
-
-	            global.postMessage(data);
+	            this._createWorker();
 	        }
 	    }
+
 	};
 
 	module.exports = WorkerManager;

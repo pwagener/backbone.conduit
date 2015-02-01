@@ -4,25 +4,32 @@ var _ = require('underscore');
 var when = require('when');
 
 var config = require('./config');
-var _Conduit = require('./_Conduit');
+var _Worker = require('./_Worker');
 
-// TODO:  better detection here
 var isBrowser = typeof document !== 'undefined';
 
+function ensureWorker() {
+    if (!this._worker) {
+        this._worker = _Worker.create();
+    }
+}
 function sortAsync() {
     if (isBrowser) {
         config.ensureUnderscore('sortAsync');
 
+        ensureWorker.call(this);
         var self = this;
+        var data = self.toJSON();
+        var comparator = self.comparator;
 
-        //noinspection JSUnresolvedFunction
-        return when.promise(function(resolve) {
-            _Conduit.sortAsync({
-                comparator: self.comparator,
-                data: self.toJSON()
-            }).then(function(sorted) {
+        var sortPromise = this._useWorkerToSort({
+            data: data,
+            comparator: comparator
+        });
+
+        return when.promise(function(resolve, reject) {
+            sortPromise.then(function(sorted) {
                 // Well, this isn't a very good way to get the data back in, but....
-                var comparator = self.comparator;
                 self.comparator = null;
 
                 if (_.isFunction(self.refill)) {
@@ -33,6 +40,8 @@ function sortAsync() {
 
                 self.comparator = comparator;
                 resolve(self);
+            }, function(err) {
+                reject(err);
             });
         });
     } else {
@@ -40,8 +49,25 @@ function sortAsync() {
     }
 }
 
+function _useWorkerToSort(sortSpec) {
+    ensureWorker.call(this);
+    return wrapWithPromise(this._worker, 'sortAsync', sortSpec);
+}
+
+function wrapWithPromise(conduit, method, args) {
+    return when.promise(function(resolve, reject) {
+        conduit[method](args).then(function(result) {
+            resolve(result);
+        }).catch(function(err) {
+            reject (err);
+        });
+    });
+}
+
 var mixinObj = {
-    sortAsync: sortAsync
+    sortAsync: sortAsync,
+
+    _useWorkerToSort: _useWorkerToSort
 };
 
 module.exports = {

@@ -5,7 +5,7 @@
  */
 
 var _ = require('underscore');
-var _Conduit = require('./_Conduit');
+var _Worker = require('./_Worker');
 
 var _values = {};
 
@@ -31,7 +31,7 @@ function ensureValue(key, module) {
 
 
 function setUnderscorePath(path) {
-    _Conduit.setUnderscorePath(path);
+    _Worker.setUnderscorePath(path);
     setValue(underscorePathKey, path);
 }
 

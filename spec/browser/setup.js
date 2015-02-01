@@ -9,10 +9,14 @@ var chaiAsPromised = require('chai-as-promised');
 var Backbone = require('backbone');
 var Conduit = require('src/index');
 
+var mockServer = require('./../mockServer');
+mockServer.captureAjax(Backbone.$);
+
 // load specs
 require('./sortAsync.browserSpec');
 require('./WorkerManager.browserSpec');
-require('./_Conduit.browserSpec');
+require('./_Worker.browserSpec');
+require('./Collection.browserSpec');
 
 window.expect = chai.expect;
 chai.use(sinonChai);

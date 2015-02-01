@@ -1,6 +1,7 @@
 'use strict';
 /**
- * This defines a worker that wraps Underscore functionality
+ * This defines how we manage a single worker; spinning it up on demand,
+ * terminating it when necessary, using Promises for communication.
  */
 
 var _ = require('underscore');
@@ -9,6 +10,7 @@ var when = require('when');
 function WorkerManager(options) {
     this.initialize(options);
 }
+//noinspection JSUnusedLocalSymbols
 WorkerManager.prototype = {
     initialize: function(options) {
         options = options || {};
@@ -16,57 +18,77 @@ WorkerManager.prototype = {
             this.scripts = options.importScripts;
         }
 
-        this.url = this._getBlobUrl();
-        this.worker = options.Worker? new options.Worker(this.url) : new window.Worker(this.url);
+        this.Worker = options.Worker || window.Worker;
     },
 
-    runSingleJob: function(details) {
-        this.workerJob = details.job;
+    /**
+     * This is the main point to run a job in a worker
+     * @param details The details of the job to run.  Must provide:
+     *   o job:  The function to run; must be a worker-friendly function that accepts (global, scriptsToImport)
+     *   o data: The data to pass to the function, if any
+     * @return A Promise that is resolved to the result of the job
+     */
+    runJob: function(details) {
+        if (this.timeoutHandle) {
+            clearTimeout(this.timeoutHandle);
+            delete this.timeoutHandle;
+        }
+
+        if (this._workerJob) {
+            // See if our job has changed
+            if (this._workerJob != details.job) {
+                // We have a different job to run; kill the existing
+                // worker, if any
+                this.terminate();
+            }
+        }
+
+        this._workerJob = details.job;
+
+        if (!this._workerJob) {
+            throw new Error("You must specify a job for the worker");
+        }
+
+        if (!this.worker) {
+            this._createWorker();
+        }
 
         var self = this;
-        var worker = this.worker;
-        return when.promise(function(resolve, reject) {
+        //noinspection JSUnresolvedFunction
+        return when.promise(function(resolve) {
+            var worker = self.worker;
             worker.onmessage = function(event) {
                 resolve(event.data);
             };
 
             worker.postMessage(details.data);
         }).finally(function() {
-            self.terminate();
+            // Set a timeout to terminate the worker if it is not used quickly enough
+            var callTerminate = _.bind(self.terminate, self);
+            self.timeoutHandle = setTimeout(callTerminate, 1000);
         });
     },
 
-    sort: function(sortSpec) {
-        this._ensureWorker();
-        if (!_.isObject(sortSpec)) {
-            throw "You must provide a sort specification";
-        }
-
-        if (_.isFunction(sortSpec.comparator)) {
-            throw "Cannot sort with a function comparator";
-        }
-
-        var worker = this.worker;
-        return when.promise(function(resolve, reject) {
-            worker.onmessage = function(event) {
-                resolve(event.data);
-            };
-
-            worker.postMessage(sortSpec);
-        });
-    },
-
+    /**
+     * Explicitly terminate the managed worker, if it hasn't been terminated yet.
+     */
     terminate: function() {
         if(this.worker) {
             this.worker.terminate();
             this.worker = null;
         }
+
         if(this.url) {
+            //noinspection JSUnresolvedFunction
             URL.revokeObjectURL(this.url);
             this.url = null;
         }
     },
 
+    _createWorker: function () {
+        this.url = this._getBlobUrl();
+        this.worker = new this.Worker(this.url);
+    },
 
     /**
      * Create the Blob URL that we use to represent the worker
@@ -88,9 +110,10 @@ WorkerManager.prototype = {
             argumentJs += ', [' + fullScripts.join(',') + ']';
         }
 
-        workerJs += '(' + this.workerJob + ')(' + argumentJs + ')';
+        workerJs += '(' + this._workerJob + ')(' + argumentJs + ')';
 
         var blob = new Blob([ workerJs ], { type: 'text/javascript' });
+        //noinspection JSUnresolvedFunction
         return URL.createObjectURL(blob);
     },
 
@@ -110,33 +133,10 @@ WorkerManager.prototype = {
      */
     _ensureWorker: function () {
         if (!this.worker) {
-            throw "The worker has already been killed";
-        }
-    },
-
-    /**
-     * The implementation of our worker.
-     */
-    workerJob: function (global, toImport) {
-
-        if (toImport && toImport.length) {
-            for (var i = 0; i < toImport.length; i++) {
-                global.importScripts(toImport[i]);
-            }
-        }
-
-        global.onmessage = function(event) {
-            var data = event.data.data;
-            var comparator = event.data.comparator;
-
-            function evaluator(item) {
-                return item[comparator];
-            }
-            data = _.sortBy(data, evaluator);
-
-            global.postMessage(data);
+            this._createWorker();
         }
     }
+
 };
 
 module.exports = WorkerManager;

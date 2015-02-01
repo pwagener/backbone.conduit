@@ -6,7 +6,7 @@ var DEFAULT_DATA_FILE = "./data/2008-20K.json";
 var wiring = require('./wiring');
 var Backbone = wiring.Backbone;
 var BackboneLodash = wiring.BackboneLodash;
-var Conduit = require("./../dist/backbone.conduit");
+var Conduit = require("./../src/index");
 
 var Benchmark = require('benchmark');
 
@@ -20,7 +20,6 @@ function makeTestFunction(CollectionType, methodName, options) {
 
 function onSuiteCycle(event) {
     console.log('  ' + String(event.target));
-
 }
 
 function onSuiteComplete(suite) {

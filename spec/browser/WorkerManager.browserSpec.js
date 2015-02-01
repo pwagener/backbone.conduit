@@ -3,14 +3,28 @@
 /**
  * This spec validates the behavior of the WorkerManager in the browser.
  */
-
 var when = require('when');
 var _ = require('underscore');
 
 var WorkerManager = require('./../../src/WorkerManager');
 
+function workerLengthTimesAThousand(global) {
+
+    global.onmessage = function(event) {
+        var count = 0;
+        var data = event.data;
+        for (var i = 0; i < 1000; i++) {
+            for (var j = 0; j < data.length; j++) {
+                count++;
+            }
+        }
+
+        global.postMessage(count);
+    }
+}
+
 describe('The WorkerManager module', function() {
-    var manager, MockWorker;
+    var manager, boundRunJob;
 
     beforeEach(function() {
         manager = new WorkerManager({
@@ -18,65 +32,37 @@ describe('The WorkerManager module', function() {
                 '/base/node_modules/underscore/underscore.js'
             ]
         });
+
+        boundRunJob = _.bind(manager.runJob, manager, {
+            job: workerLengthTimesAThousand,
+            data: [1, 2, 3, 4, 5]
+        });
     });
 
     it('should be instantiable', function() {
         expect(manager).to.be.an('object');
     });
 
-    it('should throw an exception on "sort" if it has already been killed', function(){
-        manager.terminate();
-        expect(manager.sort).to.throw();
-    });
-
-    it('should throw an exception if there is no sort specification', function() {
-        var boundMethod = _.bind(manager.sort, manager, null);
-        expect(boundMethod).to.throw();
-    });
-
-    it('should throw an exception if the comparator is a function', function() {
-        var boundMethod = _.bind(manager.sort, manager, {
-            comparator: function() {}
+    it('should throw an exception if there is not a job specified', function() {
+        var boundMethod = _.bind(manager.runJob, manager, {
+            data: [1, 2, 3, 4, 5]
         });
         expect(boundMethod).to.throw();
     });
 
-    describe('when attempting a sort', function() {
-        var sortSpec, promise;
+    it('should provide a promise from "runJob"', function() {
+        var returned = boundRunJob();
+        expect(when.isPromiseLike(returned)).to.equal(true);
+    });
 
-        beforeEach(function() {
-            sortSpec = {
-                comparator: 'name',
-                data: [
-                    {id: 2, name: "two", first: 0, second: 2},
-                    {id: 1, name: "one", first: 1, second: 0},
-                    {id: 3, name: "three", first: 1, second: 2}
-                ]
-            };
-
-            promise = manager.sort(sortSpec);
-        });
-
-        it('should return a promise from "sort"', function() {
-            //noinspection BadExpressionStatementJS
-            expect(when.isPromiseLike(promise)).to.be.true;
-        });
-
-        it('should resolve the promise to an array', function() {
-            expect(promise).to.eventually.be.an('array');
-        });
-
-        it('should resolve to an array of the same length', function() {
-            expect(promise).to.eventually.have.length(3);
-        });
-
-        it('should resolve the data sorted by the comparator', function(done) {
-            // chaiAsPromised/Things doesn't appear to support array order testing, so ...
-            promise.then(function(sorted) {
-                expect(sorted[0].name).to.equal('one');
-                done();
-            });
+    it('should resolve the promise to the correct count', function(done) {
+        boundRunJob().then(function(result) {
+            expect(result).to.equal(5000);
+            done();
         });
     });
+
+    // TODO:  test calling multiple times ... ?
+    // TODO:  test worker shutdown after a second
 
 });

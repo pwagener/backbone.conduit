@@ -2,8 +2,11 @@
 
 var _ = require('underscore');
 var Backbone = require('backbone');
+var when = require('when');
+
 var fill = require('./fill');
 var refill = require('./refill');
+var sortAsync = require('./sortAsync');
 
 /**
  * This utility method is taken from backbone.js verbatim
@@ -27,11 +30,33 @@ function fetchJumbo(options) {
     var success = options.success;
     var collection = this;
     options.success = function(resp) {
-        // This is the interesting line:  use refill/fill instead of reset/set
+        // This is one change from 'fetch':  use refill/fill instead of reset/set
         var method = options.reset ? 'refill' : 'fill';
-        collection[method](resp, options);
-        if (success) success(collection, resp, options);
-        collection.trigger('sync', collection, resp, options);
+
+        // Function that will finish the fetch operation
+        var finishFetch = function(data) {
+            collection[method](data, options);
+            if (success) success(collection, data, options);
+            collection.trigger('sync', collection, data, options);
+        };
+
+        // If sorting requested, do it asynchronously
+        var sortable = collection.comparator && (options.at == null) && options.sort !== false;
+        if (sortable) {
+            // Ensure we don't do synchronous sort
+            options.sort = false;
+
+            // Do the async sort, then set the values.
+            var sortPromise = collection._useWorkerToSort({
+                data: resp,
+                comparator: collection.comparator
+            });
+            sortPromise.then(function(sorted) {
+                finishFetch(sorted);
+            });
+        } else {
+            finishFetch(resp);
+        }
     };
     wrapError(this, options);
     return this.sync('read', this, options);
@@ -41,16 +66,21 @@ var mixinObj = {
     fetchJumbo: fetchJumbo
 };
 
-
 module.exports = {
     mixin: function(Collection) {
 
+        // TODO:  does this really require 'refill'?
         if (!_.isFunction(Collection.prototype.refill)) {
             refill.mixin(Collection);
         }
 
+        // TODO:  does this really require 'fill'?
         if (!_.isFunction(Collection.prototype.fill)) {
             fill.mixin(Collection);
+        }
+
+        if (!_.isFunction(Collection.prototype.sortAsync)) {
+            sortAsync.mixin(Collection);
         }
 
         _.extend(Collection.prototype, mixinObj);
