@@ -28,11 +28,9 @@ collection.fetchJumbo();
 ## More, Please
 Please check out [The Documentation](http://pwagener.github.io/backbone.conduit/).
 
-Does documentation bore you?  Well, how about a
-[live demo of refill(...)](http://pwagener.github.io/backbone.conduit/examples/refill-vs-reset.html) showing the
-performance improvement versus `Backbone.Collection.reset(...)`.  Or perhaps a
-[live demo of fill(...)](http://pwagener.github.io/backbone.conduit/examples/fill-vs-set.html) allowing you to
-compare it to `Backbone.Collection.set(...)`?
+Does documentation bore you?  Well, have a look at:
+- A [live demo of refill(...)](http://pwagener.github.io/backbone.conduit/examples/refill-vs-reset.html) showing side-by-side performance versus `Backbone.Collection.reset(...)`.
+- A [live demo of fill(...)](http://pwagener.github.io/backbone.conduit/examples/fill-vs-set.html) showing side-by-side performance versus `Backbone.Collection.set(...)`?
 
 ## Issues
 Have problems?  Please [file an issue](https://github.com/pwagener/backbone.conduit/issues)!
