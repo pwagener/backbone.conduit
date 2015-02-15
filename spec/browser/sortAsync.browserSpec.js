@@ -70,6 +70,15 @@ describe('The sortAsync module', function() {
                     done();
                 });
             });
+
+            it('triggers a "sort" event', function(done) {
+                var sortSpy = this.sinon.spy();
+                collection.on('sort', sortSpy);
+                promise.then(function(sorted) {
+                    expect(sortSpy.callCount).to.equal(1);
+                    done();
+                });
+            });
         });
     });
 });

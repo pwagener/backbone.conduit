@@ -13,7 +13,9 @@ function ensureWorker() {
         this._worker = _Worker.create();
     }
 }
-function sortAsync() {
+function sortAsync(options) {
+    options = options || {};
+
     if (isBrowser) {
         config.ensureUnderscore('sortAsync');
 
@@ -39,6 +41,9 @@ function sortAsync() {
                 }
 
                 self.comparator = comparator;
+                if (!options.silent) {
+                    self.trigger('sort', self, options);
+                }
                 resolve(self);
             }, function(err) {
                 reject(err);
