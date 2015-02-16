@@ -6,7 +6,7 @@ var config = require('./config');
 var fill = require('./fill');
 var refill = require('./refill');
 var Collection = require('./Collection');
-var fetchJumbo = require('./fetchJumbo');
+var haul = require('./haul');
 var sortAsync = require('./sortAsync');
 
 Backbone.Conduit = module.exports = {
@@ -14,8 +14,11 @@ Backbone.Conduit = module.exports = {
 
     fill: fill,
     refill: refill,
-    fetchJumbo: fetchJumbo,
+    haul: haul,
     sortAsync: sortAsync,
 
-    Collection: Collection
+    Collection: Collection,
+
+    // Deprecated
+    fetchJumbo: require('./fetchJumbo')
 };

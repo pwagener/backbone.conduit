@@ -9,7 +9,7 @@ var _ = require('underscore');
 var fill = require('./fill');
 var refill = require('./refill');
 var sortAsync = require('./sortAsync');
-var fetchJumbo = require('./fetchJumbo');
+var haul = require('./haul');
 
 // Extend Backbone.Collection and provide the 'refill' method
 var Collection = Backbone.Collection.extend({ });
@@ -18,6 +18,6 @@ var Collection = Backbone.Collection.extend({ });
 fill.mixin(Collection);
 refill.mixin(Collection);
 sortAsync.mixin(Collection);
-fetchJumbo.mixin(Collection);
+haul.mixin(Collection);
 
 module.exports = Collection;

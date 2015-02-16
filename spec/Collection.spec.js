@@ -13,8 +13,8 @@ describe("The Conduit.Collection", function() {
         expect(Collection.prototype.refill).to.be.a('function');
     });
 
-    it('has a "fetchJumbo" method', function() {
-        expect(Collection.prototype.fetchJumbo).to.be.a('function');
+    it('has a "haul" method', function() {
+        expect(Collection.prototype.haul).to.be.a('function');
     });
 
     it('has a "sortAsync" method', function() {

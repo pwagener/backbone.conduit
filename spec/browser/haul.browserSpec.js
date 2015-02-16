@@ -4,13 +4,13 @@ var Backbone = require('backbone');
 var when = require('when');
 
 var config = require('./../../src/config');
-var fetchJumbo = require('./../../src/fetchJumbo');
+var haul = require('./../../src/haul');
 var mockServer = require('./../mockServer');
 
 var FooCollection = Backbone.Collection.extend({
     url: '/foo'
 });
-fetchJumbo.mixin(FooCollection);
+haul.mixin(FooCollection);
 
 
 function fetchAndWait(collection) {
@@ -20,13 +20,13 @@ function fetchAndWait(collection) {
             resolve(collection);
         });
 
-        collection.fetchJumbo({
+        collection.haul({
             sort: true
         });
     });
 }
 
-describe('The fetchJumbo module', function() {
+describe('The haul module', function() {
     var collection;
 
     beforeEach(function() {

@@ -7,7 +7,7 @@
 		var a = typeof exports === 'object' ? factory(require("backbone"), require("underscore")) : factory(root["Backbone"], root["_"]);
 		for(var i in a) (typeof exports === 'object' ? exports : root)[i] = a[i];
 	}
-})(this, function(__WEBPACK_EXTERNAL_MODULE_1__, __WEBPACK_EXTERNAL_MODULE_8__) {
+})(this, function(__WEBPACK_EXTERNAL_MODULE_1__, __WEBPACK_EXTERNAL_MODULE_9__) {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
@@ -62,7 +62,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var fill = __webpack_require__(3);
 	var refill = __webpack_require__(4);
 	var Collection = __webpack_require__(5);
-	var fetchJumbo = __webpack_require__(6);
+	var haul = __webpack_require__(6);
 	var sortAsync = __webpack_require__(7);
 
 	Backbone.Conduit = module.exports = {
@@ -70,10 +70,13 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    fill: fill,
 	    refill: refill,
-	    fetchJumbo: fetchJumbo,
+	    haul: haul,
 	    sortAsync: sortAsync,
 
-	    Collection: Collection
+	    Collection: Collection,
+
+	    // Deprecated
+	    fetchJumbo: __webpack_require__(8)
 	};
 
 
@@ -93,8 +96,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * It is accessible externally via 'Conduit.config'
 	 */
 
-	var _ = __webpack_require__(8);
-	var _Worker = __webpack_require__(9);
+	var _ = __webpack_require__(9);
+	var _Worker = __webpack_require__(10);
 
 	var _values = {};
 
@@ -151,9 +154,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	'use strict';
 
-	var _ = __webpack_require__(8);
+	var _ = __webpack_require__(9);
 	var Backbone = __webpack_require__(1);
-	var shortCircuit = __webpack_require__(10);
+	var shortCircuit = __webpack_require__(11);
 
 	function fill(models, options) {
 	    // Create the short-circuit
@@ -198,9 +201,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * 'Collection.reset(...)' in some circumstances.
 	 */
 
-	var _ = __webpack_require__(8);
+	var _ = __webpack_require__(9);
 	var Backbone = __webpack_require__(1);
-	var shortCircuit = __webpack_require__(10);
+	var shortCircuit = __webpack_require__(11);
 
 	/**
 	 * Implementation of the refill function as an alternative to Backbone.Collection.reset
@@ -245,12 +248,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	 */
 
 	var Backbone = __webpack_require__(1);
-	var _ = __webpack_require__(8);
+	var _ = __webpack_require__(9);
 
 	var fill = __webpack_require__(3);
 	var refill = __webpack_require__(4);
 	var sortAsync = __webpack_require__(7);
-	var fetchJumbo = __webpack_require__(6);
+	var haul = __webpack_require__(6);
 
 	// Extend Backbone.Collection and provide the 'refill' method
 	var Collection = Backbone.Collection.extend({ });
@@ -259,7 +262,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	fill.mixin(Collection);
 	refill.mixin(Collection);
 	sortAsync.mixin(Collection);
-	fetchJumbo.mixin(Collection);
+	haul.mixin(Collection);
 
 	module.exports = Collection;
 
@@ -269,9 +272,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	'use strict';
 
-	var _ = __webpack_require__(8);
+	var _ = __webpack_require__(9);
 	var Backbone = __webpack_require__(1);
-	var when = __webpack_require__(12);
+	var when = __webpack_require__(13);
 
 	var config = __webpack_require__(2);
 	var fill = __webpack_require__(3);
@@ -294,7 +297,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * Conduit.Collection.fill/refill instead of Backbone.Collection.set/reset when data
 	 * is successfully returned from the server.
 	 */
-	function fetchJumbo(options) {
+	function haul(options) {
 	    options = options ? _.clone(options) : {};
 	    if (options.parse === void 0) options.parse = true;
 	    var success = options.success;
@@ -335,7 +338,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	var mixinObj = {
-	    fetchJumbo: fetchJumbo
+	    haul: haul
 	};
 
 	module.exports = {
@@ -364,11 +367,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	'use strict';
 
-	var _ = __webpack_require__(8);
-	var when = __webpack_require__(12);
+	var _ = __webpack_require__(9);
+	var when = __webpack_require__(13);
 
 	var config = __webpack_require__(2);
-	var _Worker = __webpack_require__(9);
+	var _Worker = __webpack_require__(10);
 
 	var isBrowser = typeof document !== 'undefined';
 
@@ -450,10 +453,45 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 8 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = __WEBPACK_EXTERNAL_MODULE_8__;
+	/**
+	 *  NOTE:  this module has been renamed 'haul.js'.  The 'fetchJumbo' module
+	 *  and related function will be removed in a future release.
+	 */
+	'use strict';
+
+	var _ = __webpack_require__(9);
+
+	var haul = __webpack_require__(6);
+
+	function warn() {
+	    console.warn("The 'fetchJumbo' module has been renamed 'haul'.");
+	    console.warn("'fetchJumbo' will be removed in a subsequent release.");
+	}
+
+	module.exports = {
+	    mixin: function(Collection) {
+	        warn();
+	        haul.mixin(Collection);
+
+	        _.extend(Collection.prototype, {
+	            fetchJumbo: function(options) {
+	                warn();
+	                return this.haul(options);
+	            }
+	        });
+
+	        return Collection;
+	    }
+	};
 
 /***/ },
 /* 9 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = __WEBPACK_EXTERNAL_MODULE_9__;
+
+/***/ },
+/* 10 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
@@ -464,8 +502,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * prior to calling any of the *Async() functions.
 	 */
 
-	var _ = __webpack_require__(8);
-	var WorkerManager = __webpack_require__(11);
+	var _ = __webpack_require__(9);
+	var WorkerManager = __webpack_require__(12);
 
 	/**
 	 * This method is the implementation of the worker code to do a sort, which
@@ -550,7 +588,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 10 */
+/* 11 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -559,7 +597,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * This module is shared between 'fill' and 'refill' as where the short-circuit method
 	 * implementations live.
 	 */
-	var _ = __webpack_require__(8);
+	var _ = __webpack_require__(9);
 	var Backbone = __webpack_require__(1);
 
 
@@ -701,7 +739,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 11 */
+/* 12 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -710,8 +748,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * terminating it when necessary, using Promises for communication.
 	 */
 
-	var _ = __webpack_require__(8);
-	var when = __webpack_require__(12);
+	var _ = __webpack_require__(9);
+	var when = __webpack_require__(13);
 
 	function WorkerManager(options) {
 	    this.initialize(options);
@@ -848,7 +886,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = WorkerManager;
 
 /***/ },
-/* 12 */
+/* 13 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -858,29 +896,29 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * when is part of the cujoJS family of libraries (http://cujojs.com/)
 	 * @author Brian Cavalier
 	 * @author John Hann
-	 * @version 3.6.4
+	 * @version 3.7.2
 	 */
 	(function(define) { 'use strict';
 	!(__WEBPACK_AMD_DEFINE_RESULT__ = function (require) {
 
-		var timed = __webpack_require__(16);
-		var array = __webpack_require__(17);
-		var flow = __webpack_require__(18);
-		var fold = __webpack_require__(19);
-		var inspect = __webpack_require__(20);
-		var generate = __webpack_require__(21);
-		var progress = __webpack_require__(22);
-		var withThis = __webpack_require__(23);
-		var unhandledRejection = __webpack_require__(24);
-		var TimeoutError = __webpack_require__(13);
+		var timed = __webpack_require__(17);
+		var array = __webpack_require__(18);
+		var flow = __webpack_require__(19);
+		var fold = __webpack_require__(20);
+		var inspect = __webpack_require__(21);
+		var generate = __webpack_require__(22);
+		var progress = __webpack_require__(23);
+		var withThis = __webpack_require__(24);
+		var unhandledRejection = __webpack_require__(25);
+		var TimeoutError = __webpack_require__(14);
 
 		var Promise = [array, flow, fold, generate, progress,
 			inspect, withThis, timed, unhandledRejection]
 			.reduce(function(Promise, feature) {
 				return feature(Promise);
-			}, __webpack_require__(14));
+			}, __webpack_require__(15));
 
-		var apply = __webpack_require__(15)(Promise);
+		var apply = __webpack_require__(16)(Promise);
 
 		// Public API
 
@@ -1079,11 +1117,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
 		return when;
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	})(__webpack_require__(25));
+	})(__webpack_require__(26));
 
 
 /***/ },
-/* 13 */
+/* 14 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -1112,10 +1150,10 @@ return /******/ (function(modules) { // webpackBootstrap
 
 		return TimeoutError;
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(25)));
+	}(__webpack_require__(26)));
 
 /***/ },
-/* 14 */
+/* 15 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -1125,20 +1163,20 @@ return /******/ (function(modules) { // webpackBootstrap
 	(function(define) { 'use strict';
 	!(__WEBPACK_AMD_DEFINE_RESULT__ = function (require) {
 
-		var makePromise = __webpack_require__(26);
-		var Scheduler = __webpack_require__(27);
-		var async = __webpack_require__(28).asap;
+		var makePromise = __webpack_require__(27);
+		var Scheduler = __webpack_require__(28);
+		var async = __webpack_require__(29).asap;
 
 		return makePromise({
 			scheduler: new Scheduler(async)
 		});
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	})(__webpack_require__(25));
+	})(__webpack_require__(26));
 
 
 /***/ },
-/* 15 */
+/* 16 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -1193,13 +1231,13 @@ return /******/ (function(modules) { // webpackBootstrap
 		}
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(25)));
+	}(__webpack_require__(26)));
 
 
 
 
 /***/ },
-/* 16 */
+/* 17 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -1209,8 +1247,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	(function(define) { 'use strict';
 	!(__WEBPACK_AMD_DEFINE_RESULT__ = function(require) {
 
-		var env = __webpack_require__(28);
-		var TimeoutError = __webpack_require__(13);
+		var env = __webpack_require__(29);
+		var TimeoutError = __webpack_require__(14);
 
 		function setTimeout(f, ms, x, y) {
 			return env.setTimer(function() {
@@ -1279,11 +1317,11 @@ return /******/ (function(modules) { // webpackBootstrap
 		};
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(25)));
+	}(__webpack_require__(26)));
 
 
 /***/ },
-/* 17 */
+/* 18 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -1293,8 +1331,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	(function(define) { 'use strict';
 	!(__WEBPACK_AMD_DEFINE_RESULT__ = function(require) {
 
-		var state = __webpack_require__(29);
-		var applier = __webpack_require__(15);
+		var state = __webpack_require__(30);
+		var applier = __webpack_require__(16);
 
 		return function array(Promise) {
 
@@ -1528,8 +1566,12 @@ return /******/ (function(modules) { // webpackBootstrap
 
 			function settleOne(p) {
 				var h = Promise._handler(p);
-				return h.state() === 0 ? toPromise(p).then(state.fulfilled, state.rejected)
-						: state.inspect(h);
+				if(h.state() === 0) {
+					return toPromise(p).then(state.fulfilled, state.rejected);
+				}
+
+				h._unreport();
+				return state.inspect(h);
 			}
 
 			/**
@@ -1570,11 +1612,11 @@ return /******/ (function(modules) { // webpackBootstrap
 		};
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(25)));
+	}(__webpack_require__(26)));
 
 
 /***/ },
-/* 18 */
+/* 19 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -1736,11 +1778,11 @@ return /******/ (function(modules) { // webpackBootstrap
 		}
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(25)));
+	}(__webpack_require__(26)));
 
 
 /***/ },
-/* 19 */
+/* 20 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -1769,11 +1811,11 @@ return /******/ (function(modules) { // webpackBootstrap
 		};
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(25)));
+	}(__webpack_require__(26)));
 
 
 /***/ },
-/* 20 */
+/* 21 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -1783,7 +1825,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	(function(define) { 'use strict';
 	!(__WEBPACK_AMD_DEFINE_RESULT__ = function(require) {
 
-		var inspect = __webpack_require__(29).inspect;
+		var inspect = __webpack_require__(30).inspect;
 
 		return function inspection(Promise) {
 
@@ -1795,11 +1837,11 @@ return /******/ (function(modules) { // webpackBootstrap
 		};
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(25)));
+	}(__webpack_require__(26)));
 
 
 /***/ },
-/* 21 */
+/* 22 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -1866,11 +1908,11 @@ return /******/ (function(modules) { // webpackBootstrap
 		};
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(25)));
+	}(__webpack_require__(26)));
 
 
 /***/ },
-/* 22 */
+/* 23 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -1896,11 +1938,11 @@ return /******/ (function(modules) { // webpackBootstrap
 		};
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(25)));
+	}(__webpack_require__(26)));
 
 
 /***/ },
-/* 23 */
+/* 24 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -1939,12 +1981,12 @@ return /******/ (function(modules) { // webpackBootstrap
 		};
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(25)));
+	}(__webpack_require__(26)));
 
 
 
 /***/ },
-/* 24 */
+/* 25 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -1954,10 +1996,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	(function(define) { 'use strict';
 	!(__WEBPACK_AMD_DEFINE_RESULT__ = function(require) {
 
-		var setTimer = __webpack_require__(28).setTimer;
-		var format = __webpack_require__(30);
+		var setTimer = __webpack_require__(29).setTimer;
+		var format = __webpack_require__(31);
 
 		return function unhandledRejection(Promise) {
+
 			var logError = noop;
 			var logInfo = noop;
 			var localConsole;
@@ -2031,21 +2074,21 @@ return /******/ (function(modules) { // webpackBootstrap
 		function noop() {}
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(25)));
-
-
-/***/ },
-/* 25 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = function() { throw new Error("define cannot be used indirect"); };
+	}(__webpack_require__(26)));
 
 
 /***/ },
 /* 26 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
+	module.exports = function() { throw new Error("define cannot be used indirect"); };
+
+
+/***/ },
+/* 27 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var __WEBPACK_AMD_DEFINE_RESULT__;/* WEBPACK VAR INJECTION */(function(process) {/** @license MIT License (c) copyright 2010-2014 original author or authors */
 	/** @author Brian Cavalier */
 	/** @author John Hann */
 
@@ -2055,6 +2098,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		return function makePromise(environment) {
 
 			var tasks = environment.scheduler;
+			var emitRejection = initEmitRejection();
 
 			var objectCreate = Object.create ||
 				function(proto) {
@@ -2521,7 +2565,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
 			Pending.prototype.run = function() {
 				var q = this.consumers;
-				var handler = this.join();
+				var handler = this.handler;
+				this.handler = this.handler.join();
 				this.consumers = void 0;
 
 				for (var i = 0; i < q.length; ++i) {
@@ -2683,6 +2728,8 @@ return /******/ (function(modules) { // webpackBootstrap
 			};
 
 			Rejected.prototype.fail = function(context) {
+				this.reported = true;
+				emitRejection('unhandledRejection', this);
 				Promise.onFatalRejection(this, context === void 0 ? this.context : context);
 			};
 
@@ -2692,9 +2739,10 @@ return /******/ (function(modules) { // webpackBootstrap
 			}
 
 			ReportTask.prototype.run = function() {
-				if(!this.rejection.handled) {
+				if(!this.rejection.handled && !this.rejection.reported) {
 					this.rejection.reported = true;
-					Promise.onPotentiallyUnhandledRejection(this.rejection, this.context);
+					emitRejection('unhandledRejection', this.rejection) ||
+						Promise.onPotentiallyUnhandledRejection(this.rejection, this.context);
 				}
 			};
 
@@ -2704,14 +2752,14 @@ return /******/ (function(modules) { // webpackBootstrap
 
 			UnreportTask.prototype.run = function() {
 				if(this.rejection.reported) {
-					Promise.onPotentiallyUnhandledRejectionHandled(this.rejection);
+					emitRejection('rejectionHandled', this.rejection) ||
+						Promise.onPotentiallyUnhandledRejectionHandled(this.rejection);
 				}
 			};
 
 			// Unhandled rejection hooks
 			// By default, everything is a noop
 
-			// TODO: Better names: "annotate"?
 			Promise.createContext
 				= Promise.enterContext
 				= Promise.exitContext
@@ -2924,14 +2972,54 @@ return /******/ (function(modules) { // webpackBootstrap
 
 			function noop() {}
 
+			function initEmitRejection() {
+				/*global process, self, CustomEvent*/
+				if(typeof process !== 'undefined' && process !== null
+					&& typeof process.emit === 'function') {
+					// Returning falsy here means to call the default
+					// onPotentiallyUnhandledRejection API.  This is safe even in
+					// browserify since process.emit always returns falsy in browserify:
+					// https://github.com/defunctzombie/node-process/blob/master/browser.js#L40-L46
+					return function(type, rejection) {
+						return type === 'unhandledRejection'
+							? process.emit(type, rejection.value, rejection)
+							: process.emit(type, rejection);
+					};
+				} else if(typeof self !== 'undefined' && typeof CustomEvent === 'function') {
+					return (function(noop, self, CustomEvent) {
+						var hasCustomEvent = false;
+						try {
+							var ev = new CustomEvent('unhandledRejection');
+							hasCustomEvent = ev instanceof CustomEvent;
+						} catch (e) {}
+
+						return !hasCustomEvent ? noop : function(type, rejection) {
+							var ev = new CustomEvent(type, {
+								detail: {
+									reason: rejection.value,
+									key: rejection
+								},
+								bubbles: false,
+								cancelable: true
+							});
+
+							return !self.dispatchEvent(ev);
+						};
+					}(noop, self, CustomEvent));
+				}
+
+				return noop;
+			}
+
 			return Promise;
 		};
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(25)));
-
+	}(__webpack_require__(26)));
+	
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(33)))
 
 /***/ },
-/* 27 */
+/* 28 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -2953,9 +3041,9 @@ return /******/ (function(modules) { // webpackBootstrap
 			this._async = async;
 			this._running = false;
 
-			this._queue = new Array(1<<16);
+			this._queue = this;
 			this._queueLen = 0;
-			this._afterQueue = new Array(1<<4);
+			this._afterQueue = {};
 			this._afterQueueLen = 0;
 
 			var self = this;
@@ -3013,11 +3101,11 @@ return /******/ (function(modules) { // webpackBootstrap
 		return Scheduler;
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(25)));
+	}(__webpack_require__(26)));
 
 
 /***/ },
-/* 28 */
+/* 29 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;var require;/* WEBPACK VAR INJECTION */(function(process) {/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -3051,7 +3139,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 		} else if (!capturedSetTimeout) { // vert.x
 			var vertxRequire = require;
-			var vertx = __webpack_require__(31);
+			var vertx = __webpack_require__(32);
 			setTimer = function (f, ms) { return vertx.setTimer(ms, f); };
 			clearTimer = vertx.cancelTimer;
 			asap = vertx.runOnLoop || vertx.runOnContext;
@@ -3092,12 +3180,12 @@ return /******/ (function(modules) { // webpackBootstrap
 			};
 		}
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(25)));
+	}(__webpack_require__(26)));
 	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(32)))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(33)))
 
 /***/ },
-/* 29 */
+/* 30 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -3134,11 +3222,11 @@ return /******/ (function(modules) { // webpackBootstrap
 		}
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(25)));
+	}(__webpack_require__(26)));
 
 
 /***/ },
-/* 30 */
+/* 31 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -3196,17 +3284,17 @@ return /******/ (function(modules) { // webpackBootstrap
 		}
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(25)));
+	}(__webpack_require__(26)));
 
 
 /***/ },
-/* 31 */
+/* 32 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* (ignored) */
 
 /***/ },
-/* 32 */
+/* 33 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// shim for using process in browser

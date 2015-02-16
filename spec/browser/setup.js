@@ -17,7 +17,7 @@ require('./sortAsync.browserSpec');
 require('./WorkerManager.browserSpec');
 require('./_Worker.browserSpec');
 require('./Collection.browserSpec');
-require('./fetchJumbo.browserSpec');
+require('./haul.browserSpec.js');
 
 window.expect = chai.expect;
 chai.use(sinonChai);
