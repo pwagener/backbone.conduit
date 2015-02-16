@@ -1,24 +1,15 @@
 /**
  * Test browser-specific pieces of the Collection
  */
+'use strict';
 
-var Conduit = require('./../../src/index');
-var Collection = Conduit.Collection;
+var config = require('./../../src/config');
+var Collection = require('./../../src/Collection');
 var mockServer = require('./../mockServer');
 
 var FooCollection = Collection.extend({
     url: '/foo'
 });
-
-var sampleData = [
-    {id: 2, name: "two", first: 0, second: 2},
-    {id: 1, name: "one", first: 1, second: 0},
-    {id: 3, name: "three", first: 1, second: 2}
-];
-
-function setUnderscorePath() {
-    Conduit.config.setUnderscorePath('/base/node_modules/underscore/underscore.js');
-}
 
 describe('The Conduit Collection', function() {
     var collection;
@@ -29,7 +20,7 @@ describe('The Conduit Collection', function() {
         });
         mockServer.add({
             url: '/foo',
-            data: sampleData
+            data: this.getSampleData()
         });
     });
 
@@ -59,10 +50,10 @@ describe('The Conduit Collection', function() {
         });
     });
 
-    describe('when resetting data unsorted', function() {
+    describe('when resetting unsorted data', function() {
         beforeEach(function() {
             collection.comparator = null;
-            collection.reset(sampleData);
+            collection.reset(this.getSampleData());
             collection.comparator = 'name';
         });
 
@@ -78,49 +69,11 @@ describe('The Conduit Collection', function() {
         });
 
         it('can sort async if underscore path is set', function(done) {
-            setUnderscorePath();
+            config.setUnderscorePath(window.underscorePath);
             collection.sortAsync().then(function() {
                 expect(collection.at(0).get('name')).to.equal('one');
                 done();
             });
         });
-    });
-
-    describe('when using "fetchJumbo"', function() {
-        var sortSpy, _useWorkerToSortSpy;
-
-        beforeEach(function(done) {
-            sortSpy = this.sinon.spy(collection, 'sort');
-            _useWorkerToSortSpy = this.sinon.spy(collection, '_useWorkerToSort');
-
-            // Ensure an empty collection
-            collection.reset();
-
-            // Ensure we've finished fetching; won't be synchronous because of 'sortAsync'
-            collection.once('sync', function() {
-                done();
-            });
-            collection.fetchJumbo({
-                sort: true
-            });
-        });
-
-        it('receives the sample data', function() {
-            expect(collection).to.have.length(3);
-        });
-
-        it('does not call synchronous sort', function() {
-            //noinspection BadExpressionStatementJS
-            expect(sortSpy.called).to.be.false;
-        });
-
-        it('calls _useWorkerToSort', function() {
-            //noinspection BadExpressionStatementJS
-            expect(_useWorkerToSortSpy.called).to.be.true;
-        });
-
-        it('contains sorted data', function() {
-            expect(collection.at(1).get('name')).to.equal('three');
-        })
     });
 });

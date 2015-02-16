@@ -17,18 +17,32 @@ require('./sortAsync.browserSpec');
 require('./WorkerManager.browserSpec');
 require('./_Worker.browserSpec');
 require('./Collection.browserSpec');
+require('./fetchJumbo.browserSpec');
 
 window.expect = chai.expect;
 chai.use(sinonChai);
 chai.use(chaiAsPromised);
 
+window.underscorePath = '/base/node_modules/underscore/underscore.js';
+
+function getSampleData() {
+    return[
+        {id: 2, name: "two", first: 0, second: 2},
+        {id: 1, name: "one", first: 1, second: 0},
+        {id: 3, name: "three", first: 1, second: 2}
+    ];
+}
+
 beforeEach(function () {
-    this.server = sinon.fakeServer.create();
-    this.server.autoRespond = true;
     this.sinon = sinon.sandbox.create();
+
+    this.getSampleData = getSampleData;
 });
 
 afterEach(function () {
-    this.server.restore();
     this.sinon.restore();
+
+    // Make sure the Underscore path doesn't leak
+    var config = require('src/config');
+    config.setUnderscorePath(null);
 });

@@ -12,8 +12,6 @@
   "license": "MIT",
   "dependencies": {
     "backbone": "*",
-    "benchmark": "^1.0.0",
-    "catiline": "^2.9.3",
     "underscore": "*"
   }
 }

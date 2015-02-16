@@ -10,12 +10,6 @@ var sortAsync = Conduit.sortAsync;
 describe('The sortAsync module', function() {
     var Collection;
 
-    var sampleData = [
-        {id: 2, name: "two", first: 0, second: 2},
-        {id: 1, name: "one", first: 1, second: 0},
-        {id: 3, name: "three", first: 1, second: 2}
-    ];
-
     beforeEach(function() {
         Collection = Backbone.Collection.extend();
         Collection = sortAsync.mixin(Collection);
@@ -30,7 +24,7 @@ describe('The sortAsync module', function() {
         var collection;
         beforeEach(function() {
             collection = new Collection();
-            collection.reset(sampleData);
+            collection.reset(this.getSampleData());
             collection.comparator = 'name';
         });
 

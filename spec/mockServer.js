@@ -96,6 +96,9 @@ if (inTestContext) {
     });
 }
 
+// Reset ourselves initially
+reset();
+
 module.exports = {
 
     /**

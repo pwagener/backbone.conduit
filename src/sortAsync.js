@@ -16,7 +16,7 @@ function ensureWorker() {
 function sortAsync(options) {
     options = options || {};
 
-    if (isBrowser) {
+    if (config.isBrowserEnv()) {
         config.ensureUnderscore('sortAsync');
 
         ensureWorker.call(this);

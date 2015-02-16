@@ -67,10 +67,12 @@ function sortAsync(sortSpec) {
         throw new Error("Cannot sort with a function comparator");
     }
 
-    return this._workerManager.runJob({
+    var jobObject = {
         job: workerSort,
         data: sortSpec
-    });
+    };
+
+    return this._workerManager.runJob(jobObject);
 }
 
 function create() {

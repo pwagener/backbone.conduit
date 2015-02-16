@@ -19,11 +19,6 @@ describe("The fill module", function() {
         });
 
         describe('and instantiated', function() {
-            var sampleData = [
-                {id: 2, name: "two", first: 0, second: 2},
-                {id: 1, name: "one", first: 1, second: 0},
-                {id: 3, name: "three", first: 1, second: 2}
-            ];
 
             var extraData = [
                 {id: 4, name: "four", first: 2, second: 2},
@@ -51,7 +46,7 @@ describe("The fill module", function() {
 
             describe('and provided data via "fill"', function () {
                 beforeEach(function () {
-                    instance.fill(sampleData);
+                    instance.fill(this.getSampleData());
                 });
 
                 it('contains the right data', function () {
@@ -81,7 +76,7 @@ describe("The fill module", function() {
 
                 it('can handle natural sorting', function() {
                     instance.comparator = "id";
-                    instance.fill(sampleData, { sort: true });
+                    instance.fill(this.getSampleData(), { sort: true });
                     var first = instance.at(0);
                     expect(first.id).to.equal(1);
                 });
@@ -91,7 +86,7 @@ describe("The fill module", function() {
                         return -1 * item.id;
                     };
 
-                    instance.fill(sampleData, { sort: true });
+                    instance.fill(this.getSampleData(), { sort: true });
                     var first = instance.at(0);
                     expect(first.id).to.equal(3);
                 });
@@ -107,7 +102,7 @@ describe("The fill module", function() {
                         }
                         firedEvents[event]++;
                     });
-                    instance.fill(sampleData, { sort: true });
+                    instance.fill(this.getSampleData(), { sort: true });
                 });
 
                 it('fires a single "fill" event', function() {
@@ -149,13 +144,13 @@ describe("The fill module", function() {
                 });
 
                 it('calls parse on the model', function() {
-                    customInstance.fill(sampleData);
+                    customInstance.fill(this.getSampleData());
                     expect(customInstance.at(0).has('calculated'));
                 });
 
                 it('will validate correctly after using "refill"', function() {
                     // This should not add anything
-                    customInstance.fill(sampleData);
+                    customInstance.fill(this.getSampleData());
                     expect(customInstance.add(badData, { validate: true })).to.equal(false);
                     expect(customInstance.length).to.equal(3);
                 });

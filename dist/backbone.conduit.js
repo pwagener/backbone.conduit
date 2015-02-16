@@ -118,6 +118,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	}
 
+	function isBrowserEnv() {
+	    return typeof document !== 'undefined';
+	}
 
 	function setUnderscorePath(path) {
 	    _Worker.setUnderscorePath(path);
@@ -127,8 +130,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	var underscorePathKey = 'underscoreJsPath';
 
 	module.exports = {
+	    _values: _values,
+
+	    // Are we running in a browser environment?
+	    isBrowserEnv: isBrowserEnv,
+
+	    // Set the path to the available Underscore JS
 	    setUnderscorePath: setUnderscorePath,
+
+	    // Get the path to Underscore JS
 	    getUnderscorePath: _.bind(getValue, this, underscorePathKey),
+
+	    // Ensure Underscore JS path has been set.  Throws an exception otherwise.
 	    ensureUnderscore: _.bind(ensureValue, this, underscorePathKey)
 	};
 
@@ -260,6 +273,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var Backbone = __webpack_require__(1);
 	var when = __webpack_require__(12);
 
+	var config = __webpack_require__(2);
 	var fill = __webpack_require__(3);
 	var refill = __webpack_require__(4);
 	var sortAsync = __webpack_require__(7);
@@ -298,8 +312,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	        // If sorting requested, do it asynchronously
 	        var sortable = collection.comparator && (options.at == null) && options.sort !== false;
-	        if (sortable) {
-	            // Ensure we don't do synchronous sort
+
+	        if (sortable && config.isBrowserEnv() && config.getUnderscorePath()) {
+	            // We can use the asynchronous sorting.  So, ensure we don't do synchronous sort
 	            options.sort = false;
 
 	            // Do the async sort, then set the values.
@@ -311,6 +326,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	                finishFetch(sorted);
 	            });
 	        } else {
+	            // Finish the fetch the usual way, with synchronous sorting if requested.
 	            finishFetch(resp);
 	        }
 	    };
@@ -324,13 +340,10 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	module.exports = {
 	    mixin: function(Collection) {
-
-	        // TODO:  does this really require 'refill'?
 	        if (!_.isFunction(Collection.prototype.refill)) {
 	            refill.mixin(Collection);
 	        }
 
-	        // TODO:  does this really require 'fill'?
 	        if (!_.isFunction(Collection.prototype.fill)) {
 	            fill.mixin(Collection);
 	        }
@@ -364,8 +377,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	        this._worker = _Worker.create();
 	    }
 	}
-	function sortAsync() {
-	    if (isBrowser) {
+	function sortAsync(options) {
+	    options = options || {};
+
+	    if (config.isBrowserEnv()) {
 	        config.ensureUnderscore('sortAsync');
 
 	        ensureWorker.call(this);
@@ -390,6 +405,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	                }
 
 	                self.comparator = comparator;
+	                if (!options.silent) {
+	                    self.trigger('sort', self, options);
+	                }
 	                resolve(self);
 	            }, function(err) {
 	                reject(err);
@@ -507,10 +525,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	        throw new Error("Cannot sort with a function comparator");
 	    }
 
-	    return this._workerManager.runJob({
+	    var jobObject = {
 	        job: workerSort,
 	        data: sortSpec
-	    });
+	    };
+
+	    return this._workerManager.runJob(jobObject);
 	}
 
 	function create() {

@@ -4,6 +4,7 @@ var _ = require('underscore');
 var Backbone = require('backbone');
 var when = require('when');
 
+var config = require('./config');
 var fill = require('./fill');
 var refill = require('./refill');
 var sortAsync = require('./sortAsync');
@@ -42,8 +43,9 @@ function fetchJumbo(options) {
 
         // If sorting requested, do it asynchronously
         var sortable = collection.comparator && (options.at == null) && options.sort !== false;
-        if (sortable) {
-            // Ensure we don't do synchronous sort
+
+        if (sortable && config.isBrowserEnv() && config.getUnderscorePath()) {
+            // We can use the asynchronous sorting.  So, ensure we don't do synchronous sort
             options.sort = false;
 
             // Do the async sort, then set the values.
@@ -55,6 +57,7 @@ function fetchJumbo(options) {
                 finishFetch(sorted);
             });
         } else {
+            // Finish the fetch the usual way, with synchronous sorting if requested.
             finishFetch(resp);
         }
     };
@@ -68,13 +71,10 @@ var mixinObj = {
 
 module.exports = {
     mixin: function(Collection) {
-
-        // TODO:  does this really require 'refill'?
         if (!_.isFunction(Collection.prototype.refill)) {
             refill.mixin(Collection);
         }
 
-        // TODO:  does this really require 'fill'?
         if (!_.isFunction(Collection.prototype.fill)) {
             fill.mixin(Collection);
         }

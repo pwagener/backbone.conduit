@@ -29,6 +29,9 @@ function ensureValue(key, module) {
     }
 }
 
+function isBrowserEnv() {
+    return typeof document !== 'undefined';
+}
 
 function setUnderscorePath(path) {
     _Worker.setUnderscorePath(path);
@@ -38,7 +41,17 @@ function setUnderscorePath(path) {
 var underscorePathKey = 'underscoreJsPath';
 
 module.exports = {
+    _values: _values,
+
+    // Are we running in a browser environment?
+    isBrowserEnv: isBrowserEnv,
+
+    // Set the path to the available Underscore JS
     setUnderscorePath: setUnderscorePath,
+
+    // Get the path to Underscore JS
     getUnderscorePath: _.bind(getValue, this, underscorePathKey),
+
+    // Ensure Underscore JS path has been set.  Throws an exception otherwise.
     ensureUnderscore: _.bind(ensureValue, this, underscorePathKey)
 };

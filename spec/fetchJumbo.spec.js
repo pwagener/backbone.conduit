@@ -6,16 +6,8 @@ var _ = require('underscore');
 var fetchJumbo = require('./../src/fetchJumbo');
 var when = require('when');
 
-var sampleData = [
-    {id: 2, name: "two", first: 0, second: 2},
-    {id: 1, name: "one", first: 1, second: 0},
-    {id: 3, name: "three", first: 1, second: 2}
-];
 
-
-function callThenResolve(collection, method, resolveValue) {
-    resolveValue = resolveValue || collection;
-
+function callThenResolve(collection, method) {
     return when.promise(function(resolve) {
         collection[method]().then(function() {
             resolve(collection);
@@ -61,7 +53,7 @@ describe("The fetchJumbo module", function() {
         beforeEach(function() {
             mockServer.add({
                 url: '/foo',
-                data: sampleData
+                data: this.getSampleData()
             });
 
             collection = new Collection();
@@ -69,6 +61,7 @@ describe("The fetchJumbo module", function() {
 
         afterEach(function() {
             mockServer.reset();
+            collection.comparator = null;
         });
 
         it('populates the collection', function(done) {
@@ -96,6 +89,20 @@ describe("The fetchJumbo module", function() {
                 expect(refillSpy.callCount).to.equal(1);
                 done();
             });
+        });
+
+        it('sorts when requested', function(done) {
+            collection.once('sync', function() {
+                // Make sure it's sorted
+                expect(collection.at(0).get('name')).to.equals('one');
+                done();
+            });
+            collection.comparator = 'name';
+            collection.fetchJumbo({ sort: true });
+        });
+
+        it('sorts asynchronously when available', function() {
+            // TODO: write me
         });
     });
 });
