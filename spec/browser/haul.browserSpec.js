@@ -1,6 +1,7 @@
 'use strict';
 
 var Backbone = require('backbone');
+var _ = require('underscore');
 var when = require('when');
 
 var config = require('./../../src/config');
@@ -13,16 +14,18 @@ var FooCollection = Backbone.Collection.extend({
 haul.mixin(FooCollection);
 
 
-function fetchAndWait(collection) {
+function fetchAndWait(collection, options) {
     return when.promise(function(resolve) {
         // Ensure we've finished fetching; might not be synchronous because of 'sortAsync'
         collection.once('sync', function() {
             resolve(collection);
         });
 
-        collection.haul({
+        var haulOpts = _.extend({}, options, {
             sort: true
         });
+
+        collection.haul(haulOpts);
     });
 }
 
@@ -95,8 +98,16 @@ describe('The haul module', function() {
             });
         });
 
-        it('uses asynchronous sort', function(done) {
+        it("won't use asynchronous sort by default", function(done) {
             fetchAndWait(collection).then(function() {
+                //noinspection BadExpressionStatementJS
+                expect(_useWorkerToSortSpy.called).to.be.false;
+                done();
+            });
+        });
+
+        it("will use asynchronous sort for a 'reset'", function(done) {
+            fetchAndWait(collection, { reset: true }).then(function() {
                 //noinspection BadExpressionStatementJS
                 expect(_useWorkerToSortSpy.called).to.be.true;
                 done();

@@ -41,10 +41,15 @@ function haul(options) {
             collection.trigger('sync', collection, data, options);
         };
 
-        // If sorting requested, do it asynchronously
-        var sortable = collection.comparator && (options.at == null) && options.sort !== false;
+        // We may be able to sort asynchronously.  The conditions we need:
+        //  - We are in the browser
+        //  - We have a path to Underscore configured
+        //  - The collection has a comparator
+        //  - The collection is being 'reset'
+        //  - A sort was requested
 
-        if (sortable && config.isBrowserEnv() && config.getUnderscorePath()) {
+        var sortable = collection.comparator && options.reset && options.sort !== false;
+        if (config.isBrowserEnv() && config.getUnderscorePath() && sortable) {
             // We can use the asynchronous sorting.  So, ensure we don't do synchronous sort
             options.sort = false;
 
