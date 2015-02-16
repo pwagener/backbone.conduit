@@ -6,8 +6,6 @@ var when = require('when');
 var config = require('./config');
 var _Worker = require('./_Worker');
 
-var isBrowser = typeof document !== 'undefined';
-
 function ensureWorker() {
     if (!this._worker) {
         this._worker = _Worker.create();
