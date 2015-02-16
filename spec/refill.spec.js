@@ -19,12 +19,6 @@ describe("The refill module", function() {
         });
 
         describe('and instantiated', function() {
-            var sampleData = [
-                { id: 2, name: "two", first: 0, second: 2 },
-                { id: 1, name: "one", first: 1, second: 0 },
-                { id: 3, name: "three", first: 1, second: 2 }
-            ];
-
             var badData = {id: 6, name: "six", first: 6};
 
             var instance;
@@ -46,7 +40,7 @@ describe("The refill module", function() {
 
             describe('and provided data via "reset"', function() {
                 beforeEach(function() {
-                    instance.reset(sampleData);
+                    instance.reset(this.getSampleData());
                 });
 
                 it('contains the right data', function() {
@@ -67,7 +61,7 @@ describe("The refill module", function() {
 
             describe('and provided data via "refill"', function() {
                 beforeEach(function() {
-                    instance.refill(sampleData);
+                    instance.refill(this.getSampleData());
                 });
 
                 it('contains the right data', function() {
@@ -98,7 +92,7 @@ describe("The refill module", function() {
 
                 it('can handle natural sorting', function() {
                     instance.comparator = "id";
-                    instance.refill(sampleData, { sort: true });
+                    instance.refill(this.getSampleData(), { sort: true });
                     var first = instance.at(0);
                     expect(first.id).to.equal(1);
                 });
@@ -108,7 +102,7 @@ describe("The refill module", function() {
                         return -1 * item.id;
                     };
 
-                    instance.refill(sampleData, { sort: true });
+                    instance.refill(this.getSampleData(), { sort: true });
                     var first = instance.at(0);
                     expect(first.id).to.equal(3);
                 });
@@ -122,7 +116,7 @@ describe("The refill module", function() {
                 it('fires a "reset" event', function() {
                     var resetSpy = this.sinon.spy();
                     instance.on('reset', resetSpy);
-                    instance.refill(sampleData);
+                    instance.refill(this.getSampleData());
 
                     expect(resetSpy.callCount).to.equal(1);
                 });
@@ -130,7 +124,7 @@ describe("The refill module", function() {
                 it('does not fire an "add" for each model', function() {
                     var addSpy = this.sinon.spy();
                     instance.on('add', addSpy);
-                    instance.refill(sampleData);
+                    instance.refill(this.getSampleData());
 
                     expect(addSpy.callCount).to.equal(0);
                 });
@@ -161,13 +155,13 @@ describe("The refill module", function() {
                 });
 
                 it('calls parse on the model', function() {
-                    customInstance.refill(sampleData);
+                    customInstance.refill(this.getSampleData());
                     expect(customInstance.at(0).has('calculated'));
                 });
 
                 it('will validate correctly after using "refill"', function() {
                     // This should not add anything
-                    customInstance.refill(sampleData);
+                    customInstance.refill(this.getSampleData());
                     expect(customInstance.add(badData, { validate: true })).to.equal(false);
                     expect(customInstance.length).to.equal(3);
                 });

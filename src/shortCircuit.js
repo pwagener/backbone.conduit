@@ -54,14 +54,15 @@ function quickCollectionSet(models, options) {
     // Force no-sort up front
     options = options || {};
     var needsSort = options.sort;
-    if (options.sort) {
+    var sortable = this.comparator && (options.at == null) && options.sort !== false;
+    if (sortable) {
         options.sort = false;
     }
 
     var returnedModels = this._originalCollectionSet(models, options);
 
     // Handle sorting after we have set everything
-    if (needsSort && _.isArray(returnedModels)) {
+    if (needsSort && sortable && _.isArray(returnedModels)) {
         this.sort();
         returnedModels = _.clone(this.models);
     }

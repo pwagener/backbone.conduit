@@ -21,8 +21,8 @@ var collection = new MyCollection();
 var aBigArray = [ ... ];
 collection.refill(aBigArray);
 
-// Or, if you need to fetch it asynchronously
-collection.fetchJumbo();
+// Or, if you need to get it asynchronously, instead of 'fetch()' do ...
+collection.haul();
 ```
 
 ## More, Please

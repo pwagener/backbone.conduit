@@ -6,12 +6,18 @@
 var Backbone = require('backbone');
 var _ = require('underscore');
 
-var refill = require('./refill');
 var fill = require('./fill');
-var fetchJumbo = require('./fetchJumbo');
+var refill = require('./refill');
+var sortAsync = require('./sortAsync');
+var haul = require('./haul');
 
 // Extend Backbone.Collection and provide the 'refill' method
 var Collection = Backbone.Collection.extend({ });
-fetchJumbo.mixin(Collection);
+
+// Add all the relevant modules to the new Collection type
+fill.mixin(Collection);
+refill.mixin(Collection);
+sortAsync.mixin(Collection);
+haul.mixin(Collection);
 
 module.exports = Collection;

@@ -4,7 +4,6 @@
 'use strict';
 
 var _ = require('underscore');
-var sinon = require('sinon');
 var when = require('when');
 
 /**
@@ -53,9 +52,10 @@ function _handleRequest(xhr) {
 }
 
 function captureAjax($) {
-    sinon.stub($, 'ajax', function(opts) {
+    $['ajax'] = function(opts) {
         return when(_handleRequest(opts));
-    });
+    };
+
     ajaxCaptured = true;
 }
 
@@ -95,6 +95,9 @@ if (inTestContext) {
         reset();
     });
 }
+
+// Reset ourselves initially
+reset();
 
 module.exports = {
 

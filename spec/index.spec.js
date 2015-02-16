@@ -13,7 +13,11 @@ describe('The index module', function() {
         expect(Conduit.refill).to.be.an('object');
     });
 
-    it('provides "fetchJumbo" module', function() {
+    it('provides "haul" module', function() {
+        expect(Conduit.haul).to.be.an('object');
+    });
+
+    it('provides (deprecated) "fetchJumbo" module', function() {
         expect(Conduit.fetchJumbo).to.be.an('object');
     });
 

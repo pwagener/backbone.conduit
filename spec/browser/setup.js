@@ -1,18 +1,29 @@
 'use strict';
 
-
-var sinon = require('sinon');
+// loaded by karma
+var sinon = window.sinon;
+delete window.sinon;
 var chai = require('chai');
 var sinonChai = require('sinon-chai');
 var chaiAsPromised = require('chai-as-promised');
-
 var Backbone = require('backbone');
-var mockServer = require('./mockServer');
+var Conduit = require('src/index');
+
+var mockServer = require('./../mockServer');
 mockServer.captureAjax(Backbone.$);
 
-global.expect = chai.expect;
+// load specs
+require('./sortAsync.browserSpec');
+require('./WorkerManager.browserSpec');
+require('./_Worker.browserSpec');
+require('./Collection.browserSpec');
+require('./haul.browserSpec.js');
+
+window.expect = chai.expect;
 chai.use(sinonChai);
 chai.use(chaiAsPromised);
+
+window.underscorePath = '/base/node_modules/underscore/underscore.js';
 
 function getSampleData() {
     return[
@@ -22,16 +33,16 @@ function getSampleData() {
     ];
 }
 
-
 beforeEach(function () {
     this.sinon = sinon.sandbox.create();
 
     this.getSampleData = getSampleData;
-    if (this.currentTest) {
-        this.currentTest.sinon = this.sinon;
-    }
 });
 
 afterEach(function () {
     this.sinon.restore();
+
+    // Make sure the Underscore path doesn't leak
+    var config = require('src/config');
+    config.setUnderscorePath(null);
 });

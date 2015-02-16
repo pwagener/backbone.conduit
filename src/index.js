@@ -2,18 +2,23 @@
 
 var Backbone = require('backbone');
 
+var config = require('./config');
 var fill = require('./fill');
 var refill = require('./refill');
 var Collection = require('./Collection');
-var fetchJumbo = require('./fetchJumbo');
+var haul = require('./haul');
+var sortAsync = require('./sortAsync');
 
 Backbone.Conduit = module.exports = {
-    Promise: function () {
-        throw new TypeError('An ES6-compliant Promise implementation must be provided');
-    },
+    config: config,
 
     fill: fill,
     refill: refill,
-    fetchJumbo: fetchJumbo,
-    Collection: Collection
+    haul: haul,
+    sortAsync: sortAsync,
+
+    Collection: Collection,
+
+    // Deprecated
+    fetchJumbo: require('./fetchJumbo')
 };
