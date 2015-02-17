@@ -313,10 +313,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	            collection.trigger('sync', collection, data, options);
 	        };
 
-	        // If sorting requested, do it asynchronously
-	        var sortable = collection.comparator && (options.at == null) && options.sort !== false;
+	        // We may be able to sort asynchronously.  The conditions we need:
+	        //  - We are in the browser
+	        //  - We have a path to Underscore configured
+	        //  - The collection has a "string" comparator
+	        //  - The collection is being 'reset'
+	        //  - A sort was requested
 
-	        if (sortable && config.isBrowserEnv() && config.getUnderscorePath()) {
+	        var goodComparator = _.isString(collection.comparator);
+	        var sortable = goodComparator && options.reset && options.sort !== false;
+	        if (config.isBrowserEnv() && config.getUnderscorePath() && sortable) {
 	            // We can use the asynchronous sorting.  So, ensure we don't do synchronous sort
 	            options.sort = false;
 
@@ -372,8 +378,6 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var config = __webpack_require__(2);
 	var _Worker = __webpack_require__(10);
-
-	var isBrowser = typeof document !== 'undefined';
 
 	function ensureWorker() {
 	    if (!this._worker) {
@@ -464,8 +468,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	var haul = __webpack_require__(6);
 
 	function warn() {
-	    console.warn("The 'fetchJumbo' module has been renamed 'haul'.");
-	    console.warn("'fetchJumbo' will be removed in a subsequent release.");
+	    console.log("WARNING: The 'fetchJumbo' module has been renamed 'haul'.");
+	    console.log("WARNING: 'fetchJumbo' will be removed in a subsequent release.");
 	}
 
 	module.exports = {
