@@ -7,8 +7,16 @@ Conduit is a Backbone plugin that improves the ability of Backbone to handle lar
 [![Join the chat at https://gitter.im/pwagener/backbone.conduit](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/pwagener/backbone.conduit?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 ## TL;DR
-Use `Conduit.Collection` (an extension of `Backbone.Collection`) if you need to
-initialize a Collection with a large amount of data:
+`Conduit` provides some special functions for dealing
+with large data sets.  Install it with `npm` or `bower`:
+```
+$ bower install --save backbone.conduit
+... or ...
+$ npm install --save backbone.conduit
+```
+
+`Conduit.Collection` (an extension of `Backbone.Collection`) is a great way to get started:
+
 ```
 var collection = new Backbone.Conduit.Collection();
 
@@ -19,14 +27,18 @@ collection.refill(aBigArray);
 // Or, if you need to get it asynchronously, instead of 'fetch()' do ...
 collection.haul();
 ```
+Performance varies, but typically loading data into a `Conduit.Collection` is ~ 50% faster than a `Backbone.Collection`.
 
 ### Interesting.  Can you tell me more?
 - Sure!  [Here's the Documentation](http://pwagener.github.io/backbone.conduit/).
 
 ### Reading bores me.  Can you show me instead?
-- Yes!  [Check out the Examples](http://pwagener.github.io/backbone.conduit/examples)
+- Yes!  [Check out the Examples](http://pwagener.github.io/backbone.conduit/examples).
 
 ### I Think It's Broken.
-- Oh No!  [Please File an Issue](https://github.com/pwagener/backbone.conduit/issues)!
-- Or, send a note [via Gitter](https://gitter.im/pwagener/backbone.conduit)
-- Or, send a note [via Twitter](https://twitter.com/peterwagener)
+- Oh Noes!  [Please File an Issue](https://github.com/pwagener/backbone.conduit/issues)!
+
+### I Have A Question
+Great!  Either ...
+- Send a note [via Gitter](https://gitter.im/pwagener/backbone.conduit)
+- Send a note [via Twitter](https://twitter.com/peterwagener)
