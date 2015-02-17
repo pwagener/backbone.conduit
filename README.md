@@ -1,5 +1,7 @@
 # Backbone.Conduit
 ## Moving Data Through Backbone
+
+[![Join the chat at https://gitter.im/pwagener/backbone.conduit](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/pwagener/backbone.conduit?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 Conduit is a Backbone plugin that improves the ability of Backbone to handle large scale data sets.  
 
 [![Build Status](https://travis-ci.org/pwagener/backbone.conduit.svg?branch=master)](https://travis-ci.org/pwagener/backbone.conduit)
