@@ -255,8 +255,21 @@ return /******/ (function(modules) { // webpackBootstrap
 	var sortAsync = __webpack_require__(7);
 	var haul = __webpack_require__(6);
 
-	// Extend Backbone.Collection and provide the 'refill' method
-	var Collection = Backbone.Collection.extend({ });
+	// Act like a Backbone.Collection, but use 'refill'
+	var Collection = function(models, options) {
+	    options || (options = {});
+	    if (options.model) this.model = options.model;
+	    if (options.comparator !== void 0) this.comparator = options.comparator;
+	    this._reset();
+	    this.initialize.apply(this, arguments);
+
+	    // Difference from Backbone:  use 'refill' instead of 'reset'
+	    if (models) {
+	        this.refill(models, _.extend({silent: true}, options));
+	    }
+	};
+	_.extend(Collection.prototype, Backbone.Collection.prototype);
+	Collection.extend = Backbone.Collection.extend;
 
 	// Add all the relevant modules to the new Collection type
 	fill.mixin(Collection);
