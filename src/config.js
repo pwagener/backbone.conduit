@@ -5,9 +5,20 @@
  */
 
 var _ = require('underscore');
-var _Worker = require('./_Worker');
+var when = require('when');
+
+var workerProbe = require('./workerProbe');
 
 var _values = {};
+
+var defaultPaths = [
+    'javascript/backbone.conduit/dist',
+    'js/backbone.conduit/dist',
+    'bower_components/backbone.conduit/dist'
+];
+
+var workerFileName = 'backbone.conduit-worker.js';
+var workerPathKey = 'workerPath';
 
 function setValue(key, value) {
     _values[key] = value;
@@ -33,12 +44,30 @@ function isBrowserEnv() {
     return typeof document !== 'undefined';
 }
 
-function setUnderscorePath(path) {
-    _Worker.setUnderscorePath(path);
-    setValue(underscorePathKey, path);
+function enableWorker(options) {
+    options = options || {};
+
+    return when.promise(function(resolve, reject) {
+        var paths = options.paths || defaultPaths;
+        var searchOptions = {
+            Worker: options.Worker || global.Worker,
+            paths: options.paths || defaultPaths,
+            fileName: workerFileName
+        };
+
+        workerProbe.searchPaths(searchOptions).then(function(foundPath) {
+            setValue(workerPathKey, foundPath);
+            resolve();
+        }).catch(function() {
+            reject(new Error('Did not find worker file'));
+        });
+    });
 }
 
-var underscorePathKey = 'underscoreJsPath';
+function getWorkerPath() {
+    ensureValue(workerPathKey);
+    return getValue(workerPathKey);
+}
 
 module.exports = {
     _values: _values,
@@ -46,12 +75,27 @@ module.exports = {
     // Are we running in a browser environment?
     isBrowserEnv: isBrowserEnv,
 
-    // Set the path to the available Underscore JS
-    setUnderscorePath: setUnderscorePath,
+    /**
+     * Enable the Conduit Worker.  This does not create a worker immediately; rather, it
+     * will ensure we can find the worker file.
+     * @param options.  Optional arguments.  May include:
+     *   o Worker (required):  The Worker constructor to use.  Typically will be
+     *        'window.Worker' in production code.
+     *   o debug: Print details to the console about where we look for the worker and
+     *        where it is finally loaded from.  TODO:  implement this!
+     *   o paths:  String or array listing directories to search for the worker.
+     *       Defaults to looking in some common locations:
+     * @return A Promise that is resolved once the worker file has been found, meaning
+     *   the worker-centric Conduit functions are available for use.  The promise will
+     *   be rejected if we cannot find the worker file.
+     */
+    enableWorker: enableWorker,
 
-    // Get the path to Underscore JS
-    getUnderscorePath: _.bind(getValue, this, underscorePathKey),
+    /**
+     * Get the path to the worker file.  This is typically not needed by external
+     * applications.  Note this will throw an error if it is called prior to calling
+     * 'enableWorker'.
+     */
+    getWorkerPath: getWorkerPath
 
-    // Ensure Underscore JS path has been set.  Throws an exception otherwise.
-    ensureUnderscore: _.bind(ensureValue, this, underscorePathKey)
 };

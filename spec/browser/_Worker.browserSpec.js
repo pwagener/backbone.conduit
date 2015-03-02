@@ -4,12 +4,50 @@ var when = require('when');
 
 var _Worker = require('./../../src/_Worker');
 
+var noop = function() { };
+
 describe('The _Worker module', function() {
+
+    it('provides a "probeWorkerPaths" function', function() {
+        expect(_Worker.probeWorkerPaths).to.be.a('function');
+    });
+
+    describe('when searching for its worker file', function() {
+
+        it('returns a promise from "probe"', function() {
+            var probePromise = _Worker.probeWorkerPaths([
+                '/somePath'
+            ]);
+
+            //noinspection BadExpressionStatementJS
+            expect(when.isPromiseLike(probePromise)).to.be.true;
+
+            // No promises escaping
+            probePromise.done(noop, noop);
+        });
+
+        it('rejects when no locations match', function(done) {
+            _Worker.probeWorkerPaths([
+                '/nothingIsHere'
+            ]).done(noop, function() {
+                done();
+            });
+        });
+
+        it('resolves to the string location', function(done) {
+            _Worker.probeWorkerPaths([
+                '/base/spec/browserSpec-worker.bundle.js'
+            ]).done(function() {
+                done();
+            }, noop);
+        });
+    });
 
     it('provides a "create" function', function() {
         //noinspection JSUnresolvedVariable
         expect(_Worker.create).to.be.a('function');
     });
+
 
     describe('after creating an instance', function() {
         var _worker;

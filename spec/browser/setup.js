@@ -14,7 +14,6 @@ mockServer.captureAjax(Backbone.$);
 
 // load specs
 require('./sortAsync.browserSpec');
-require('./WorkerManager.browserSpec');
 require('./_Worker.browserSpec');
 require('./Collection.browserSpec');
 require('./haul.browserSpec.js');

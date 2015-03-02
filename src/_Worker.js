@@ -6,59 +6,15 @@
  * prior to calling any of the *Async() functions.
  */
 
+// TODO:  this is probably going the way of the dodo.  Async sorting of a full collection is
+// really not a scalable idea.  Might as well start implementing SparseCollection.
+
 var _ = require('underscore');
-var WorkerManager = require('./WorkerManager');
+var when = require('when');
 
-/**
- * This method is the implementation of the worker code to do a sort, which
- * is provided to the WorkerManager
- */
-var workerSort = function(global, toImport) {
-    if (toImport && toImport.length) {
-        for (var i = 0; i < toImport.length; i++) {
-            global.importScripts(toImport[i]);
-        }
-    }
-
-    global.onmessage = function(event) {
-        var data = event.data.data;
-        var comparator = event.data.comparator;
-
-        function evaluator(item) {
-            return item[comparator];
-        }
-        data = _.sortBy(data, evaluator);
-
-        global.postMessage(data);
-    }
-};
-
-var underscoreJsPath = null;
-function setUnderscorePath(pathFromRoot) {
-    underscoreJsPath = pathFromRoot;
-}
-
-function _ensureUnderscoreJsPath() {
-    if (!_.isString(underscoreJsPath)) {
-        throw new Error('Cannot find underscore.js path');
-    }
-}
-
-function _ensureManagerCreated() {
-    if (!this._workerManager) {
-        this._workerManager = new WorkerManager({
-            importScripts: [
-                underscoreJsPath
-            ]
-        });
-    }
-}
+var Boss = require('./Boss');
 
 function sortAsync(sortSpec) {
-    _ensureUnderscoreJsPath();
-
-    this._ensureManagerCreated();
-
     if (!_.isObject(sortSpec)) {
         throw new Error("You must provide a sort specification");
     }
@@ -67,25 +23,67 @@ function sortAsync(sortSpec) {
         throw new Error("Cannot sort with a function comparator");
     }
 
-    var jobObject = {
-        job: workerSort,
-        data: sortSpec
-    };
+    var workerArgs = _.extend({
+        method: 'sort'
+    }, sortSpec);
 
-    return this._workerManager.runJob(jobObject);
+    return this._boss.promise(workerArgs);
 }
 
-function create() {
-    return _.extend({}, {
-        sortAsync: sortAsync,
+function _makeNewBoss(options) {
+    options = options || {};
 
-        _ensureManagerCreated: _ensureManagerCreated
+    // TODO:  used the probed location, OR a decent default
+    var fileLocation = options.workerLocation || '/base/node_modules/this/will/suck';
+
+    return new Boss({
+        fileLocation: fileLocation
+    });
+}
+
+function create(options) {
+    return _.extend({}, {
+        _boss: _makeNewBoss(options),
+
+        sortAsync: sortAsync
     }, _);
 }
 
-module.exports = {
-    setUnderscorePath: setUnderscorePath,
+function probeWorkerPaths(paths) {
+    return when.promise(function(resolve, reject) {
+        var foundPath = null;
 
+        _.each(paths, function(path) {
+            if (!foundPath) {
+                // Try to load the worker
+                try {
+                    var worker = new Worker(path);
+                    console.log("Worker found at '" + path + "'");
+                    foundPath = path;
+                } catch (err) {
+                    console.log("No worker found at '" + path + "'");
+                }
+            }
+        });
+
+        if (foundPath) {
+            resolve(foundPath);
+        } else {
+            reject(new Error('No worker found at any probed paths'));
+        }
+    });
+}
+
+module.exports = {
+
+    /**
+     * Method to find the worker JS file in an alternate place
+     */
+    probeWorkerPaths: probeWorkerPaths,
+
+    /**
+     * Create an object that looks like underscore, but with async methods that will
+     * talk to a specific Worker thread
+     */
     create: create
 };
-

@@ -1,7 +1,11 @@
 'use strict';
 
 var _ = require('underscore');
+var when = require('when');
+
 var config = require('./../src/config');
+
+var noop = function() { };
 
 describe("The config module", function() {
 
@@ -10,15 +14,20 @@ describe("The config module", function() {
         expect(config).to.be.an('object');
     });
 
-    it('will throw an exception when needed for "underscorePath"', function() {
-        var testMethod = _.bind(config.ensureUnderscore, config);
-        expect(testMethod).to.throw(Error);
+    it('can detect we are not running in a browser environment', function() {
+        //noinspection BadExpressionStatementJS
+        expect(config.isBrowserEnv()).to.be.false;
     });
 
-    it('can set & get "underscorePath"', function() {
-        var testVal = '/foo/bar';
-        config.setUnderscorePath(testVal);
-        expect(config.getUnderscorePath()).to.equal(testVal);
+    it('returns a promise from "enableWorker"', function() {
+        var promise = config.enableWorker({
+            Worker: this.sinon.spy()
+        });
+        //noinspection BadExpressionStatementJS
+        expect(when.isPromiseLike(promise)).to.be.true;
+
+        // Squash the failing promise
+        promise.done(noop, noop);
     });
 
 });

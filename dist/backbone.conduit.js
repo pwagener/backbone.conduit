@@ -521,58 +521,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	 */
 
 	var _ = __webpack_require__(9);
-	var WorkerManager = __webpack_require__(12);
+	var when = __webpack_require__(13);
 
-	/**
-	 * This method is the implementation of the worker code to do a sort, which
-	 * is provided to the WorkerManager
-	 */
-	var workerSort = function(global, toImport) {
-	    if (toImport && toImport.length) {
-	        for (var i = 0; i < toImport.length; i++) {
-	            global.importScripts(toImport[i]);
-	        }
-	    }
-
-	    global.onmessage = function(event) {
-	        var data = event.data.data;
-	        var comparator = event.data.comparator;
-
-	        function evaluator(item) {
-	            return item[comparator];
-	        }
-	        data = _.sortBy(data, evaluator);
-
-	        global.postMessage(data);
-	    }
-	};
-
-	var underscoreJsPath = null;
-	function setUnderscorePath(pathFromRoot) {
-	    underscoreJsPath = pathFromRoot;
-	}
-
-	function _ensureUnderscoreJsPath() {
-	    if (!_.isString(underscoreJsPath)) {
-	        throw new Error('Cannot find underscore.js path');
-	    }
-	}
-
-	function _ensureManagerCreated() {
-	    if (!this._workerManager) {
-	        this._workerManager = new WorkerManager({
-	            importScripts: [
-	                underscoreJsPath
-	            ]
-	        });
-	    }
-	}
+	var Boss = __webpack_require__(12);
 
 	function sortAsync(sortSpec) {
-	    _ensureUnderscoreJsPath();
-
-	    this._ensureManagerCreated();
-
 	    if (!_.isObject(sortSpec)) {
 	        throw new Error("You must provide a sort specification");
 	    }
@@ -581,28 +534,70 @@ return /******/ (function(modules) { // webpackBootstrap
 	        throw new Error("Cannot sort with a function comparator");
 	    }
 
-	    var jobObject = {
-	        job: workerSort,
-	        data: sortSpec
-	    };
+	    var workerArgs = _.extend({
+	        method: 'sort'
+	    }, sortSpec);
 
-	    return this._workerManager.runJob(jobObject);
+	    return this._boss.promise(workerArgs);
 	}
 
-	function create() {
-	    return _.extend({}, {
-	        sortAsync: sortAsync,
+	function _makeNewBoss(options) {
+	    options = options || {};
 
-	        _ensureManagerCreated: _ensureManagerCreated
+	    // TODO:  used the probed location, OR a decent default
+	    var fileLocation = options.workerLocation || '/base/node_modules/this/will/suck';
+
+	    return new Boss({
+	        fileLocation: fileLocation
+	    });
+	}
+
+	function create(options) {
+	    return _.extend({}, {
+	        _boss: _makeNewBoss(options),
+
+	        sortAsync: sortAsync
 	    }, _);
 	}
 
-	module.exports = {
-	    setUnderscorePath: setUnderscorePath,
+	function probeWorkerPaths(paths) {
+	    return when.promise(function(resolve, reject) {
+	        var foundPath = null;
 
+	        _.each(paths, function(path) {
+	            if (!foundPath) {
+	                // Try to load the worker
+	                try {
+	                    var worker = new Worker(path);
+	                    console.log("Worker found at '" + path + "'");
+	                    foundPath = path;
+	                } catch (err) {
+	                    console.log("No worker found at '" + path + "'");
+	                }
+	            }
+	        });
+
+	        if (foundPath) {
+	            resolve(foundPath);
+	        } else {
+	            reject(new Error('No worker found at any probed paths'));
+	        }
+	    });
+	}
+
+	module.exports = {
+
+	    /**
+	     * Method to find the worker JS file in an alternate place
+	     */
+	    probeWorkerPaths: probeWorkerPaths,
+
+	    /**
+	     * Create an object that looks like underscore, but with async methods that will
+	     * talk to a specific Worker thread
+	     */
 	    create: create
 	};
-
 
 
 /***/ },
@@ -761,73 +756,70 @@ return /******/ (function(modules) { // webpackBootstrap
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
-	/**
-	 * This defines how we manage a single worker; spinning it up on demand,
-	 * terminating it when necessary, using Promises for communication.
-	 */
 
 	var _ = __webpack_require__(9);
 	var when = __webpack_require__(13);
 
-	function WorkerManager(options) {
+	/**
+	 * This object provides an interface to a worker that communicates via promises.
+	 * Still conflicted about whether this should be an external module or not
+	 * @param options
+	 * @constructor
+	 */
+	function Boss(options) {
 	    this.initialize(options);
 	}
-	//noinspection JSUnusedLocalSymbols
-	WorkerManager.prototype = {
+
+	// TODO:  this whole thing needs testing. Awesomely, we can do most
+	// of that testing outside of the browser.
+
+	Boss.prototype = {
 	    initialize: function(options) {
 	        options = options || {};
-	        if (options.importScripts) {
-	            this.scripts = options.importScripts;
+
+	        this.WorkerFileLocation = options.fileLocation;
+	        if (!this.WorkerFileLocation) {
+	            throw new Error("You must provide 'fileLocation'");
 	        }
 
-	        this.Worker = options.Worker || window.Worker;
+	        this.WorkerConstructor = options.Worker || window.Worker;
+	        this.WorkerTimeoutMillis = options.timeout || 1000;
 	    },
 
 	    /**
-	     * This is the main point to run a job in a worker
-	     * @param details The details of the job to run.  Must provide:
-	     *   o job:  The function to run; must be a worker-friendly function that accepts (global, scriptsToImport)
-	     *   o data: The data to pass to the function, if any
-	     * @return A Promise that is resolved to the result of the job
+	     * Get a promise that will be resolved when the worker finishes
+	     * @param details Details for the method call
 	     */
-	    runJob: function(details) {
-	        if (this.timeoutHandle) {
-	            clearTimeout(this.timeoutHandle);
-	            delete this.timeoutHandle;
+	    promise: function(details) {
+	        if (!_.isString(details.method)) {
+	            throw new Error("Must provide 'method'");
 	        }
 
-	        if (this._workerJob) {
-	            // See if our job has changed
-	            if (this._workerJob != details.job) {
-	                // We have a different job to run; kill the existing
-	                // worker, if any
-	                this.terminate();
-	            }
+	        if (this.terminateTimeoutHandle) {
+	            clearTimeout(this.terminateTimeoutHandle);
+	            delete this.terminateTimeoutHandle;
 	        }
 
-	        this._workerJob = details.job;
-
-	        if (!this._workerJob) {
-	            throw new Error("You must specify a job for the worker");
-	        }
-
-	        if (!this.worker) {
-	            this._createWorker();
-	        }
-
+	        this._ensureWorker();
 	        var self = this;
+
 	        //noinspection JSUnresolvedFunction
 	        return when.promise(function(resolve) {
 	            var worker = self.worker;
 	            worker.onmessage = function(event) {
-	                resolve(event.data);
+	                var result = event.data;
+	                if (result instanceof Error) {
+	                    reject(result);
+	                } else {
+	                    resolve(result);
+	                }
 	            };
 
-	            worker.postMessage(details.data);
+	            worker.postMessage(details);
 	        }).finally(function() {
 	            // Set a timeout to terminate the worker if it is not used quickly enough
 	            var callTerminate = _.bind(self.terminate, self);
-	            self.timeoutHandle = setTimeout(callTerminate, 1000);
+	            self.terminateTimeoutHandle = setTimeout(callTerminate, self.WorkerTimeoutMillis);
 	        });
 	    },
 
@@ -839,69 +831,21 @@ return /******/ (function(modules) { // webpackBootstrap
 	            this.worker.terminate();
 	            this.worker = null;
 	        }
-
-	        if(this.url) {
-	            //noinspection JSUnresolvedFunction
-	            URL.revokeObjectURL(this.url);
-	            this.url = null;
-	        }
-	    },
-
-	    _createWorker: function () {
-	        this.url = this._getBlobUrl();
-	        this.worker = new this.Worker(this.url);
 	    },
 
 	    /**
-	     * Create the Blob URL that we use to represent the worker
-	     */
-	    _getBlobUrl: function() {
-	        // First build up the script as a String
-	        var workerJs = '';
-
-	        var argumentJs = 'this';
-	        if (this.scripts && this.scripts.length) {
-	            var origin = this._findOrigin();
-
-	            var fullScripts = [];
-	            for (var i = 0; i < this.scripts.length; i++) {
-	                var fullUrl = '"' + origin + this.scripts[i] + '"';
-	                fullScripts.push(fullUrl);
-	            }
-
-	            argumentJs += ', [' + fullScripts.join(',') + ']';
-	        }
-
-	        workerJs += '(' + this._workerJob + ')(' + argumentJs + ')';
-
-	        var blob = new Blob([ workerJs ], { type: 'text/javascript' });
-	        //noinspection JSUnresolvedFunction
-	        return URL.createObjectURL(blob);
-	    },
-
-	    _findOrigin: function() {
-	        if (location.origin) {
-	            return location.origin;
-	        } else {
-	            // Yay, IE
-	            return window.location.protocol + "//" + window.location.hostname +
-	                (window.location.port ? ':' + window.location.port: '');
-	        }
-	    },
-
-	    /**
-	     * Make sure our worker actually exists.  Throw if it does not.
+	     * Make sure our worker actually exists.  Create one if it does not
 	     * @private
 	     */
 	    _ensureWorker: function () {
 	        if (!this.worker) {
-	            this._createWorker();
+	            this.worker = new this.WorkerConstructor(this.WorkerFileLocation);
 	        }
 	    }
-
 	};
 
-	module.exports = WorkerManager;
+	module.exports = Boss;
+
 
 /***/ },
 /* 13 */
