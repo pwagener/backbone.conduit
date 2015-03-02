@@ -98,7 +98,12 @@ describe('The haul module', function() {
             });
         });
 
-        it("won't use asynchronous sort by default", function(done) {
+        it("won't use asynchronous sort when the collection has data", function(done) {
+            // Make sure it has data already
+            collection.add({
+                id: 100, name: "one hundred", first: 80, second: 20
+            });
+
             fetchAndWait(collection).then(function() {
                 //noinspection BadExpressionStatementJS
                 expect(_useWorkerToSortSpy.called).to.be.false;
@@ -107,11 +112,23 @@ describe('The haul module', function() {
         });
 
         it("will use asynchronous sort for a 'reset'", function(done) {
+            // Make sure it has data already
+            collection.add({
+                id: 100, name: "one hundred", first: 80, second: 20
+            });
             fetchAndWait(collection, { reset: true }).then(function() {
                 //noinspection BadExpressionStatementJS
                 expect(_useWorkerToSortSpy.called).to.be.true;
                 done();
             });
+        });
+
+        it("will use asynchronous sort for an empty collection", function(done) {
+            fetchAndWait(collection).then(function() {
+                //noinspection BadExpressionStatementJS
+                expect(_useWorkerToSortSpy.called).to.be.true;
+                done();
+            })
         });
     });
 });

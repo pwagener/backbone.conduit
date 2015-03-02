@@ -101,8 +101,5 @@ describe("The haul module", function() {
             collection.haul({ sort: true });
         });
 
-        it('sorts asynchronously when available', function() {
-            // TODO: write me
-        });
     });
 });
