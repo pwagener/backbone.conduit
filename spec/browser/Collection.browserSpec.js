@@ -3,8 +3,10 @@
  */
 'use strict';
 
-var config = require('./../../src/config');
-var Collection = require('./../../src/Collection');
+var Conduit = require('src/index');
+
+var config = Conduit.config;
+var Collection = Conduit.Collection;
 var mockServer = require('./../mockServer');
 
 var FooCollection = Collection.extend({
@@ -57,22 +59,28 @@ describe('The Conduit Collection', function() {
             collection.comparator = 'name';
         });
 
+        afterEach(function() {
+            config.disableWorker();
+        });
+
         it('can sort data regularly', function() {
             collection.sort();
             expect(collection.at(0).get('name')).to.equal('one');
         });
 
-
-        it('throws an error when sorting async w/o setting the underscore path', function() {
-            var testMethod = _.bind(collection.sortAsync, collection);
-            expect(testMethod).to.throw(Error);
+        it('throws an error when sorting async w/o enabling the worker', function() {
+            var boundMethod = _.bind(collection.sortAsync, collection);
+            expect(boundMethod).to.throw(Error);
         });
 
-        it('can sort async if underscore path is set', function(done) {
-            config.setUnderscorePath(window.underscorePath);
-            collection.sortAsync().then(function() {
-                expect(collection.at(0).get('name')).to.equal('one');
-                done();
+        it('can sort async if worker is enabled', function(done) {
+            config.enableWorker({
+                paths: workerLocation
+            }).then(function() {
+                collection.sortAsync().then(function() {
+                    expect(collection.at(0).get('name')).to.equal('one');
+                    done();
+                });
             });
         });
     });

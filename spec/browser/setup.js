@@ -12,10 +12,12 @@ var Conduit = require('src/index');
 var mockServer = require('./../mockServer');
 mockServer.captureAjax(Backbone.$);
 
+// The location of the worker file, from the tests' perspective
+window.workerLocation = '/base/dist';
+
 // load specs
+require('./config.browserSpec.js');
 require('./sortAsync.browserSpec');
-require('./WorkerManager.browserSpec');
-require('./_Worker.browserSpec');
 require('./Collection.browserSpec');
 require('./haul.browserSpec.js');
 
@@ -23,7 +25,6 @@ window.expect = chai.expect;
 chai.use(sinonChai);
 chai.use(chaiAsPromised);
 
-window.underscorePath = '/base/node_modules/underscore/underscore.js';
 
 function getSampleData() {
     return[
@@ -41,8 +42,4 @@ beforeEach(function () {
 
 afterEach(function () {
     this.sinon.restore();
-
-    // Make sure the Underscore path doesn't leak
-    var config = require('src/config');
-    config.setUnderscorePath(null);
 });

@@ -4,15 +4,16 @@ var Backbone = require('backbone');
 var _ = require('underscore');
 var when = require('when');
 
-var config = require('./../../src/config');
-var haul = require('./../../src/haul');
+var Conduit = require('src/index');
+
+var config = Conduit.config;
+var haul = Conduit.haul;
 var mockServer = require('./../mockServer');
 
 var FooCollection = Backbone.Collection.extend({
     url: '/foo'
 });
 haul.mixin(FooCollection);
-
 
 function fetchAndWait(collection, options) {
     return when.promise(function(resolve) {
@@ -42,11 +43,11 @@ describe('The haul module', function() {
         });
     });
 
-    describe('when Underscore path is not set', function() {
+    describe('when worker is not enabled', function() {
         var sortSpy;
 
         beforeEach(function() {
-            config.setUnderscorePath(null);
+            config.disableWorker();
 
             // Spy on the to sort technique
             sortSpy = this.sinon.spy(collection, 'sort');
@@ -75,14 +76,20 @@ describe('The haul module', function() {
         });
     });
 
-    describe('when Underscore path is set', function() {
-        var _useWorkerToSortSpy;
+    describe('when worker is enabled', function() {
+        var _useBossToSortSpy;
 
-        beforeEach(function() {
-            config.setUnderscorePath(window.underscorePath);
+        beforeEach(function(done) {
+            config.enableWorker({
+                paths: workerLocation
+            }).done(function() {
+                done();
+            }, function(err) {
+                throw new Error('Unexpected testing failure.  Cannot enable worker: ' + err);
+            });
 
-            // Spy on the to sort technique
-            _useWorkerToSortSpy = this.sinon.spy(collection, '_useWorkerToSort');
+            // Spy on the sort technique
+            _useBossToSortSpy = this.sinon.spy(collection, '_useBossToSort');
             // Ensure an empty collection
             collection.reset();
         });
@@ -106,7 +113,7 @@ describe('The haul module', function() {
 
             fetchAndWait(collection).then(function() {
                 //noinspection BadExpressionStatementJS
-                expect(_useWorkerToSortSpy.called).to.be.false;
+                expect(_useBossToSortSpy.called).to.be.false;
                 done();
             });
         });
@@ -118,7 +125,7 @@ describe('The haul module', function() {
             });
             fetchAndWait(collection, { reset: true }).then(function() {
                 //noinspection BadExpressionStatementJS
-                expect(_useWorkerToSortSpy.called).to.be.true;
+                expect(_useBossToSortSpy.called).to.be.true;
                 done();
             });
         });
@@ -126,7 +133,7 @@ describe('The haul module', function() {
         it("will use asynchronous sort for an empty collection", function(done) {
             fetchAndWait(collection).then(function() {
                 //noinspection BadExpressionStatementJS
-                expect(_useWorkerToSortSpy.called).to.be.true;
+                expect(_useBossToSortSpy.called).to.be.true;
                 done();
             })
         });

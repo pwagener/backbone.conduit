@@ -2,11 +2,14 @@
 
 var gulp = require('gulp');
 var webpack = require('gulp-webpack');
-var rename = require('gulp-rename');
 
-gulp.task('test:browser:bundle', false, ['link'], function () {
+gulp.task('test:browser:bundle', false, ['dist:worker', 'link'], function () {
     return gulp.src('./spec/browser/setup.js')
-        .pipe(webpack({ devtool: 'inline-source-map' }))
-        .pipe(rename('browserSpec.bundle.js'))
+        .pipe(webpack({
+            output: {
+                filename: 'browserSpec.bundle.js'
+            },
+            devtool: 'inline-source-map'
+        }))
         .pipe(gulp.dest('./spec/browser'));
 });
