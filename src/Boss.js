@@ -53,15 +53,25 @@ Boss.prototype = {
         var self = this;
 
         //noinspection JSUnresolvedFunction
-        return when.promise(function(resolve) {
+        return when.promise(function(resolve, reject) {
             var worker = self.worker;
             worker.onmessage = function(event) {
                 var result = event.data;
+
                 if (result instanceof Error) {
+                    // Reject if we get an error
+                    self.terminate();
                     reject(result);
                 } else {
                     resolve(result);
                 }
+            };
+
+            // Reject if we get an error.  This occurs, for instance, when the worker
+            // path is invalid
+            worker.onerror = function(err) {
+                self.terminate();
+                reject(err);
             };
 
             worker.postMessage(details);
@@ -88,6 +98,8 @@ Boss.prototype = {
      */
     _ensureWorker: function () {
         if (!this.worker) {
+            // Note this will never throw an error; construction always succeeds
+            // regardless of whether the path is valid or not
             this.worker = new this.WorkerConstructor(this.WorkerFileLocation);
         }
     }

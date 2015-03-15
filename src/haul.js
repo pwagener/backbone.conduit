@@ -51,12 +51,12 @@ function haul(options) {
         var goodComparator = _.isString(collection.comparator);
         var sortable = goodComparator && options.sort !== false &&
             (options.reset || collection.length == 0);
-        if (config.isBrowserEnv() && config.getUnderscorePath() && sortable) {
+        if (config.isBrowserEnv() && config.isWorkerEnabled() && sortable) {
             // We can use the asynchronous sorting.  So, ensure we don't do synchronous sort
             options.sort = false;
 
             // Do the async sort, then set the values.
-            var sortPromise = collection._useWorkerToSort({
+            var sortPromise = collection._useBossToSort({
                 data: resp,
                 comparator: collection.comparator
             });

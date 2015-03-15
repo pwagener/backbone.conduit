@@ -34,10 +34,11 @@ var enableHandlers = function(global, handlerModules) {
 
     global.onmessage = function(event) {
         var method = event.data.method;
+        var data = event.data.data;
 
         var handler = handlers[method];
         if (handler) {
-            var result = handler(event.data);
+            var result = handler(data);
             global.postMessage(result);
         } else {
             global.postMessage(new Error("No such Conduit worker method: '" + method + "'"));

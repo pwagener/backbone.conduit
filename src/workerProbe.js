@@ -14,7 +14,8 @@ var Boss = require('./Boss');
  * location.
  * @return A promise that will be resolved either with nothing (i.e. the worker
  * was not found), or will resolve with the path (i.e. a functional worker was
- * found).  The promise is never rejected.
+ * found).  The promise is never rejected, allowing it to be used in 'when.all(...)'
+ * and similar structures.
  * @private
  */
 function _createProbePromise(Worker, path, fileName, debug) {
@@ -33,17 +34,18 @@ function _createProbePromise(Worker, path, fileName, debug) {
         fileLocation: fullPath
     });
 
+    //noinspection JSUnresolvedFunction
     return when.promise(function(resolve) {
         try {
             boss.promise({
                 method: 'ping'
-            }).done(function() {
+            }).done(function(response) {
                 // Ping succeeded.  We found a functional worker
-                debug('Located worker at "' + fullPath + '"');
+                debug('Located worker at "' + fullPath + '" at "' + response + '"');
                 resolve(fullPath);
             }, function() {
                 // Worker loaded, but ping error (yikes)
-                debug('Worker located at "' + fullPath + '", but it failed to respond');
+                debug('Worker at "' + fullPath + '" did not respond');
                 resolve();
             });
         } catch (err) {
@@ -73,10 +75,11 @@ function searchPaths(options) {
 
     var probePromises = [];
     _.each(paths, function(path) {
-        var probePromise = _createProbePromise(options.Worker, path, fileName, true);
+        var probePromise = _createProbePromise(options.Worker, path, fileName, options.debug);
         probePromises.push(probePromise);
     });
 
+    //noinspection JSUnresolvedFunction
     return when.promise(function(resolve, reject) {
         when.all(probePromises).then(function(results) {
             // Find the first result that returned a string path.

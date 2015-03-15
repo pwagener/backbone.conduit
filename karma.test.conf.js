@@ -13,11 +13,18 @@ module.exports = function(config) {
         frameworks: ['mocha'],
 
 
-        // list of files / patterns to load in the browser
+        // list of files / patterns to serve
         files: [
             'node_modules/underscore/underscore.js',
             'node_modules/sinon/pkg/sinon.js',
-            'spec/browser/browserSpec.bundle.js'
+            'spec/browser/browserSpec.bundle.js',
+
+            // The worker file isn't included by default, but is served
+            {
+                pattern: 'dist/backbone.conduit-worker.js',
+                included: true
+            }
+
         ],
 
 

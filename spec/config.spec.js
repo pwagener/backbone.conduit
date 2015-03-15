@@ -30,4 +30,7 @@ describe("The config module", function() {
         promise.done(noop, noop);
     });
 
+    // TODO:  test for debug option?
+
+
 });

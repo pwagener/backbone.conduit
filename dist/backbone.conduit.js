@@ -97,9 +97,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	 */
 
 	var _ = __webpack_require__(9);
-	var _Worker = __webpack_require__(10);
+	var when = __webpack_require__(13);
+
+	var workerProbe = __webpack_require__(10);
 
 	var _values = {};
+
+	var workerFileName = 'backbone.conduit-worker.js';
+	var workerPathKey = 'workerPath';
+
+	var workerConstructorKey = 'WorkerConstructor';
 
 	function setValue(key, value) {
 	    _values[key] = value;
@@ -125,27 +132,127 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return typeof document !== 'undefined';
 	}
 
-	function setUnderscorePath(path) {
-	    _Worker.setUnderscorePath(path);
-	    setValue(underscorePathKey, path);
+	/**
+	 * If no path is specified to find our worker, try some reasonable places
+	 */
+	function findDefaultWorkerPath() {
+
+	    /*
+	        It's worth exploring how we could find the "current" script and assume
+	        that directory might contain the worker too.  Something like:
+	    */
+	    //var scripts = document.querySelectorAll('script[src]');
+	    //var currentScript = scripts[ scripts.length - 1 ].src;
+	    //var currentScriptChunks = currentScript.split('/');
+	    //var currentScriptFile = currentScriptChunks[currentScriptChunks.length - 1];
+	    //var directory = currentScript.replace(currentScriptFile, '');
+
+	    return [
+	        // Absolutes
+	        '/bower_components/backbone.conduit/dist',
+	        '/javascript/lib/backbone.conduit/dist',
+
+	        // Relatives
+	        'bower_components/backbone.conduit/dist',
+	        'javascript/lib/backbone.conduit/dist'
+	    ];
 	}
 
-	var underscorePathKey = 'underscoreJsPath';
+	function enableWorker(options) {
+	    options = options || {};
+
+	    var WorkerConstructor = options.Worker ? options.worker : Worker;
+	    setValue(workerConstructorKey, WorkerConstructor);
+
+	    return when.promise(function(resolve, reject) {
+	        var paths = options.paths || findDefaultWorkerPath();
+
+	        if (_.isString(paths)) {
+	            paths = [ paths ];
+	        }
+	        var searchOptions = {
+	            Worker: WorkerConstructor,
+	            fileName: workerFileName,
+	            paths: paths,
+	            debug: options.debug
+	        };
+
+	        workerProbe.searchPaths(searchOptions).then(function(foundPath) {
+	            setValue(workerPathKey, foundPath);
+	            resolve();
+	        }).catch(function() {
+	            reject(new Error('Did not find worker file in ' + paths));
+	        });
+	    });
+	}
+
+	function isWorkerEnabled() {
+	    return !!getValue(workerPathKey) && !!getValue(workerConstructorKey);
+	}
+
+	function disableWorker() {
+	    setValue(workerPathKey, null);
+	}
+
+	function getWorkerPath() {
+	    ensureValue(workerPathKey);
+	    return getValue(workerPathKey);
+	}
+
+	function getWorkerConstructor() {
+	    ensureValue(workerConstructorKey);
+	    return getValue(workerConstructorKey);
+	}
 
 	module.exports = {
 	    _values: _values,
 
-	    // Are we running in a browser environment?
+	    /**
+	     * Determine if we are running in a browser-like environment.
+	     */
 	    isBrowserEnv: isBrowserEnv,
 
-	    // Set the path to the available Underscore JS
-	    setUnderscorePath: setUnderscorePath,
+	    /**
+	     * Determine if the Conduit Worker is currently enabled.  This will be false until
+	     * a call to 'enableWorker' resolves successfully.
+	     */
+	    isWorkerEnabled: isWorkerEnabled,
 
-	    // Get the path to Underscore JS
-	    getUnderscorePath: _.bind(getValue, this, underscorePathKey),
+	    /**
+	     * Enable the Conduit Worker.  This does not create a worker immediately; rather, it
+	     * will ensure we can find the worker file.
+	     * @param options.  Optional arguments.  May include:
+	     *   o paths:  String or array listing directories to search for the worker.
+	     *       Defaults to looking in some common locations
+	     *   o Worker:  The Worker constructor to use.  Typically will be
+	     *        'window.Worker' in production code.
+	     *   o debug: Print details to the console about where we look for the worker and
+	     *        where it is finally loaded from.  Defaults to 'false'.
+	     * @return A Promise that is resolved once the worker file has been found, meaning
+	     *   the worker-centric Conduit functions are available for use.  The promise will
+	     *   be rejected if we cannot find the worker file or cannot construct the worker.
+	     */
+	    enableWorker: enableWorker,
 
-	    // Ensure Underscore JS path has been set.  Throws an exception otherwise.
-	    ensureUnderscore: _.bind(ensureValue, this, underscorePathKey)
+	    /**
+	     * If you ever need to turn off the worker, call this.  Shouldn't be necessary
+	     * in regular code, but helpful in testing.
+	     */
+	    disableWorker: disableWorker,
+
+	    /**
+	     * Get the path to the worker file.  This is typically not needed by external
+	     * applications.  Note this will throw an error if 'isWorkerEnabled' returns
+	     * false.
+	     */
+	    getWorkerPath: getWorkerPath,
+
+	    /**
+	     * Get the constructor to use to create a Worker.  This is not typically needed
+	     * by applications.  Note this will throw an error if 'isWorkerEnabled' returns
+	     * false.
+	     */
+	    getWorkerConstructor: getWorkerConstructor
 	};
 
 /***/ },
@@ -336,12 +443,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	        var goodComparator = _.isString(collection.comparator);
 	        var sortable = goodComparator && options.sort !== false &&
 	            (options.reset || collection.length == 0);
-	        if (config.isBrowserEnv() && config.getUnderscorePath() && sortable) {
+	        if (config.isBrowserEnv() && config.isWorkerEnabled() && sortable) {
 	            // We can use the asynchronous sorting.  So, ensure we don't do synchronous sort
 	            options.sort = false;
 
 	            // Do the async sort, then set the values.
-	            var sortPromise = collection._useWorkerToSort({
+	            var sortPromise = collection._useBossToSort({
 	                data: resp,
 	                comparator: collection.comparator
 	            });
@@ -391,73 +498,70 @@ return /******/ (function(modules) { // webpackBootstrap
 	var when = __webpack_require__(13);
 
 	var config = __webpack_require__(2);
-	var _Worker = __webpack_require__(10);
+	var Boss = __webpack_require__(12);
 
-	function ensureWorker() {
-	    if (!this._worker) {
-	        this._worker = _Worker.create();
-	    }
-	}
 	function sortAsync(options) {
 	    options = options || {};
 
-	    if (config.isBrowserEnv()) {
-	        config.ensureUnderscore('sortAsync');
-
-	        ensureWorker.call(this);
-	        var self = this;
-	        var data = self.toJSON();
-	        var comparator = self.comparator;
-
-	        var sortPromise = this._useWorkerToSort({
-	            data: data,
-	            comparator: comparator
-	        });
-
-	        return when.promise(function(resolve, reject) {
-	            sortPromise.then(function(sorted) {
-	                // Well, this isn't a very good way to get the data back in, but....
-	                self.comparator = null;
-
-	                if (_.isFunction(self.refill)) {
-	                    self.refill(sorted, { silent: true });
-	                } else {
-	                    self.reset(sorted, { silent: true });
-	                }
-
-	                self.comparator = comparator;
-	                if (!options.silent) {
-	                    self.trigger('sort', self, options);
-	                }
-	                resolve(self);
-	            }, function(err) {
-	                reject(err);
-	            });
-	        });
-	    } else {
+	    if (!config.isBrowserEnv()) {
 	        throw new Error("Async sorting only supported in a browser environment");
 	    }
-	}
 
-	function _useWorkerToSort(sortSpec) {
-	    ensureWorker.call(this);
-	    return wrapWithPromise(this._worker, 'sortAsync', sortSpec);
-	}
+	    if (!config.isWorkerEnabled()) {
+	        // TODO: would be nice to attempt to enable it for them....
+	        throw new Error("Cannot sort asynchronously; worker not enabled");
+	    }
 
-	function wrapWithPromise(conduit, method, args) {
+	    var data = this.toJSON();
+	    var comparator = this.comparator;
+	    var sortPromise = this._useBossToSort({
+	        data: data,
+	        comparator: comparator
+	    });
+
+	    var self = this;
 	    return when.promise(function(resolve, reject) {
-	        conduit[method](args).then(function(result) {
-	            resolve(result);
-	        }).catch(function(err) {
-	            reject (err);
+	        sortPromise.then(function(sorted) {
+	            // Well, this isn't a very good way to get the data back in, but
+	            // this whole thing feels like a bad idea.
+	            self.comparator = null;
+
+	            if (_.isFunction(self.refill)) {
+	                self.refill(sorted, { silent: true });
+	            } else {
+	                self.reset(sorted, { silent: true });
+	            }
+
+	            self.comparator = comparator;
+	            if (!options.silent) {
+	                self.trigger('sort', self, options);
+	            }
+	            resolve(self);
+	        }, function(err) {
+	            reject(err);
 	        });
+	    });
+	}
+
+	function _useBossToSort(sortSpec) {
+	    // Make sure we have a boss/worker pair spun up
+	    if (!this._boss) {
+	        this._boss = new Boss({
+	            Worker: config.getWorkerConstructor(),
+	            fileLocation: config.getWorkerPath()
+	        });
+	    }
+
+	    return this._boss.promise({
+	        method: 'sort',
+	        data: sortSpec
 	    });
 	}
 
 	var mixinObj = {
 	    sortAsync: sortAsync,
 
-	    _useWorkerToSort: _useWorkerToSort
+	    _useBossToSort: _useBossToSort
 	};
 
 	module.exports = {
@@ -512,12 +616,10 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 10 */
 /***/ function(module, exports, __webpack_require__) {
 
+	'use strict';
+
 	/**
-	 * This module provides an extended version of Underscore that has some
-	 * asynchronous functionality via Workers and Promises.
-	 *
-	 * NOTE:  you must set the path to 'underscore.js' via `setUnderscorePath(pathFromRoot)`
-	 * prior to calling any of the *Async() functions.
+	 * This module attempts to load the worker file from a variety of paths
 	 */
 
 	var _ = __webpack_require__(9);
@@ -525,80 +627,112 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var Boss = __webpack_require__(12);
 
-	function sortAsync(sortSpec) {
-	    if (!_.isObject(sortSpec)) {
-	        throw new Error("You must provide a sort specification");
+	/**
+	 * Creates a promise that will attempt to find the worker at a specific
+	 * location.
+	 * @return A promise that will be resolved either with nothing (i.e. the worker
+	 * was not found), or will resolve with the path (i.e. a functional worker was
+	 * found).  The promise is never rejected, allowing it to be used in 'when.all(...)'
+	 * and similar structures.
+	 * @private
+	 */
+	function _createProbePromise(Worker, path, fileName, debug) {
+	    if (debug) {
+	        debug = function(msg) {
+	            console.log(msg)
+	        }
+	    } else {
+	        debug = function() { }
 	    }
 
-	    if (_.isFunction(sortSpec.comparator)) {
-	        throw new Error("Cannot sort with a function comparator");
-	    }
+	    var fullPath = path + '/' + fileName;
+	    debug('Probing for worker at "' + fullPath + '"');
+	    var boss = new Boss({
+	        Worker: Worker,
+	        fileLocation: fullPath
+	    });
 
-	    var workerArgs = _.extend({
-	        method: 'sort'
-	    }, sortSpec);
-
-	    return this._boss.promise(workerArgs);
-	}
-
-	function _makeNewBoss(options) {
-	    options = options || {};
-
-	    // TODO:  used the probed location, OR a decent default
-	    var fileLocation = options.workerLocation || '/base/node_modules/this/will/suck';
-
-	    return new Boss({
-	        fileLocation: fileLocation
+	    //noinspection JSUnresolvedFunction
+	    return when.promise(function(resolve) {
+	        try {
+	            boss.promise({
+	                method: 'ping'
+	            }).done(function(response) {
+	                // Ping succeeded.  We found a functional worker
+	                debug('Located worker at "' + fullPath + '" at "' + response + '"');
+	                resolve(fullPath);
+	            }, function() {
+	                // Worker loaded, but ping error (yikes)
+	                debug('Worker at "' + fullPath + '" did not respond');
+	                resolve();
+	            });
+	        } catch (err) {
+	            debug('Failed to load worker at "' + fullPath + "'");
+	            resolve();
+	        }
 	    });
 	}
 
-	function create(options) {
-	    return _.extend({}, {
-	        _boss: _makeNewBoss(options),
+	function searchPaths(options) {
+	    options = options || {};
 
-	        sortAsync: sortAsync
-	    }, _);
-	}
+	    var paths = options.paths;
+	    if (!_.isArray(paths)) {
+	        throw new Error('"searchPaths" requires "paths" in the options');
+	    }
 
-	function probeWorkerPaths(paths) {
+	    var fileName = options.fileName;
+	    if (!_.isString(fileName)) {
+	        throw new Error('"searchPaths" requires "fileName" in the options');
+	    }
+
+	    var Worker = options.Worker;
+	    if (!_.isFunction(Worker)) {
+	        throw new Error('"searchPaths" requires "Worker" in the options');
+	    }
+
+	    var probePromises = [];
+	    _.each(paths, function(path) {
+	        var probePromise = _createProbePromise(options.Worker, path, fileName, options.debug);
+	        probePromises.push(probePromise);
+	    });
+
+	    //noinspection JSUnresolvedFunction
 	    return when.promise(function(resolve, reject) {
-	        var foundPath = null;
-
-	        _.each(paths, function(path) {
-	            if (!foundPath) {
-	                // Try to load the worker
-	                try {
-	                    var worker = new Worker(path);
-	                    console.log("Worker found at '" + path + "'");
-	                    foundPath = path;
-	                } catch (err) {
-	                    console.log("No worker found at '" + path + "'");
+	        when.all(probePromises).then(function(results) {
+	            // Find the first result that returned a string path.
+	            var found;
+	            for (var i = 0; i < results.length; i++) {
+	                if (results[i]) {
+	                    found = results[i];
+	                    break;
 	                }
 	            }
-	        });
 
-	        if (foundPath) {
-	            resolve(foundPath);
-	        } else {
-	            reject(new Error('No worker found at any probed paths'));
-	        }
+	            if (found) {
+	                resolve(found);
+	            } else {
+	                reject();
+	            }
+	        });
 	    });
 	}
 
 	module.exports = {
 
 	    /**
-	     * Method to find the worker JS file in an alternate place
+	     * Search a collection of paths to see if we can find a functional worker.
+	     * @param global The global environment to use.
+	     * @param options All other options.  Must include:
+	     *    o Worker: The constructor for a Worker object
+	     *    o paths:  The array of paths to search
+	     *    o fileName: The name of the worker file to try to load
+	     * @return A Promise that is resolved with the path to the worker, or rejected
+	     * if a functioning worker cannot be found.
 	     */
-	    probeWorkerPaths: probeWorkerPaths,
+	    searchPaths: searchPaths
 
-	    /**
-	     * Create an object that looks like underscore, but with async methods that will
-	     * talk to a specific Worker thread
-	     */
-	    create: create
 	};
-
 
 /***/ },
 /* 11 */
@@ -770,9 +904,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.initialize(options);
 	}
 
-	// TODO:  this whole thing needs testing. Awesomely, we can do most
-	// of that testing outside of the browser.
-
 	Boss.prototype = {
 	    initialize: function(options) {
 	        options = options || {};
@@ -782,13 +913,22 @@ return /******/ (function(modules) { // webpackBootstrap
 	            throw new Error("You must provide 'fileLocation'");
 	        }
 
-	        this.WorkerConstructor = options.Worker || window.Worker;
+	        this.WorkerConstructor = options.Worker;
+	        if (!this.WorkerConstructor) {
+	            throw new Error("You must provide 'Worker'");
+	        }
+
 	        this.WorkerTimeoutMillis = options.timeout || 1000;
 	    },
 
 	    /**
 	     * Get a promise that will be resolved when the worker finishes
-	     * @param details Details for the method call
+	     * @param details Details for the method call:
+	     *   o method (required) The name of the method to call
+	     *   o data (optional) Any data that should be passed to the worker method
+	     *     you are calling
+	     * @return A Promise that will be resolved or rejected based on calling
+	     *   the method you are calling.
 	     */
 	    promise: function(details) {
 	        if (!_.isString(details.method)) {
@@ -804,15 +944,25 @@ return /******/ (function(modules) { // webpackBootstrap
 	        var self = this;
 
 	        //noinspection JSUnresolvedFunction
-	        return when.promise(function(resolve) {
+	        return when.promise(function(resolve, reject) {
 	            var worker = self.worker;
 	            worker.onmessage = function(event) {
 	                var result = event.data;
+
 	                if (result instanceof Error) {
+	                    // Reject if we get an error
+	                    self.terminate();
 	                    reject(result);
 	                } else {
 	                    resolve(result);
 	                }
+	            };
+
+	            // Reject if we get an error.  This occurs, for instance, when the worker
+	            // path is invalid
+	            worker.onerror = function(err) {
+	                self.terminate();
+	                reject(err);
 	            };
 
 	            worker.postMessage(details);
@@ -839,6 +989,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	     */
 	    _ensureWorker: function () {
 	        if (!this.worker) {
+	            // Note this will never throw an error; construction always succeeds
+	            // regardless of whether the path is valid or not
 	            this.worker = new this.WorkerConstructor(this.WorkerFileLocation);
 	        }
 	    }
@@ -3262,69 +3414,40 @@ return /******/ (function(modules) { // webpackBootstrap
 	// shim for using process in browser
 
 	var process = module.exports = {};
+	var queue = [];
+	var draining = false;
 
-	process.nextTick = (function () {
-	    var canSetImmediate = typeof window !== 'undefined'
-	    && window.setImmediate;
-	    var canMutationObserver = typeof window !== 'undefined'
-	    && window.MutationObserver;
-	    var canPost = typeof window !== 'undefined'
-	    && window.postMessage && window.addEventListener
-	    ;
-
-	    if (canSetImmediate) {
-	        return function (f) { return window.setImmediate(f) };
+	function drainQueue() {
+	    if (draining) {
+	        return;
 	    }
-
-	    var queue = [];
-
-	    if (canMutationObserver) {
-	        var hiddenDiv = document.createElement("div");
-	        var observer = new MutationObserver(function () {
-	            var queueList = queue.slice();
-	            queue.length = 0;
-	            queueList.forEach(function (fn) {
-	                fn();
-	            });
-	        });
-
-	        observer.observe(hiddenDiv, { attributes: true });
-
-	        return function nextTick(fn) {
-	            if (!queue.length) {
-	                hiddenDiv.setAttribute('yes', 'no');
-	            }
-	            queue.push(fn);
-	        };
+	    draining = true;
+	    var currentQueue;
+	    var len = queue.length;
+	    while(len) {
+	        currentQueue = queue;
+	        queue = [];
+	        var i = -1;
+	        while (++i < len) {
+	            currentQueue[i]();
+	        }
+	        len = queue.length;
 	    }
-
-	    if (canPost) {
-	        window.addEventListener('message', function (ev) {
-	            var source = ev.source;
-	            if ((source === window || source === null) && ev.data === 'process-tick') {
-	                ev.stopPropagation();
-	                if (queue.length > 0) {
-	                    var fn = queue.shift();
-	                    fn();
-	                }
-	            }
-	        }, true);
-
-	        return function nextTick(fn) {
-	            queue.push(fn);
-	            window.postMessage('process-tick', '*');
-	        };
+	    draining = false;
+	}
+	process.nextTick = function (fun) {
+	    queue.push(fun);
+	    if (!draining) {
+	        setTimeout(drainQueue, 0);
 	    }
-
-	    return function nextTick(fn) {
-	        setTimeout(fn, 0);
-	    };
-	})();
+	};
 
 	process.title = 'browser';
 	process.browser = true;
 	process.env = {};
 	process.argv = [];
+	process.version = ''; // empty string to avoid regexp issues
+	process.versions = {};
 
 	function noop() {}
 
@@ -3345,6 +3468,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	process.chdir = function (dir) {
 	    throw new Error('process.chdir is not supported');
 	};
+	process.umask = function() { return 0; };
 
 
 /***/ }
