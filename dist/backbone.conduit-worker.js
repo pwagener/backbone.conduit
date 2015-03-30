@@ -53,7 +53,7 @@
 	 * The main library communicates with the worker via Boss.js
 	 */
 
-	var _ = __webpack_require__(3);
+	var _ = __webpack_require__(7);
 
 	/**
 	 * Function that will allow this worker to do useful work
@@ -70,7 +70,7 @@
 	            throw new Error('Handler did not provide a name');
 	        }
 
-	        var method = handler.method;
+	        var method = _.bind(handler.method, global);
 	        if (!_.isFunction(method)) {
 	            throw new Error('Handler "' + name + '" did not provide a "method" function');
 	        }
@@ -80,11 +80,13 @@
 
 	    global.onmessage = function(event) {
 	        var method = event.data.method;
-	        var data = event.data.data;
+	        var argument = event.data.argument;
 
 	        var handler = handlers[method];
 	        if (handler) {
-	            var result = handler(data);
+	            // TODO:  would be wonderful if the 'ping' would allow us to set a debug
+	            // flag or something.
+	            var result = handler(argument);
 	            global.postMessage(result);
 	        } else {
 	            global.postMessage(new Error("No such Conduit worker method: '" + method + "'"));
@@ -92,17 +94,29 @@
 	    }
 	};
 
+	var getDefaultHandlers = function() {
+	    return [
+	            __webpack_require__(1),
+	            __webpack_require__(2),
+	            __webpack_require__(3),
+	            __webpack_require__(4),
+	            __webpack_require__(5)
+	        ]
+	}
+
+
 	//noinspection JSUnresolvedVariable
 	if (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScope) {
 	    // We're in a worker context.  Enable all known handlers
-	    enableHandlers(self, [
-	        __webpack_require__(1),
-	        __webpack_require__(2)
-	    ]);
+	    enableHandlers(self, getDefaultHandlers());
 	}
+
 
 	// We export the enable methods to make testing easy.
 	module.exports = {
+
+	    getDefaultHandlers: getDefaultHandlers,
+
 	    enableHandlers: enableHandlers
 	};
 
@@ -132,9 +146,127 @@
 	'use strict';
 
 	/**
+	 * This worker method handler stores data on the worker.
+	 */
+	var _ = __webpack_require__(7);
+
+	var dataUtils = __webpack_require__(6);
+
+	module.exports = {
+
+	    name: 'setData',
+
+	    method: function(argument) {
+	        var self = dataUtils.getDataContext(this);
+
+	        argument = argument || {};
+	        var data = argument.data || [];
+	        data = dataUtils.parseData(data);
+
+	        // We're resetting the data completely
+	        dataUtils.initStore(self, {
+	            reset: true,
+	            idKey: argument.idKey
+	        });
+
+	        dataUtils.addTo(self, data);
+	        return dataUtils.length(self);
+	    }
+	};
+
+/***/ },
+/* 3 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	/**
+	 * Module used to merge existing data sets on the worker
+	 */
+
+	var _ = __webpack_require__(7);
+
+	var dataUtils = __webpack_require__(6);
+
+	module.exports = {
+
+	    name: 'mergeData',
+
+	    method: function(argument) {
+	        var self = dataUtils.getDataContext(this);
+
+	        argument = argument || {};
+	        var data = argument.data || [];
+	        data = dataUtils.parseData(data);
+
+	        dataUtils.initStore(self, {
+	            idKey: argument.idKey
+	        });
+
+	        dataUtils.addTo(self, data);
+	        return dataUtils.length(self);
+	    }
+
+	};
+
+/***/ },
+/* 4 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	/**
+	 * This worker method handler returns data from the worker.
+	 */
+
+	var _ = __webpack_require__(7);
+
+	var dataUtils = __webpack_require__(6);
+
+	module.exports = {
+
+	    name: 'prepare',
+
+	    /**
+	     * Prepare to use the data in the main thread.  The data should already be
+	     * in the context of the method as 'this.data'; typically it will have been
+	     * placed there by using the 'setData' or 'mergeData' method.
+	     * @param options Should contain either:
+	     *   o id:  The single ID of the item
+	     *   o ids: An array of IDs to return
+	     *   o index: The index of the item
+	     *   o indexes: An object specifying 'min' and 'max' of indexes to return
+	     * @return {*} Either the single item or an array of items, depending how it
+	     * was called
+	     */
+	    method: function(options) {
+	        var self = dataUtils.getDataContext(this);
+	        var found;
+
+	        if (!_.isUndefined(options.id)) {
+	            found = dataUtils.findById(self, options.id);
+	        } else if (_.isArray(options.ids)) {
+	            found = dataUtils.findByIds(self, options.ids);
+	        } else if (_.isNumber(options.index)) {
+	            found = dataUtils.findByIndex(self, options.index);
+	        } else if (_.isObject(options.indexes)) {
+	            found = dataUtils.findByIndexes(self, options.indexes);
+	        }
+
+	        return found;
+	    }
+	};
+
+/***/ },
+/* 5 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	/**
 	 * This module provides sorting for the worker
 	 */
-	var _ = __webpack_require__(3);
+	var _ = __webpack_require__(7);
 
 	module.exports = {
 	    name: 'sort',
@@ -158,10 +290,171 @@
 	};
 
 /***/ },
-/* 3 */
+/* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;//     Underscore.js 1.8.2
+	/* WEBPACK VAR INJECTION */(function(global) {'use strict';
+
+	/**
+	 * This module provides the utility methods for managing data on the worker.
+	 * Typically shared amongst several core worker modules.
+	 *
+	 * Much of the logic here is in managing the quick lookup collections (i.e. _byId)
+	 * that allow us to not constantly iterate over the whole set.
+	 */
+
+	var _ = __webpack_require__(7);
+
+	/**
+	 * Different browsers treat the global context of a worker differently.  This
+	 * method will return the context that we should store our data in.
+	 * @param context
+	 */
+	function getDataContext(context) {
+	    if (!context) {
+	        context = this || global;
+	    }
+
+	    if (!context) {
+	        throw new Error('Cannot determine worker context');
+	    }
+
+	    return context;
+	}
+
+	function initStore(context, options) {
+	    options = options || {};
+
+	    if (options.reset || !context.data) {
+	        context.data = [];
+	        context._idKey = options.idKey || 'id';
+	        context._byId = {};
+	    }
+
+	    if (context._idKey && options.idKey && (context._idKey != options.idKey)) {
+	        throw new Error('Cannot change the ID key of existing data');
+	    }
+	}
+
+	function _isInitialized(context) {
+	    return _.isArray(context.data);
+	}
+
+	function addTo(context, data) {
+	    data = data || [];
+
+	    var byId = context._byId;
+	    var idKey = context._idKey;
+	    _.each(data, function(item) {
+	        var id = item[idKey];
+	        var existing = byId[id];
+	        if (existing) {
+	            // Must merge item properties
+	            var keys = _.keys(item);
+	            _.each(keys, function(key) {
+	                existing[key] = item[key];
+	            });
+	        } else {
+	            // Brand new element or overwriting
+	            if (id) {
+	                byId[id] = item;
+	            }
+
+	            // Add the index where the data exists
+	            item._dataIndex = context.data.push(item) - 1;
+	        }
+	    });
+	}
+
+	function findById(context, id) {
+	    if (_isInitialized(context)) {
+	        return context._byId[id];
+	    }
+	}
+
+	function findByIds(context, idArray) {
+	    var matches = [];
+
+	    if (_isInitialized(context)) {
+	        for (var i = 0; i < idArray.length; i++) {
+	            var match = context._byId[idArray[i]];
+	            if (!_.isUndefined(match)) {
+	                matches.push(match);
+	            }
+	        }
+	    }
+
+	    return matches;
+	}
+
+	function findByIndex(context, index) {
+	    if (_isInitialized(context)) {
+	        return context.data[index];
+	    }
+	}
+
+	function findByIndexes(context, indexes) {
+	    var found = [];
+
+	    if (_isInitialized(context)) {
+	        for (var i = indexes.min; i <= indexes.max; i++) {
+	            var data = context.data[i];
+	            if (!_.isUndefined(data)) {
+	                found.push(data);
+	            }
+	        }
+	    }
+
+	    return found;
+	}
+
+
+	/**
+	 * 'setData' and 'mergeData' can both accept either an array of items, or a string of JSON.
+	 * @param data An array of data, or a string that can be JSON.parse-ed into an array.  If
+	 * neither of those are true, this throws an error.
+	 */
+	function parseData(data) {
+	    if (_.isString(data)) {
+	        data = JSON.parse(data);
+	    }
+
+	    if (!_.isArray(data)) {
+	        throw new Error('Data must be either an array or a JSON string representing an array');
+	    }
+
+	    return data;
+	}
+
+	module.exports = {
+
+	    getDataContext: getDataContext,
+
+	    initStore: initStore,
+
+	    addTo: addTo,
+
+	    findById: findById,
+
+	    findByIds: findByIds,
+
+	    findByIndex: findByIndex,
+
+	    findByIndexes: findByIndexes,
+
+	    parseData: parseData,
+
+	    length: function(context) {
+	        return context.data.length;
+	    }
+	};
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
+
+/***/ },
+/* 7 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;//     Underscore.js 1.8.3
 	//     http://underscorejs.org
 	//     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
 	//     Underscore may be freely distributed under the MIT license.
@@ -218,7 +511,7 @@
 	  }
 
 	  // Current version.
-	  _.VERSION = '1.8.2';
+	  _.VERSION = '1.8.3';
 
 	  // Internal function that returns an efficient (for current engines) version
 	  // of the passed-in callback, to be repeatedly applied in other Underscore
@@ -285,12 +578,20 @@
 	    return result;
 	  };
 
+	  var property = function(key) {
+	    return function(obj) {
+	      return obj == null ? void 0 : obj[key];
+	    };
+	  };
+
 	  // Helper for collection methods to determine whether a collection
 	  // should be iterated as an array or as an object
 	  // Related: http://people.mozilla.org/~jorendorff/es6-draft.html#sec-tolength
+	  // Avoids a very nasty iOS 8 JIT bug on ARM-64. #2094
 	  var MAX_ARRAY_INDEX = Math.pow(2, 53) - 1;
+	  var getLength = property('length');
 	  var isArrayLike = function(collection) {
-	    var length = collection && collection.length;
+	    var length = getLength(collection);
 	    return typeof length == 'number' && length >= 0 && length <= MAX_ARRAY_INDEX;
 	  };
 
@@ -415,11 +716,12 @@
 	    return false;
 	  };
 
-	  // Determine if the array or object contains a given value (using `===`).
+	  // Determine if the array or object contains a given item (using `===`).
 	  // Aliased as `includes` and `include`.
-	  _.contains = _.includes = _.include = function(obj, target, fromIndex) {
+	  _.contains = _.includes = _.include = function(obj, item, fromIndex, guard) {
 	    if (!isArrayLike(obj)) obj = _.values(obj);
-	    return _.indexOf(obj, target, typeof fromIndex == 'number' && fromIndex) >= 0;
+	    if (typeof fromIndex != 'number' || guard) fromIndex = 0;
+	    return _.indexOf(obj, item, fromIndex) >= 0;
 	  };
 
 	  // Invoke a method (with arguments) on every item in a collection.
@@ -643,7 +945,7 @@
 	  // Internal implementation of a recursive `flatten` function.
 	  var flatten = function(input, shallow, strict, startIndex) {
 	    var output = [], idx = 0;
-	    for (var i = startIndex || 0, length = input && input.length; i < length; i++) {
+	    for (var i = startIndex || 0, length = getLength(input); i < length; i++) {
 	      var value = input[i];
 	      if (isArrayLike(value) && (_.isArray(value) || _.isArguments(value))) {
 	        //flatten current level of array or arguments object
@@ -674,7 +976,6 @@
 	  // been sorted, you have the option of using a faster algorithm.
 	  // Aliased as `unique`.
 	  _.uniq = _.unique = function(array, isSorted, iteratee, context) {
-	    if (array == null) return [];
 	    if (!_.isBoolean(isSorted)) {
 	      context = iteratee;
 	      iteratee = isSorted;
@@ -683,7 +984,7 @@
 	    if (iteratee != null) iteratee = cb(iteratee, context);
 	    var result = [];
 	    var seen = [];
-	    for (var i = 0, length = array.length; i < length; i++) {
+	    for (var i = 0, length = getLength(array); i < length; i++) {
 	      var value = array[i],
 	          computed = iteratee ? iteratee(value, i, array) : value;
 	      if (isSorted) {
@@ -710,10 +1011,9 @@
 	  // Produce an array that contains every item shared between all the
 	  // passed-in arrays.
 	  _.intersection = function(array) {
-	    if (array == null) return [];
 	    var result = [];
 	    var argsLength = arguments.length;
-	    for (var i = 0, length = array.length; i < length; i++) {
+	    for (var i = 0, length = getLength(array); i < length; i++) {
 	      var item = array[i];
 	      if (_.contains(result, item)) continue;
 	      for (var j = 1; j < argsLength; j++) {
@@ -742,7 +1042,7 @@
 	  // Complement of _.zip. Unzip accepts an array of arrays and groups
 	  // each array's elements on shared indices
 	  _.unzip = function(array) {
-	    var length = array && _.max(array, 'length').length || 0;
+	    var length = array && _.max(array, getLength).length || 0;
 	    var result = Array(length);
 
 	    for (var index = 0; index < length; index++) {
@@ -756,7 +1056,7 @@
 	  // the corresponding values.
 	  _.object = function(list, values) {
 	    var result = {};
-	    for (var i = 0, length = list && list.length; i < length; i++) {
+	    for (var i = 0, length = getLength(list); i < length; i++) {
 	      if (values) {
 	        result[list[i]] = values[i];
 	      } else {
@@ -766,42 +1066,11 @@
 	    return result;
 	  };
 
-	  // Return the position of the first occurrence of an item in an array,
-	  // or -1 if the item is not included in the array.
-	  // If the array is large and already in sort order, pass `true`
-	  // for **isSorted** to use binary search.
-	  _.indexOf = function(array, item, isSorted) {
-	    var i = 0, length = array && array.length;
-	    if (typeof isSorted == 'number') {
-	      i = isSorted < 0 ? Math.max(0, length + isSorted) : isSorted;
-	    } else if (isSorted && length) {
-	      i = _.sortedIndex(array, item);
-	      return array[i] === item ? i : -1;
-	    }
-	    if (item !== item) {
-	      return _.findIndex(slice.call(array, i), _.isNaN);
-	    }
-	    for (; i < length; i++) if (array[i] === item) return i;
-	    return -1;
-	  };
-
-	  _.lastIndexOf = function(array, item, from) {
-	    var idx = array ? array.length : 0;
-	    if (typeof from == 'number') {
-	      idx = from < 0 ? idx + from + 1 : Math.min(idx, from + 1);
-	    }
-	    if (item !== item) {
-	      return _.findLastIndex(slice.call(array, 0, idx), _.isNaN);
-	    }
-	    while (--idx >= 0) if (array[idx] === item) return idx;
-	    return -1;
-	  };
-
 	  // Generator function to create the findIndex and findLastIndex functions
-	  function createIndexFinder(dir) {
+	  function createPredicateIndexFinder(dir) {
 	    return function(array, predicate, context) {
 	      predicate = cb(predicate, context);
-	      var length = array != null && array.length;
+	      var length = getLength(array);
 	      var index = dir > 0 ? 0 : length - 1;
 	      for (; index >= 0 && index < length; index += dir) {
 	        if (predicate(array[index], index, array)) return index;
@@ -811,16 +1080,15 @@
 	  }
 
 	  // Returns the first index on an array-like that passes a predicate test
-	  _.findIndex = createIndexFinder(1);
-
-	  _.findLastIndex = createIndexFinder(-1);
+	  _.findIndex = createPredicateIndexFinder(1);
+	  _.findLastIndex = createPredicateIndexFinder(-1);
 
 	  // Use a comparator function to figure out the smallest index at which
 	  // an object should be inserted so as to maintain order. Uses binary search.
 	  _.sortedIndex = function(array, obj, iteratee, context) {
 	    iteratee = cb(iteratee, context, 1);
 	    var value = iteratee(obj);
-	    var low = 0, high = array.length;
+	    var low = 0, high = getLength(array);
 	    while (low < high) {
 	      var mid = Math.floor((low + high) / 2);
 	      if (iteratee(array[mid]) < value) low = mid + 1; else high = mid;
@@ -828,11 +1096,43 @@
 	    return low;
 	  };
 
+	  // Generator function to create the indexOf and lastIndexOf functions
+	  function createIndexFinder(dir, predicateFind, sortedIndex) {
+	    return function(array, item, idx) {
+	      var i = 0, length = getLength(array);
+	      if (typeof idx == 'number') {
+	        if (dir > 0) {
+	            i = idx >= 0 ? idx : Math.max(idx + length, i);
+	        } else {
+	            length = idx >= 0 ? Math.min(idx + 1, length) : idx + length + 1;
+	        }
+	      } else if (sortedIndex && idx && length) {
+	        idx = sortedIndex(array, item);
+	        return array[idx] === item ? idx : -1;
+	      }
+	      if (item !== item) {
+	        idx = predicateFind(slice.call(array, i, length), _.isNaN);
+	        return idx >= 0 ? idx + i : -1;
+	      }
+	      for (idx = dir > 0 ? i : length - 1; idx >= 0 && idx < length; idx += dir) {
+	        if (array[idx] === item) return idx;
+	      }
+	      return -1;
+	    };
+	  }
+
+	  // Return the position of the first occurrence of an item in an array,
+	  // or -1 if the item is not included in the array.
+	  // If the array is large and already in sort order, pass `true`
+	  // for **isSorted** to use binary search.
+	  _.indexOf = createIndexFinder(1, _.findIndex, _.sortedIndex);
+	  _.lastIndexOf = createIndexFinder(-1, _.findLastIndex);
+
 	  // Generate an integer Array containing an arithmetic progression. A port of
 	  // the native Python `range()` function. See
 	  // [the Python documentation](http://docs.python.org/library/functions.html#range).
 	  _.range = function(start, stop, step) {
-	    if (arguments.length <= 1) {
+	    if (stop == null) {
 	      stop = start || 0;
 	      start = 0;
 	    }
@@ -1211,6 +1511,15 @@
 	  // Fill in a given object with default properties.
 	  _.defaults = createAssigner(_.allKeys, true);
 
+	  // Creates an object that inherits from the given prototype object.
+	  // If additional properties are provided then they will be added to the
+	  // created object.
+	  _.create = function(prototype, props) {
+	    var result = baseCreate(prototype);
+	    if (props) _.extendOwn(result, props);
+	    return result;
+	  };
+
 	  // Create a (shallow-cloned) duplicate of an object.
 	  _.clone = function(obj) {
 	    if (!_.isObject(obj)) return obj;
@@ -1288,7 +1597,7 @@
 	    }
 	    // Assume equality for cyclic structures. The algorithm for detecting cyclic
 	    // structures is adapted from ES 5.1 section 15.12.3, abstract operation `JO`.
-	    
+
 	    // Initializing stack of traversed objects.
 	    // It's done here since we only need them for objects and arrays comparison.
 	    aStack = aStack || [];
@@ -1439,11 +1748,7 @@
 
 	  _.noop = function(){};
 
-	  _.property = function(key) {
-	    return function(obj) {
-	      return obj == null ? void 0 : obj[key];
-	    };
-	  };
+	  _.property = property;
 
 	  // Generates a function for a given object that returns a given property.
 	  _.propertyOf = function(obj) {
@@ -1452,7 +1757,7 @@
 	    };
 	  };
 
-	  // Returns a predicate for checking whether an object has a given set of 
+	  // Returns a predicate for checking whether an object has a given set of
 	  // `key:value` pairs.
 	  _.matcher = _.matches = function(attrs) {
 	    attrs = _.extendOwn({}, attrs);
@@ -1679,7 +1984,7 @@
 	  // Provide unwrapping proxy for some methods used in engine operations
 	  // such as arithmetic and JSON stringification.
 	  _.prototype.valueOf = _.prototype.toJSON = _.prototype.value;
-	  
+
 	  _.prototype.toString = function() {
 	    return '' + this._wrapped;
 	  };

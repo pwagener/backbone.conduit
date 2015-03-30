@@ -6,7 +6,7 @@ var _ = require('underscore');
 var haul = require('./../src/haul');
 var when = require('when');
 
-
+// TODO:  migrate usages to 'this.callThenResolve'
 function callThenResolve(collection, method) {
     return when.promise(function(resolve) {
         collection[method]().then(function() {
@@ -66,7 +66,10 @@ describe("The haul module", function() {
 
         it('populates the collection', function(done) {
             var promised = callThenResolve(collection, 'haul');
-            expect(promised).to.eventually.have.length(3).and.notify(done);
+            promised.done(function(collection) {
+                expect(collection).to.have.length(3);
+                done();
+            });
         });
 
         it('calls "fill" by default', function(done) {

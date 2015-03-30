@@ -9,6 +9,10 @@ describe('The worker/worker module', function() {
         expect(worker.enableHandlers).to.be.a('function');
     });
 
+    it('provides a default set of handlers', function() {
+        expect(worker.getDefaultHandlers()).to.be.an('array');
+    });
+
     it('refuses to register a handler without a "name"', function() {
         var boundMethod = _.bind(worker.enableHandlers, worker, {},  [{
             method: function() { }

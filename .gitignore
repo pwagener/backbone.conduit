@@ -1,5 +1,6 @@
 # Created by .gitignore support plugin (hsz.mobi)
 .idea
+coverage
 atlassian-ide-plugin.xml
 backbone.conduit.iml
 node_modules

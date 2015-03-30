@@ -69,9 +69,10 @@ function findDefaultWorkerPath() {
 function enableWorker(options) {
     options = options || {};
 
-    var WorkerConstructor = options.Worker ? options.worker : Worker;
+    var WorkerConstructor = options.Worker ? options.Worker : Worker;
     setValue(workerConstructorKey, WorkerConstructor);
 
+    // TODO:  chain this promise
     return when.promise(function(resolve, reject) {
         var paths = options.paths || findDefaultWorkerPath();
 

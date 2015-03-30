@@ -17,12 +17,12 @@ describe('The index module', function() {
         expect(Conduit.haul).to.be.an('object');
     });
 
-    it('provides (deprecated) "fetchJumbo" module', function() {
-        expect(Conduit.fetchJumbo).to.be.an('object');
+    it('provides the "QuickCollection"', function() {
+        expect(Conduit.QuickCollection).to.be.a('function');
     });
 
-    it('provides the "Collection"', function() {
-        expect(Conduit.Collection).to.be.a('function');
+    it('provides the "SparseCollection"', function() {
+        expect(Conduit.SparseCollection).to.be.a('function');
     });
 
 });

@@ -30,7 +30,31 @@ describe("The config module", function() {
         promise.done(noop, noop);
     });
 
-    // TODO:  test for debug option?
+    it('can accept a Worker constructor', function() {
+        var Worker = this.sinon.spy();
 
+        config.enableWorker({
+            Worker: Worker
+        }).done(noop, noop);
+
+        expect(config.getWorkerConstructor()).to.equal(Worker);
+    });
+
+    it('does not report the worker as enabled unless probe succeeded', function() {
+        config.enableWorker({
+            Worker: this.sinon.spy()
+        }).done(noop, noop);
+
+        expect(config.isWorkerEnabled()).to.be.false;
+    });
+
+    it('does not provide a worker path unless probe succeeds', function() {
+        config.enableWorker({
+            Worker: this.sinon.spy()
+        }).done(noop, noop);
+
+        var bound = _.bind(config.getWorkerPath, config);
+        expect(bound).to.throw(Error);
+    })
 
 });

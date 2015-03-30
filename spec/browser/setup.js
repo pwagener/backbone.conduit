@@ -17,14 +17,13 @@ window.workerLocation = '/base/dist';
 
 // load specs
 require('./config.browserSpec.js');
-require('./sortAsync.browserSpec');
-require('./Collection.browserSpec');
+require('./QuickCollection.browserSpec.js');
 require('./haul.browserSpec.js');
+require('./sparseData.browserSpec.js');
 
 window.expect = chai.expect;
 chai.use(sinonChai);
 chai.use(chaiAsPromised);
-
 
 function getSampleData() {
     return[
@@ -38,6 +37,12 @@ beforeEach(function () {
     this.sinon = sinon.sandbox.create();
 
     this.getSampleData = getSampleData;
+
+    this.mute = function(funcToMute) {
+        return function() {
+            funcToMute();
+        }
+    }
 });
 
 afterEach(function () {

@@ -1,7 +1,7 @@
 {
   "name": "backbone.conduit",
   "description": "Moving data through backbone",
-  "version": "0.4.4",
+  "version": "0.6.0",
   "scripts": {
     "test": "gulp test",
     "perf": "gulp perf",
@@ -17,7 +17,7 @@
     "backbone",
     "performance",
     "reset",
-    "bigdata"
+    "data"
   ],
   "dependencies": {
     "backbone": "*",
@@ -25,19 +25,20 @@
   },
   "devDependencies": {
     "backbone-lodash": "^1.1.0",
+    "benchmark": "^1.0.0",
     "blob": "0.0.4",
     "chai": "^1.9.1",
     "chai-as-promised": "^4.1.1",
-    "chai-things": "^0.2.0",
-    "benchmark": "^1.0.0",
     "del": "^0.1.3",
-    "es6-promise": "^1.0.0",
     "exec-sync": "^0.1.6",
     "gulp": "^3.8.8",
+    "gulp-copy": "0.0.2",
     "gulp-help": "^1.2.0",
+    "gulp-istanbul": "^0.7.0",
     "gulp-json-editor": "^2.1.1",
     "gulp-mocha": "^1.0.0",
     "gulp-rename": "^1.2.0",
+    "gulp-s3-upload": "^1.0.5",
     "gulp-webpack": "^0.4.1",
     "jquery": "^2.1.1",
     "jsdom": "3.1.2",
@@ -51,7 +52,9 @@
     "mocha": "^1.21.4",
     "sinon": "^1.10.3",
     "sinon-chai": "^2.5.0",
-    "when": "^3.6.4"
+    "text-encoding": "^0.5.2",
+    "when": "^3.6.4",
+    "yargs": "^3.15.0"
   },
   "bugs": {
     "url": "https://github.com/pwagener/backbone.conduit/issues"

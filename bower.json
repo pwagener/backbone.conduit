@@ -1,13 +1,13 @@
 {
   "name": "backbone.conduit",
-  "version": "0.4.4",
+  "version": "0.6.0",
   "description": "Moving data through backbone",
   "main": "dist/backbone.conduit.js",
   "keywords": [
     "backbone",
     "performance",
     "reset",
-    "bigdata"
+    "data"
   ],
   "license": "MIT",
   "dependencies": {

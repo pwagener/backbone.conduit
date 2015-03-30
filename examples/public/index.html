@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Backbone.Conduit Demo</title>
+
+    <!-- Bootstrap Core CSS -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link href="css/1-col-portfolio.css" rel="stylesheet">
+    <link href="css/examples-custom.css" rel="stylesheet">
+
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+</head>
+
+<body>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+        <div class="container">
+            <!-- Brand and toggle get grouped for better mobile display -->
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/">Backbone.Conduit Demo</a>
+            </div>
+            <!-- Collect the nav links, forms, and other content for toggling -->
+            <div class="collapse navbar-collapse pull-right" id="bs-example-navbar-collapse-1">
+                <ul class="nav navbar-nav">
+                    <li>
+                        <a href="/about.html">
+                            About
+                            <span class="glyphicon glyphicon-question-sign"></span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <!-- /.navbar-collapse -->
+        </div>
+        <!-- /.container -->
+    </nav>
+
+    <!-- Page Content -->
+    <div class="container">
+
+        <!-- Page Heading -->
+        <div class="row">
+            <div class="col-lg-12">
+                <h1 class="page-header">Backbone.Conduit Demo
+                    <small>Comparing 3 Techniques For Collection Loading</small>
+                </h1>
+            </div>
+        </div>
+        <!-- /.row -->
+
+        <!-- Backbone.Collection Experiment -->
+        <div class="row" id="basic">
+            <div class="col-md-6">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">Basic Backbone.Collection Timing Table:</h3>
+                    </div>
+                    <div class="panel-body measurement" style="height: 400px; overflow: auto">
+                        <!-- Filled in by JS -->
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 description">
+                <h3>Basic Backbone.Collection</h3>
+                <h4>Simple, But Slow & Laggy</h4>
+                <p>This shows loading the items into a straight Backbone collection.</p>
+
+                <div class="row">
+                    <div class="dropdown col-md-4 menuContainer">
+                        <!-- rendered by JS -->
+                    </div>
+
+                    <div class="col-md-4">
+                        <a class="btn btn-primary" href="#">
+                            <span class="buttonText">
+                                Run This Example
+                            </span>
+                            <span class="glyphicon glyphicon-play"></span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- /.row -->
+
+        <hr>
+
+        <!-- Backbone.Conduit.Collection Experiment -->
+        <div class="row" id="conduit">
+            <div class="col-md-6">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">Conduit.Collection Timing Table:</h3>
+                    </div>
+                    <div class="panel-body measurement" style="height: 300px; overflow: auto">
+                        <!-- Filled in by JS -->
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 description">
+                <h3>Backbone.Conduit Collection</h3>
+                <h4>Drop-In Replacement, and Faster</h4>
+                <p>This shows loading the items into a Backbone.Conduit Collection.  This collection class is optimized to create Backbone.Models more efficiently.</p>
+                <div class="row">
+                    <div class="dropdown col-md-4 menuContainer">
+                        <!-- rendered by JS -->
+                    </div>
+
+                    <div class="col-md-4">
+                        <a class="btn btn-primary" href="#">
+                            <span class="buttonText">
+                                Run This Example
+                            </span>
+                            <span class="glyphicon glyphicon-play"></span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- /.row -->
+
+        <hr>
+
+        <!-- Backbone.Conduit.SparseCollection Experiment -->
+        <div class="row" id="sparse">
+            <div class="col-md-6">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">Conduit.SparseCollection Timing Table:</h3>
+                    </div>
+                    <div class="panel-body measurement" style="height: 300px; overflow: auto">
+                        <!-- Filled in by JS -->
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 description">
+                <h3>Backbone.Conduit SparseCollection</h3>
+                <h4>More Complex, But Scalable</h4>
+                <p>This shows loading the items into a Backbone.Conduit SparseCollection.  This collection manages the raw data in a web worker, allowing the main thread to only prepare the models it explicitly needs.  This fundamentally changes the data access pattern, however, making the code more complex.  But it scales extremely well, allowing your application to handle as much data as you can feed it.</p>
+                <div class="row">
+                    <div class="dropdown col-md-4 menuContainer">
+                        <!-- rendered by JS -->
+                    </div>
+
+                    <div class="col-md-4">
+                        <a class="btn btn-primary" href="#">
+                            <span class="buttonText">
+                                Run This Example
+                            </span>
+                            <span class="glyphicon glyphicon-play"></span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- /.row -->
+
+        <hr>
+
+        <!-- Footer -->
+        <footer>
+            <div class="row">
+                <div class="col-lg-12">
+                    <p>Copyright &copy; Peter Wagener, 2015</p>
+                </div>
+            </div>
+            <!-- /.row -->
+        </footer>
+
+    </div>
+    <!-- /.container -->
+
+    <!-- Handlebars template used in the timing tables -->
+    <script id="timing-log-template" type="text/x-handlebars-template">
+        <table class="table table-bordered">
+            <thead>
+            <tr>
+                <th style="font-weight: bold">
+                    Event
+                </th>
+                <th style="font-weight: bold">
+                    Duration
+                </th>
+                <th style="font-weight: bold">
+                    Sync/Async
+                </th>
+            </tr>
+            </thead>
+
+            <tbody>
+            {{#each events}}
+            {{#if summary}}
+            <tr style="font-weight: bold">
+            {{else}}
+            <tr>
+            {{/if}}
+                {{#if annotation}}
+                <td colspan="3" class="active" style="text-align: center">
+                    {{{name}}}
+                </td>
+                {{else if summary}}
+
+                <td style="max-width: 150px">
+                    {{name}}
+                </td>
+
+                <td>
+                    {{#if finished}}
+                    {{duration duration}}
+                    {{else}}
+                    <span class="loading"> </span>
+                    {{/if}}
+                </td>
+                <td>
+                </td>
+                {{else}}
+                <td style="max-width: 150px">
+                    {{name}}
+                </td>
+
+                <td>
+                    {{#if finished}}
+                    {{duration duration}}
+                    {{else}}
+                    <span class="loading"> </span>
+                    {{/if}}
+                </td>
+                <td>
+                    {{#if async}}
+                    <span class="label label-success">Async</span>
+                    {{else}}
+                    <span class="label label-warning">Sync</span>
+                    {{/if}}
+                </td>
+                {{/if}}
+            </tr>
+            {{/each}}
+            </tbody>
+        </table>
+    </script>
+
+    <!-- Handlebars template used in the drop-down menu -->
+    <script id="dropdown-template" type="text/x-handlebars-template">
+        <button class="btn btn-default dropdown-toggle" type="button" id="{{cid}}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+            <span class="menuLabel">Use {{currentLabel}}</span>
+            <span class="caret"></span>
+        </button>
+        <ul class="dropdown-menu" aria-labelledby="{{cid}}">
+            {{#each items}}
+                <li><a href="#" data-file="{{file}}">Use {{label}}</a></li>
+            {{/each}}
+        </ul>
+
+    </script>
+
+    <!-- Libraries, in their dependency order -->
+    <script src="lib/jquery.js"></script>
+    <script src="lib/es6-promise.js"></script>
+    <script src="lib/underscore.js"></script>
+    <script src="lib/backbone.js"></script>
+    <script src="lib/backbone.conduit.js"></script>
+    <script src="lib/bootstrap.min.js"></script>
+    <script src="lib/moment.js"></script>
+    <script src="lib/handlebars.js"></script>
+    <script src="lib/handlebars-helpers.js"></script>
+
+    <!-- Scripts that make up this example -->
+    <script src="HealthScoreModel.js"></script>
+    <script src="BasicCollection.js"></script>
+    <script src="ConduitCollection.js"></script>
+    <script src="SparseCollection.js"></script>
+    <script src="MeasuringView.js"></script>
+
+    <!-- Implement the Basic Backbone.Collection Example -->
+    <script>
+        var basicCollection = new BasicCollection();
+        var basicView = new MeasuringView({
+            el: $('#basic'),
+            collection: basicCollection,
+            title: 'Backbone Collection'
+        });
+
+        basicView.render();
+    </script>
+
+    <!-- Implement the Conduit.Collection Example -->
+    <script>
+        var conduitCollection = new ConduitCollection();
+        var conduitView = new MeasuringView({
+            el: $('#conduit'),
+            collection: conduitCollection,
+            title: 'Conduit Collection'
+        });
+
+        conduitView.render();
+    </script>
+
+    <!-- Implement the Conduit.SparseCollection Example -->
+    <script>
+        var sparseCollection = new SparseCollection();
+        var sparseCollectionView = new MeasuringView({
+            el: $('#sparse'),
+            collection: sparseCollection,
+            title: 'Sparse Collection'
+        });
+
+        sparseCollectionView.render();
+    </script>
+
+
+
+</body>
+
+</html>
