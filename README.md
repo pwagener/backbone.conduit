@@ -15,10 +15,10 @@ $ bower install --save backbone.conduit
 $ npm install --save backbone.conduit
 ```
 
-`Conduit.Collection` (an extension of `Backbone.Collection`) is a great way to get started:
+`Conduit.QuickCollection` (an extension of `Backbone.Collection`) is a great way to get started:
 
 ```
-var collection = new Backbone.Conduit.Collection();
+var collection = new Backbone.Conduit.QuickCollection();
 
 // If you have a large amount of data injected onto the page ...
 var aBigArray = [ ... ];
@@ -27,16 +27,22 @@ collection.refill(aBigArray);
 // Or, if you need to get it asynchronously, instead of 'fetch()' do ...
 collection.haul();
 ```
-Performance varies, but typically loading data into a `Conduit.Collection` is ~ 50% faster than a `Backbone.Collection`.
+
+Performance varies, but typically loading data into a `Conduit.QuickCollection` is ~ 50% faster than a `Backbone.Collection`.
+
+### What's New?
+Release 0.6.X introduces the `Conduit.sparseData` and `Conduit.SparseCollection`, an experiment in managing Backbone
+data in a worker thread.  It's a minimal, read-only implementation, but the scalability of it to hundreds of thousands
+of items is promising.
 
 ### Interesting.  Can you tell me more?
 - Sure!  [Here's the Documentation](http://pwagener.github.io/backbone.conduit/).
 
 ### Reading bores me.  Can you show me instead?
-- Yes!  [Check out the Examples](http://pwagener.github.io/backbone.conduit/examples).
+- Yes!  [Check out the Demo](http://conduit.wagener.org).
 
 ### I Think It's Broken.
-- Oh Noes!  [Please File an Issue](https://github.com/pwagener/backbone.conduit/issues)!
+- Oh No!  [Please File an Issue](https://github.com/pwagener/backbone.conduit/issues)!
 
 ### I Have A Question
 Great!  Either ...
