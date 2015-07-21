@@ -5,9 +5,11 @@ var Backbone = require('backbone');
 var config = require('./config');
 var fill = require('./fill');
 var refill = require('./refill');
-var Collection = require('./Collection');
 var haul = require('./haul');
-var sortAsync = require('./sortAsync');
+var sparseData = require('./sparseData');
+
+var QuickCollection = require('./QuickCollection');
+var SparseCollection = require('./SparseCollection');
 
 Backbone.Conduit = module.exports = {
     config: config,
@@ -15,10 +17,8 @@ Backbone.Conduit = module.exports = {
     fill: fill,
     refill: refill,
     haul: haul,
-    sortAsync: sortAsync,
+    sparseData: sparseData,
 
-    Collection: Collection,
-
-    // Deprecated
-    fetchJumbo: require('./fetchJumbo')
+    QuickCollection: QuickCollection,
+    SparseCollection: SparseCollection
 };

@@ -24,7 +24,7 @@ var enableHandlers = function(global, handlerModules) {
             throw new Error('Handler did not provide a name');
         }
 
-        var method = handler.method;
+        var method = _.bind(handler.method, global);
         if (!_.isFunction(method)) {
             throw new Error('Handler "' + name + '" did not provide a "method" function');
         }
@@ -34,11 +34,13 @@ var enableHandlers = function(global, handlerModules) {
 
     global.onmessage = function(event) {
         var method = event.data.method;
-        var data = event.data.data;
+        var argument = event.data.argument;
 
         var handler = handlers[method];
         if (handler) {
-            var result = handler(data);
+            // TODO:  would be wonderful if the 'ping' would allow us to set a debug
+            // flag or something.
+            var result = handler(argument);
             global.postMessage(result);
         } else {
             global.postMessage(new Error("No such Conduit worker method: '" + method + "'"));
@@ -46,16 +48,28 @@ var enableHandlers = function(global, handlerModules) {
     }
 };
 
+var getDefaultHandlers = function() {
+    return [
+            require('./ping'),
+            require('./setData'),
+            require('./mergeData'),
+            require('./prepare'),
+            require('./sort')
+        ]
+}
+
+
 //noinspection JSUnresolvedVariable
 if (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScope) {
     // We're in a worker context.  Enable all known handlers
-    enableHandlers(self, [
-        require('./ping'),
-        require('./sort')
-    ]);
+    enableHandlers(self, getDefaultHandlers());
 }
+
 
 // We export the enable methods to make testing easy.
 module.exports = {
+
+    getDefaultHandlers: getDefaultHandlers,
+
     enableHandlers: enableHandlers
 };

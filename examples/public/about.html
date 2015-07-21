@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Backbone.Conduit Demo</title>
+
+    <!-- Bootstrap Core CSS -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link href="css/1-col-portfolio.css" rel="stylesheet">
+    <link href="css/examples-custom.css" rel="stylesheet">
+
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+    <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+    <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+</head>
+
+<body>
+
+<!-- Navigation -->
+<nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+    <div class="container">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/">Backbone.Conduit Demo</a>
+        </div>
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <div class="collapse navbar-collapse pull-right" id="bs-example-navbar-collapse-1">
+            <ul class="nav navbar-nav">
+                <li>
+                    <a href="/about.html">
+                        About
+                        <span class="glyphicon glyphicon-question-sign"></span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+    <!-- /.container -->
+</nav>
+
+<!-- Page Content -->
+<div class="container">
+
+    <!-- Page Heading -->
+    <div class="row">
+        <div class="col-lg-12">
+            <h1 class="page-header">Backbone.Conduit Demo
+                <small>Data Three Ways</small>
+            </h1>
+        </div>
+    </div>
+    <!-- /.row -->
+
+    <!-- Page Content -->
+    <div class="row">
+        <h2>Introduction</h2>
+        <p>
+            <a href="http://conduit.wagener.org">This demo</a> means to help clarify how
+            <a href="http://backbonejs.org">Backbone</a>-based applications perform
+            when loading large amounts of data into a <code>Backbone.Collection</code>.  Backbone is great at many
+            things, but data sets larger than several thousand items can result in poor application performance.
+        </p>
+        <p>
+            The demo runs through the same cycle using three different techniques: One uses basic Backbone techniques, while
+            the other two leverage the <a href="http://pwagener.github.io/backbone.conduit/">Backbone.Conduit</a>
+            plugin, which provides different <code>Backbone.Collection</code> implementations that are optimized for
+            larger data.
+        </p>
+
+        <hr/>
+
+        <h2>What The Demo Does</h2>
+        <p>
+            The goal of this demo is to explore how long it takes to prepare large data sets for use by an application.
+            Loading data into a Backbone collection can be though of as three steps: Fetch the data,
+            parse the received data into JSON, and creating the <code>Backbone.Model</code> instances.
+            After that, the application shows the first three entries in the collection.
+        </p>
+        <p>
+            While not that interesting for demo purposes, the data set used here is real.  It contains all the NYC
+            Restaurant Health Grades from January 2013 until July 2015.  The application loads static JSON
+            files from the server, where each entry looks like:
+        <pre>   {"name":"Morris Park Bake Sho","zip":10462,"grade":"A","date":"02/09/2015"}</pre>
+
+        <hr/>
+
+        <h2>Three Techniques</h2>
+        <p>
+            The three implementations differ in two ways:  how much work they do, and whether each step in the process is
+            <span class="label label-warning">Synchronous</span> or <span class="label label-success">Asynchronous</span>.
+            The less work the step takes, the shorter amount of time is required.  And since the UI in browsers is
+            single-threaded, asynchronous steps provide a much better user experience: the UI doesn't "hang" while doing
+            other work.
+        </p>
+
+        <h3>Experiment #1: Benchmarking Backbone.Collection</h3>
+        <p>
+            The first experiment uses a basic <code>Backbone.Collection</code>.  Both the <strong>Parse JSON</strong> and
+            <strong>Create Models</strong> steps are <span class="label label-warning">synchronous</span>.  For
+            smaller-sized data sets, this performs fine.  But larger data sets cause significant hangs in the browser,
+            even with very fast hardware.
+        </p>
+
+        <h3>Experiment #2: Optimized Model Creation via Conduit.QuickCollection</h3>
+        <p>
+            As Experiment #1 shows, the <strong>Model Creation</strong> step is very expensive.  Experiment #2 demonstrates
+            performance differences when we treat this as a first class problem.  A <code>Conduit.QuickCollection</code>
+            is optimized to create models ~ 50% faster than the benchmark.  The result is better performance,
+            but still shows some lag with the largest data sizes due to the
+            <span class="label label-warning">synchronous</span> nature of the
+            <strong>Parse JSON</strong> and <strong>Create Models</strong> steps.
+        </p>
+
+        <h3>Experiment #3:  Web Worker Data Management via Conduit.SparseCollection</h3>
+        <p>
+            This experiment uses a <code>Conduit.SparseCollection</code>, which shifts as much of the data management
+            work as possible to another thread of execution.  The result is a slower <strong>Parse JSON</strong> step,
+            but all three steps are now <span class="label label-success">Asynchronous</span>.  Even better, the final
+            <strong>Create Models</strong> step does vastly less work:  it creates <code>Backbone.Model</code>
+            instances only when completely necessary; in this case <mark>only three models are created</mark>,
+            because that is all we need.
+        </p>
+
+        <hr/>
+
+        <h2>Where Do We Go From Here</h2>
+        <p>
+            The <code>Backbone.Conduit</code> plugin <a href="http://pwagener.github.io/backbone.conduit/">is in active development</a>.  The
+            <a href="http://pwagener.github.io/backbone.conduit/QuickCollection/">Conduit.QuickCollection</a> is a drop-in replacement
+            for a <code>Backbone.Collection</code> for most use cases.  The <code>Conduit.SparseCollection</code> is an
+            experimental module that is not yet fully implemented.  If you're interested in following along, check out the
+            <a href="http://pwagener.github.io/backbone.conduit/sparseData"><code>sparseData module</code>
+            in the documentation</a>.
+        </p>
+    </div>
+
+    <hr/>
+
+    <!-- Footer -->
+    <footer>
+        <div class="row">
+            <div class="col-lg-12">
+                <p>Copyright &copy; Peter Wagener, 2015</p>
+            </div>
+        </div>
+        <!-- /.row -->
+    </footer>
+
+</div>
+</body>
+
+</html>

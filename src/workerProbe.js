@@ -37,8 +37,9 @@ function _createProbePromise(Worker, path, fileName, debug) {
     //noinspection JSUnresolvedFunction
     return when.promise(function(resolve) {
         try {
-            boss.promise({
-                method: 'ping'
+            boss.makePromise({
+                method: 'ping',
+                autoTerminate: true
             }).done(function(response) {
                 // Ping succeeded.  We found a functional worker
                 debug('Located worker at "' + fullPath + '" at "' + response + '"');
@@ -69,7 +70,8 @@ function searchPaths(options) {
     }
 
     var Worker = options.Worker;
-    if (!_.isFunction(Worker)) {
+    // Note: checking _.isFunction(Worker) does not work in iOS Safari/Chrome
+    if (_.isUndefined(Worker)) {
         throw new Error('"searchPaths" requires "Worker" in the options');
     }
 

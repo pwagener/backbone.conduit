@@ -1,9 +1,11 @@
 'use strict';
 
+var when = require('when');
+var _ = require('underscore');
+
 var sinon = require('sinon');
 var chai = require('chai');
 var sinonChai = require('sinon-chai');
-var chaiAsPromised = require('chai-as-promised');
 
 var Backbone = require('backbone');
 var mockServer = require('./mockServer');
@@ -11,7 +13,7 @@ mockServer.captureAjax(Backbone.$);
 
 global.expect = chai.expect;
 chai.use(sinonChai);
-chai.use(chaiAsPromised);
+
 
 function getSampleData() {
     return[
@@ -21,11 +23,32 @@ function getSampleData() {
     ];
 }
 
+function callThenResolve(collection, method) {
+    return when.promise(function(resolve) {
+        collection[method]().then(function() {
+            resolve(collection);
+        });
+    });
+}
+
+function expectError(collection, method, errorType) {
+    errorType = errorType || Error;
+
+    if (!_.isFunction(collection[method])) {
+        throw new Error("Collection does not have a method named '" + method + "'");
+    }
+    var bound = _.bind(collection[method], collection);
+    expect(bound).to.throw(errorType, null, "The collection method '" + method + "' did not throw an error");
+}
+
 
 beforeEach(function () {
     this.sinon = sinon.sandbox.create();
 
     this.getSampleData = getSampleData;
+    this.callThenResolve = callThenResolve;
+    this.expectError = expectError;
+
     if (this.currentTest) {
         this.currentTest.sinon = this.sinon;
     }

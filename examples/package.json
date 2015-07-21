@@ -1,0 +1,14 @@
+{
+  "name": "backbone.conduit-examples",
+  "version": "0.0.1",
+  "description": "Examples for Backbone.Conduit",
+  "main": "run-examples.js",
+  "scripts": {
+    "test": "test"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "node-static": "^0.7.6"
+  }
+}

@@ -61,9 +61,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	var config = __webpack_require__(2);
 	var fill = __webpack_require__(3);
 	var refill = __webpack_require__(4);
-	var Collection = __webpack_require__(5);
-	var haul = __webpack_require__(6);
-	var sortAsync = __webpack_require__(7);
+	var haul = __webpack_require__(5);
+	var sparseData = __webpack_require__(6);
+
+	var QuickCollection = __webpack_require__(7);
+	var SparseCollection = __webpack_require__(8);
 
 	Backbone.Conduit = module.exports = {
 	    config: config,
@@ -71,12 +73,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	    fill: fill,
 	    refill: refill,
 	    haul: haul,
-	    sortAsync: sortAsync,
+	    sparseData: sparseData,
 
-	    Collection: Collection,
-
-	    // Deprecated
-	    fetchJumbo: __webpack_require__(8)
+	    QuickCollection: QuickCollection,
+	    SparseCollection: SparseCollection
 	};
 
 
@@ -161,9 +161,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	function enableWorker(options) {
 	    options = options || {};
 
-	    var WorkerConstructor = options.Worker ? options.worker : Worker;
+	    var WorkerConstructor = options.Worker ? options.Worker : Worker;
 	    setValue(workerConstructorKey, WorkerConstructor);
 
+	    // TODO:  chain this promise
 	    return when.promise(function(resolve, reject) {
 	        var paths = options.paths || findDefaultWorkerPath();
 
@@ -349,6 +350,441 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 5 */
 /***/ function(module, exports, __webpack_require__) {
 
+	'use strict';
+
+	var _ = __webpack_require__(9);
+	var Backbone = __webpack_require__(1);
+	var when = __webpack_require__(13);
+
+	var config = __webpack_require__(2);
+	var fill = __webpack_require__(3);
+	var refill = __webpack_require__(4);
+
+	/**
+	 * This utility method is taken from backbone.js verbatim
+	 */
+	var wrapError = function(model, options) {
+	    var error = options.error;
+	    options.error = function(resp) {
+	        if (error) error(model, resp, options);
+	        model.trigger('error', model, resp, options);
+	    };
+	};
+
+	/**
+	 * This method is called when the 'haul' method has successfully received data.  It is broken out and mixed into
+	 * the collection so that other modules (i.e. 'sparseData') have a good place to hook into.
+	 * @param response The response
+	 * @param options The options that were originally provided to 'haul'
+	 * @param origSuccessCallback The original callback on success
+	 * @private
+	 */
+	var _onHaulSuccess = function(response, options, origSuccessCallback) {
+	    // This is key change from 'fetch':  use refill/fill instead of reset/set
+	    var method = options.reset ? 'refill' : 'fill';
+	    this[method](response, options);
+	    if (origSuccessCallback) origSuccessCallback(this, response, options);
+	    this.trigger('sync', this, response, options);
+	};
+
+	/**
+	 * This method is a replacement for Backbone.Collection.fetch that will use
+	 * Conduit.QuickCollection.fill/refill instead of Backbone.Collection.set/reset when data
+	 * is successfully returned from the server.
+	 */
+	function haul(options) {
+	    options = options ? _.clone(options) : {};
+	    if (options.parse === void 0) options.parse = true;
+	    var success = options.success;
+	    var collection = this;
+	    options.success = function(resp) {
+	        collection._onHaulSuccess(resp, options, success);
+	    };
+	    wrapError(this, options);
+	    return this.sync('read', this, options);
+	}
+
+	var mixinObj = {
+	    haul: haul,
+
+	    _onHaulSuccess: _onHaulSuccess
+	};
+
+	module.exports = {
+	    mixin: function(Collection) {
+	        if (!_.isFunction(Collection.prototype.refill)) {
+	            refill.mixin(Collection);
+	        }
+
+	        if (!_.isFunction(Collection.prototype.fill)) {
+	            fill.mixin(Collection);
+	        }
+
+	        _.extend(Collection.prototype, mixinObj);
+	        return Collection;
+	    }
+	};
+
+
+/***/ },
+/* 6 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	/**
+	 * This module provides the ability for a Collection to manage its data sparsely.  Data lives on the Worker thread,
+	 * not the main one.
+	 */
+
+	var _ = __webpack_require__(9);
+	var when = __webpack_require__(13);
+	var Backbone = __webpack_require__(1);
+
+	var config = __webpack_require__(2);
+	var Boss = __webpack_require__(12);
+
+	var refillModule = __webpack_require__(4);
+	var fillModule = __webpack_require__(3);
+	var haulModule = __webpack_require__(5);
+
+
+	function get(obj, options) {
+	    options = options || {};
+
+	    if (obj == null) return void 0;
+	    var id = obj.id || obj.cid || obj;
+
+	    if (options.skipCheck || this.isPrepared({ id: id })) {
+	        return this._byId[id];
+	    } else {
+	        throw new Error('Cannot get model by ID "' + id + '".  It has not been prepared.');
+	    }
+	}
+
+
+	function at(index) {
+	    var model = this.models[index];
+	    if (!model && index < this.length) {
+	        throw new Error('Cannot get model at index "' + index + '".  It has not been prepared');
+	    }
+
+	    return model;
+	}
+
+	/**
+	 * Implement the private interface of the 'haul' module to plug into the callback when the data is retrieved.
+	 * @param response The response
+	 * @param options The options that were originally provided to 'haul'
+	 * @param origSuccessCallback The original callback on success
+	 * @private
+	 */
+	function _onHaulSuccess(response, options, origSuccessCallback) {
+	    var method = options.reset ? 'refill' : 'fill';
+	    var self = this;
+	    this[method](response, options).then(function() {
+	        // TODO:  respect sorting
+
+	        if (origSuccessCallback) origSuccessCallback(self, response, options);
+	        self.trigger('sync', self, response, options);
+	    });
+	}
+
+
+	/**
+	 * This method is used to retrieve data from the worker and prepare to use it in the main
+	 * thread.
+	 * @param items Specify what to retrieve.  Possibilities:
+	 *   o id: The numerical ID to prepare
+	 *   o ids: An array of IDs to prepare
+	 *   o index:  The single index to prepare
+	 *   o indexes: An object with 'min' and 'max' to specify the indexes to return
+	 */
+	function prepare(items) {
+	    _ensureBoss.call(this);
+
+	    var self = this;
+	    return this._boss.makePromise({
+	        method: 'prepare',
+	        argument: items
+	    }).then(function(models) {
+	        var converted = self._sparseSet(models);
+	        return(converted);
+	    });
+	}
+
+	/**
+	 * Determine if a model or set of models is prepared in the main thread
+	 * @param items The same set of options available to `prepare(...)`
+	 */
+	function isPrepared(items) {
+	    if (!_.isUndefined(items.id)) {
+	        return !!this._byId[items.id];
+	    }
+
+	    if (_.isArray(items.ids)) {
+	        for (var id = 0; id < items.ids.length; id++) {
+	            var currentId = items.ids[id];
+	            if (!this._byId[currentId]) {
+	                return false;
+	            }
+	        }
+
+	        return true;
+	    }
+
+	    if (!_.isUndefined(items.index)) {
+	        return !!this.models[items.index];
+	    }
+
+	    if (!_.isUndefined(items.indexes)) {
+	        for (var index = items.indexes.min; index <= items.indexes.max; index++) {
+	            if (!this.models[index]) {
+	                return false;
+	            }
+	        }
+
+	        return true;
+	    }
+
+	    return false;
+	}
+
+	// Default Sparse Set options
+	var setOptions = {add: true, remove: true, merge: true};
+
+	/**
+	 * Function to create & store a Backbone.Model on the main thread.  This is
+	 * a simplified variant of Backbone.Collection.set(...).
+	 * @param models The array of raw data to translate into models
+	 * @param options Any options.  A special option is available here, _sparseSetAt, which
+	 * provides an array of indexes to add the items at.
+	 * @return Array An array of Backbone.Model instances in corresponding order as 'models'
+	 * @private  This should only be called by this module when creating & caching data from
+	 * the worker in the form of a model
+	 */
+	function _sparseSet(models, options) {
+	    options = _.defaults({}, options, setOptions);
+	    if (options.parse) models = this.parse(models, options);
+	    var singular = !_.isArray(models);
+	    models = singular ? (models ? [models] : []) : models.slice();
+	    var i, l, id, model, attrs, existing, sort;
+	    var at = options.at;
+	    var targetModel = this.model;
+	    var sortable = this.comparator && (at == null) && options.sort !== false;
+	    var sortAttr = _.isString(this.comparator) ? this.comparator : null;
+	    var toAdd = [], modelMap = {};
+	    var add = options.add, merge = options.merge, remove = options.remove;
+
+	    // Turn bare objects into model references, and prevent invalid models
+	    // from being added.
+	    for (i = 0, l = models.length; i < l; i++) {
+	        attrs = models[i];
+	        if (!attrs) {
+	            // We don't add empty models via sparseSet
+	            continue;
+	        }
+
+	        var itemIndex = attrs._dataIndex;
+	        if (_.isUndefined(itemIndex)) {
+	            throw new Error('Worker data did not provide _dataIndex');
+	        }
+
+	        delete attrs._dataIndex;
+	        id = attrs[targetModel.prototype.idAttribute || 'id'];
+
+	        // If a duplicate is found, prevent it from being added and
+	        // optionally merge it into the existing model.
+	        // TODO:  not much of a fan of 'skipCheck'....
+	        if (existing = this.get(id, { skipCheck: true })) {
+	            if (remove) {
+	                modelMap[existing.cid] = true;
+	            }
+	            if (merge) {
+	                attrs = attrs === model ? model.attributes : attrs;
+	                if (options.parse) attrs = existing.parse(attrs, options);
+	                existing.set(attrs, options);
+	                if (sortable && !sort && existing.hasChanged(sortAttr)) sort = true;
+	            }
+	            models[i] = existing;
+
+	            // If this is a new, valid model, push it to the `toAdd` list.
+	        } else if (add) {
+
+	            model = models[i] = this._prepareModel(attrs, options);
+	            if (!model) continue;
+	            toAdd.push(model);
+	            this._addReference(model, options);
+
+	            this.models[itemIndex] = model;
+	        }
+	    }
+
+	    // NOTE:  we don't sort *or* fire any events
+
+	    // Return the added (or merged) model (or models).
+	    return singular ? models[0] : models;
+	}
+
+
+	function _fillOrRefillOnWorker(data, options) {
+	    var method = options.method;
+
+	    var context = options.context;
+	    _ensureBoss.call(context);
+
+	    var dataWasString = _.isString(data);
+	    var idKey = context.model.idAttribute;
+	    var bossPromise = context._boss.makePromise({
+	        method: method,
+	        argument: {
+	            data: data,
+	            idKey: idKey
+	        }
+	    });
+
+	    return bossPromise.then(function(length) {
+	        context.length = length;
+	        if (dataWasString) {
+	            // Trigger an event to let anyone know our JSON has been parsed.
+	            // TODO:  this is nice for demo purposes, but anything else?
+	            context.trigger('jsonParsed');
+	        }
+	    });
+	}
+
+
+	function refill(data) {
+	    return _fillOrRefillOnWorker(data, { context: this, method: 'setData' });
+	}
+
+	function fill(data) {
+	    return _fillOrRefillOnWorker(data, { context: this, method: 'mergeData'});
+	}
+
+	function haul(options) {
+	    options = options ? _.clone(options) : {};
+
+	    // Install a specialized jQuery Ajax converter to *not* convert 'text json'.  We will
+	    // instead pass that directly to the worker, where it will be parsed.
+	    _.extend(options, {
+	        converters: {
+	            'text json': function(response) {
+	                return response;
+	            }
+	        }
+	    });
+
+	    // Use the original Conduit.haul implementation
+	    return this._conduitHaul(options);
+	}
+
+	function _ensureBoss() {
+	    if (!this._boss) {
+	        this._boss = new Boss({
+	            Worker: config.getWorkerConstructor(),
+	            fileLocation: config.getWorkerPath(),
+	            autoTerminate: false
+	        });
+	    }
+	}
+
+	var mixinObj = {
+	    // Override 'get' & 'at' to check to see if the data has been populated first
+	    get: get,
+	    at: at,
+
+	    // Override 'refill' and 'fill' to put the data on the worker instead of in the main thread
+	    refill: refill,
+	    fill: fill,
+
+	    // Override 'haul' to be able to pass the raw JSON string to the worker
+	    haul: haul,
+
+	    prepare: prepare,
+
+	    isPrepared: isPrepared,
+
+	    // This overrides the corresponding method from the 'haul' module to plug into the data return path
+	    // TODO:  is this necessary, since we are wholly overriding 'haul'?
+	    _onHaulSuccess: _onHaulSuccess,
+
+	    _sparseSet: _sparseSet
+	};
+
+
+	// ====== Machinery to ensure we reliably throw errors on many/most Collection methods ======
+
+	// Methods to fail with a general message
+	var notSupportMethods = [
+	    // Underscore methods
+	    'forEach', 'each', 'map', 'collect', 'reduce', 'foldl',
+	    'inject', 'reduceRight', 'foldr', 'find', 'detect', 'filter', 'select',
+	    'reject', 'every', 'all', 'some', 'any', 'include', 'contains', 'invoke',
+	    'max', 'min', 'toArray', 'size', 'first', 'head', 'take', 'initial', 'rest',
+	    'tail', 'drop', 'last', 'without', 'difference', 'indexOf', 'shuffle',
+	    'lastIndexOf', 'isEmpty', 'chain', 'sample', 'partition',
+
+	    // Underscore attribute methods
+	    'groupBy', 'countBy', 'sortBy', 'indexBy',
+
+	    // Other various methods
+	    "slice", "sort", "pluck", "where", "findWhere", "parse", "clone", "create"
+
+	];
+	_.each(notSupportMethods, function(method) {
+	    mixinObj[method] = function() {
+	        throw new Error('Cannot call "' + method + '" on a collection with sparse data.');
+	    }
+	});
+
+	// Methods to fail with a "read only" message
+	var notSupportedWriteMethods = [
+	    "set", "add", "remove", "push", "pop", "unshift", "shift"
+	];
+	_.each(notSupportedWriteMethods, function(method) {
+	    mixinObj[method] = function() {
+	        throw new Error('Cannot call "' + method + '".  Collections with sparse data are read only.');
+	    }
+	});
+
+	// Methods that fail with a "use the Conduit replacement" message
+	var notSupportedConduitMethods = [
+	    { called: 'reset', use: 'refill' },
+	    { called: 'set', use: 'fill' },
+	    { called: 'fetch', use: 'haul' }
+	];
+	_.each(notSupportedConduitMethods, function(methodObj) {
+	    mixinObj[methodObj.called] = function() {
+	        throw new Error('Cannot call "' + methodObj.called + '".  Collections with sparse data must use "' + methodObj.use + '" instead.');
+	    }
+	});
+
+
+	module.exports = {
+	    mixin: function(Collection) {
+
+	        // Mix in our friends
+	        Collection = refillModule.mixin(Collection);
+	        Collection = fillModule.mixin(Collection);
+	        Collection = haulModule.mixin(Collection);
+
+	        // Keep a reference to original Conduit.haul
+	        Collection.prototype._conduitHaul = Collection.prototype.haul;
+
+	        // Mix in sparseData behavior
+	        _.extend(Collection.prototype, mixinObj);
+
+	        return Collection;
+	    }
+	};
+
+/***/ },
+/* 7 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
 	/**
 	 * This module provides an out-of-the-box Collection implementation that leverages the
 	 * Conduit capabilities to deal with large amounts of data.
@@ -359,8 +795,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var fill = __webpack_require__(3);
 	var refill = __webpack_require__(4);
-	var sortAsync = __webpack_require__(7);
-	var haul = __webpack_require__(6);
+	var haul = __webpack_require__(5);
 
 	// Act like a Backbone.Collection, but use 'refill'
 	var Collection = function(models, options) {
@@ -381,230 +816,26 @@ return /******/ (function(modules) { // webpackBootstrap
 	// Add all the relevant modules to the new Collection type
 	fill.mixin(Collection);
 	refill.mixin(Collection);
-	sortAsync.mixin(Collection);
 	haul.mixin(Collection);
 
 	module.exports = Collection;
 
 /***/ },
-/* 6 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	var _ = __webpack_require__(9);
-	var Backbone = __webpack_require__(1);
-	var when = __webpack_require__(13);
-
-	var config = __webpack_require__(2);
-	var fill = __webpack_require__(3);
-	var refill = __webpack_require__(4);
-	var sortAsync = __webpack_require__(7);
-
-	/**
-	 * This utility method is taken from backbone.js verbatim
-	 */
-	var wrapError = function(model, options) {
-	    var error = options.error;
-	    options.error = function(resp) {
-	        if (error) error(model, resp, options);
-	        model.trigger('error', model, resp, options);
-	    };
-	};
-
-	/**
-	 * This method is a replacement for Backbone.Collection.fetch that will use
-	 * Conduit.Collection.fill/refill instead of Backbone.Collection.set/reset when data
-	 * is successfully returned from the server.
-	 */
-	function haul(options) {
-	    options = options ? _.clone(options) : {};
-	    if (options.parse === void 0) options.parse = true;
-	    var success = options.success;
-	    var collection = this;
-	    options.success = function(resp) {
-	        // This is one change from 'fetch':  use refill/fill instead of reset/set
-	        var method = options.reset ? 'refill' : 'fill';
-
-	        // Function that will finish the fetch operation
-	        var finishFetch = function(data) {
-	            collection[method](data, options);
-	            if (success) success(collection, data, options);
-	            collection.trigger('sync', collection, data, options);
-	        };
-
-	        // We may be able to sort asynchronously.  The conditions we need:
-	        //  - We are in the browser
-	        //  - We have a path to Underscore configured
-	        //  - The collection has a "string" comparator
-	        //  - The collection is being 'reset', or it is empty
-	        //  - A sort was requested
-
-	        var goodComparator = _.isString(collection.comparator);
-	        var sortable = goodComparator && options.sort !== false &&
-	            (options.reset || collection.length == 0);
-	        if (config.isBrowserEnv() && config.isWorkerEnabled() && sortable) {
-	            // We can use the asynchronous sorting.  So, ensure we don't do synchronous sort
-	            options.sort = false;
-
-	            // Do the async sort, then set the values.
-	            var sortPromise = collection._useBossToSort({
-	                data: resp,
-	                comparator: collection.comparator
-	            });
-	            sortPromise.then(function(sorted) {
-	                finishFetch(sorted);
-	            });
-	        } else {
-	            // Finish the fetch the usual way, with synchronous sorting if requested.
-	            finishFetch(resp);
-	        }
-	    };
-	    wrapError(this, options);
-	    return this.sync('read', this, options);
-	}
-
-	var mixinObj = {
-	    haul: haul
-	};
-
-	module.exports = {
-	    mixin: function(Collection) {
-	        if (!_.isFunction(Collection.prototype.refill)) {
-	            refill.mixin(Collection);
-	        }
-
-	        if (!_.isFunction(Collection.prototype.fill)) {
-	            fill.mixin(Collection);
-	        }
-
-	        if (!_.isFunction(Collection.prototype.sortAsync)) {
-	            sortAsync.mixin(Collection);
-	        }
-
-	        _.extend(Collection.prototype, mixinObj);
-	        return Collection;
-	    }
-	};
-
-
-/***/ },
-/* 7 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	var _ = __webpack_require__(9);
-	var when = __webpack_require__(13);
-
-	var config = __webpack_require__(2);
-	var Boss = __webpack_require__(12);
-
-	function sortAsync(options) {
-	    options = options || {};
-
-	    if (!config.isBrowserEnv()) {
-	        throw new Error("Async sorting only supported in a browser environment");
-	    }
-
-	    if (!config.isWorkerEnabled()) {
-	        // TODO: would be nice to attempt to enable it for them....
-	        throw new Error("Cannot sort asynchronously; worker not enabled");
-	    }
-
-	    var data = this.toJSON();
-	    var comparator = this.comparator;
-	    var sortPromise = this._useBossToSort({
-	        data: data,
-	        comparator: comparator
-	    });
-
-	    var self = this;
-	    return when.promise(function(resolve, reject) {
-	        sortPromise.then(function(sorted) {
-	            // Well, this isn't a very good way to get the data back in, but
-	            // this whole thing feels like a bad idea.
-	            self.comparator = null;
-
-	            if (_.isFunction(self.refill)) {
-	                self.refill(sorted, { silent: true });
-	            } else {
-	                self.reset(sorted, { silent: true });
-	            }
-
-	            self.comparator = comparator;
-	            if (!options.silent) {
-	                self.trigger('sort', self, options);
-	            }
-	            resolve(self);
-	        }, function(err) {
-	            reject(err);
-	        });
-	    });
-	}
-
-	function _useBossToSort(sortSpec) {
-	    // Make sure we have a boss/worker pair spun up
-	    if (!this._boss) {
-	        this._boss = new Boss({
-	            Worker: config.getWorkerConstructor(),
-	            fileLocation: config.getWorkerPath()
-	        });
-	    }
-
-	    return this._boss.promise({
-	        method: 'sort',
-	        data: sortSpec
-	    });
-	}
-
-	var mixinObj = {
-	    sortAsync: sortAsync,
-
-	    _useBossToSort: _useBossToSort
-	};
-
-	module.exports = {
-	    mixin: function(Collection) {
-	        _.extend(Collection.prototype, mixinObj);
-	        return Collection;
-	    }
-	};
-
-/***/ },
 /* 8 */
 /***/ function(module, exports, __webpack_require__) {
 
-	/**
-	 *  NOTE:  this module has been renamed 'haul.js'.  The 'fetchJumbo' module
-	 *  and related function will be removed in a future release.
-	 */
 	'use strict';
+	/**
+	 * This module provides the SparseCollection, a Backbone.Collection implementation
+	 * that has the Conduit.sparseData module already mixed into it.
+	 */
+	var Backbone = __webpack_require__(1);
+	var sparseData = __webpack_require__(6);
 
-	var _ = __webpack_require__(9);
+	var SparseCollection = Backbone.Collection.extend({});
+	sparseData.mixin(SparseCollection);
 
-	var haul = __webpack_require__(6);
-
-	function warn() {
-	    console.log("WARNING: The 'fetchJumbo' module has been renamed 'haul'.");
-	    console.log("WARNING: 'fetchJumbo' will be removed in a subsequent release.");
-	}
-
-	module.exports = {
-	    mixin: function(Collection) {
-	        warn();
-	        haul.mixin(Collection);
-
-	        _.extend(Collection.prototype, {
-	            fetchJumbo: function(options) {
-	                warn();
-	                return this.haul(options);
-	            }
-	        });
-
-	        return Collection;
-	    }
-	};
+	module.exports = SparseCollection;
 
 /***/ },
 /* 9 */
@@ -655,8 +886,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	    //noinspection JSUnresolvedFunction
 	    return when.promise(function(resolve) {
 	        try {
-	            boss.promise({
-	                method: 'ping'
+	            boss.makePromise({
+	                method: 'ping',
+	                autoTerminate: true
 	            }).done(function(response) {
 	                // Ping succeeded.  We found a functional worker
 	                debug('Located worker at "' + fullPath + '" at "' + response + '"');
@@ -687,7 +919,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 
 	    var Worker = options.Worker;
-	    if (!_.isFunction(Worker)) {
+	    // Note: checking _.isFunction(Worker) does not work in iOS Safari/Chrome
+	    if (_.isUndefined(Worker)) {
 	        throw new Error('"searchPaths" requires "Worker" in the options');
 	    }
 
@@ -897,7 +1130,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	/**
 	 * This object provides an interface to a worker that communicates via promises.
 	 * Still conflicted about whether this should be an external module or not
-	 * @param options
+	 * @param options which includes:
+	 *   o fileLocation (required):  The location of the Worker JS file to load
+	 *   o Worker (required): The Worker constructor to use.  Typically will be window.Worker
+	 *     unless writing tests
+	 *   o autoTerminate (optional):  If boolean false, the worker will never be terminated.  If boolean true,
+	 *     the worker will be terminated immediately.  If a number, the worker will be terminated after that many
+	 *     milliseconds.  Note that the worker will always be recreated when necessary (i.e. when calling
+	 *     <code>boss.makePromise(...)</code>.  This defaults to 1000, meaning a worker will be terminated if it is not
+	 *     used for one second.
 	 * @constructor
 	 */
 	function Boss(options) {
@@ -918,19 +1159,22 @@ return /******/ (function(modules) { // webpackBootstrap
 	            throw new Error("You must provide 'Worker'");
 	        }
 
-	        this.WorkerTimeoutMillis = options.timeout || 1000;
+	        if (_.isUndefined(options.autoTerminate)) {
+	            options.autoTerminate = 1000;
+	        }
+	        this.autoTerminate = options.autoTerminate;
 	    },
 
 	    /**
 	     * Get a promise that will be resolved when the worker finishes
 	     * @param details Details for the method call:
 	     *   o method (required) The name of the method to call
-	     *   o data (optional) Any data that should be passed to the worker method
-	     *     you are calling
+	     *   o argument (optional) The single argument that will be passed to the
+	     *     worker method you are calling
 	     * @return A Promise that will be resolved or rejected based on calling
 	     *   the method you are calling.
 	     */
-	    promise: function(details) {
+	    makePromise: function(details) {
 	        if (!_.isString(details.method)) {
 	            throw new Error("Must provide 'method'");
 	        }
@@ -965,11 +1209,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	                reject(err);
 	            };
 
+	            // TODO:  if details.argument is an easily measurable payload (i.e. a long string),
+	            // use an ArrayBuffer to speed the transfer.
 	            worker.postMessage(details);
 	        }).finally(function() {
-	            // Set a timeout to terminate the worker if it is not used quickly enough
-	            var callTerminate = _.bind(self.terminate, self);
-	            self.terminateTimeoutHandle = setTimeout(callTerminate, self.WorkerTimeoutMillis);
+
+	            if (self.autoTerminate === true) {
+	                // terminate immediately
+	                self.terminate();
+	            } else if (_.isNumber(self.autoTerminate)) {
+	                // Set a timeout to terminate the worker if it is not used quickly enough
+	                var callTerminate = _.bind(self.terminate, self);
+	                self.terminateTimeoutHandle = setTimeout(callTerminate, self.autoTerminate);
+	            }
 	        });
 	    },
 
@@ -978,7 +1230,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	     */
 	    terminate: function() {
 	        if(this.worker) {
-	            this.worker.terminate();
+	            if (_.isFunction(this.worker.terminate)) {
+	                this.worker.terminate();
+	            }
 	            this.worker = null;
 	        }
 	    },

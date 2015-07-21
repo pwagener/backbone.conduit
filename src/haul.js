@@ -7,7 +7,6 @@ var when = require('when');
 var config = require('./config');
 var fill = require('./fill');
 var refill = require('./refill');
-var sortAsync = require('./sortAsync');
 
 /**
  * This utility method is taken from backbone.js verbatim
@@ -21,8 +20,24 @@ var wrapError = function(model, options) {
 };
 
 /**
+ * This method is called when the 'haul' method has successfully received data.  It is broken out and mixed into
+ * the collection so that other modules (i.e. 'sparseData') have a good place to hook into.
+ * @param response The response
+ * @param options The options that were originally provided to 'haul'
+ * @param origSuccessCallback The original callback on success
+ * @private
+ */
+var _onHaulSuccess = function(response, options, origSuccessCallback) {
+    // This is key change from 'fetch':  use refill/fill instead of reset/set
+    var method = options.reset ? 'refill' : 'fill';
+    this[method](response, options);
+    if (origSuccessCallback) origSuccessCallback(this, response, options);
+    this.trigger('sync', this, response, options);
+};
+
+/**
  * This method is a replacement for Backbone.Collection.fetch that will use
- * Conduit.Collection.fill/refill instead of Backbone.Collection.set/reset when data
+ * Conduit.QuickCollection.fill/refill instead of Backbone.Collection.set/reset when data
  * is successfully returned from the server.
  */
 function haul(options) {
@@ -31,49 +46,16 @@ function haul(options) {
     var success = options.success;
     var collection = this;
     options.success = function(resp) {
-        // This is one change from 'fetch':  use refill/fill instead of reset/set
-        var method = options.reset ? 'refill' : 'fill';
-
-        // Function that will finish the fetch operation
-        var finishFetch = function(data) {
-            collection[method](data, options);
-            if (success) success(collection, data, options);
-            collection.trigger('sync', collection, data, options);
-        };
-
-        // We may be able to sort asynchronously.  The conditions we need:
-        //  - We are in the browser
-        //  - We have a path to Underscore configured
-        //  - The collection has a "string" comparator
-        //  - The collection is being 'reset', or it is empty
-        //  - A sort was requested
-
-        var goodComparator = _.isString(collection.comparator);
-        var sortable = goodComparator && options.sort !== false &&
-            (options.reset || collection.length == 0);
-        if (config.isBrowserEnv() && config.isWorkerEnabled() && sortable) {
-            // We can use the asynchronous sorting.  So, ensure we don't do synchronous sort
-            options.sort = false;
-
-            // Do the async sort, then set the values.
-            var sortPromise = collection._useBossToSort({
-                data: resp,
-                comparator: collection.comparator
-            });
-            sortPromise.then(function(sorted) {
-                finishFetch(sorted);
-            });
-        } else {
-            // Finish the fetch the usual way, with synchronous sorting if requested.
-            finishFetch(resp);
-        }
+        collection._onHaulSuccess(resp, options, success);
     };
     wrapError(this, options);
     return this.sync('read', this, options);
 }
 
 var mixinObj = {
-    haul: haul
+    haul: haul,
+
+    _onHaulSuccess: _onHaulSuccess
 };
 
 module.exports = {
@@ -84,10 +66,6 @@ module.exports = {
 
         if (!_.isFunction(Collection.prototype.fill)) {
             fill.mixin(Collection);
-        }
-
-        if (!_.isFunction(Collection.prototype.sortAsync)) {
-            sortAsync.mixin(Collection);
         }
 
         _.extend(Collection.prototype, mixinObj);
