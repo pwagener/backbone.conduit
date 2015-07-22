@@ -247,6 +247,31 @@ function haul(options) {
     return this._conduitHaul(options);
 }
 
+/**
+ * Method to sort the data asynchronously.  This permanently modifies the array
+ * on the worker.  If successful, it removes any models on the UI thread that
+ * were previously prepared.
+ * @param sortSpec The sort specification.  Contains:
+ *   - comparator (required) The name of the property to sort by
+ *   - direction (optional) The direction to sort in.  Defaults to ascending; to
+ *     sort descending set this to 'desc'.
+ * @return {Promise} A promise that resolves when the sorting is completed.
+ */
+function sortAsync(sortSpec) {
+    var self = this;
+    return this._boss.makePromise({
+        method: 'sortBy',
+        argument: sortSpec
+    }).then(function() {
+        // Sort was successful; remove any local models.
+        // NOTE:  we could work around doing this by just re-preparing the
+        // models we have locally ...
+        self.models = [];
+        self.trigger('sort');
+    });
+
+}
+
 function _ensureBoss() {
     if (!this._boss) {
         this._boss = new Boss({
@@ -273,8 +298,9 @@ var mixinObj = {
 
     isPrepared: isPrepared,
 
+    sortAsync: sortAsync,
+
     // This overrides the corresponding method from the 'haul' module to plug into the data return path
-    // TODO:  is this necessary, since we are wholly overriding 'haul'?
     _onHaulSuccess: _onHaulSuccess,
 
     _sparseSet: _sparseSet

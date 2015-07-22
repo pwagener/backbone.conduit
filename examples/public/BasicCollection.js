@@ -65,6 +65,22 @@ var BasicCollection = window.BasicCollection = Backbone.Collection.extend({
     },
 
     /**
+     * TODO:
+     * @return A promise that, when resolved, indicates the collection has been sorted by name.
+     * This allows us to treat the BasicCollection, ConduitCollection, and SparseCollection the
+     * same with respect to sorting.
+     */
+    getSortByNamePromise: function() {
+        var collection = this;
+        return new Promise(function(resolve) {
+            collection.comparator = 'name';
+            collection.sort();
+            collection.comparator = null;
+            resolve();
+        });
+    },
+
+    /**
      * This method is to provide a little bit of logic that we can run after the collection
      * has received its data.
      * @return A promise that will contain a summary  of "numToSummarize" entries.  Why a Promise?

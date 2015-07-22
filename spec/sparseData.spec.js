@@ -293,6 +293,23 @@ describe("The sparseData module", function() {
                 console.log('Test Error: ', err);
             });
         });
+
+        it('sorts its data in the worker', function(done) {
+            collection.sortAsync({
+                comparator: 'name'
+            }).then(function() {
+                return collection.prepare({
+                    indexes: { min: 0, max: 2 }
+                });
+            }).then(function(models) {
+                expect(models).to.have.length(3);
+                expect(models[0].get('name')).to.equal('one');
+                expect(models[1].get('name')).to.equal('three');
+                expect(models[2].get('name')).to.equal('two');
+
+                done();
+            });
+        });
     });
 
     describe('after preparing its collection', function() {

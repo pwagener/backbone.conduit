@@ -13,7 +13,7 @@ var FooCollection = QuickCollection.extend({
     url: '/foo'
 });
 
-describe('The Conduit Collection', function() {
+describe('The Conduit QuickCollection', function() {
     var collection;
 
     beforeEach(function() {

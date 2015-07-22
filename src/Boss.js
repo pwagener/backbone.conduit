@@ -35,7 +35,7 @@ Boss.prototype = {
             throw new Error("You must provide 'Worker'");
         }
 
-        this.WorkerTimeoutMillis = options.timeout || 1000;
+        this.autoTerminate = options.autoTerminate;
     },
 
     /**
@@ -66,9 +66,17 @@ Boss.prototype = {
             worker.onmessage = function(event) {
                 var result = event.data;
 
+                if (self.autoTerminate === true) {
+                    self.terminate();
+                } else if (self.autoTerminate) {
+                    // Set a timeout for how long this worker will stay available
+                    // before we terminate it automatically
+                    var callTerminate = _.bind(self.terminate, self);
+                    self.terminateTimeoutHandle = setTimeout(callTerminate, self.autoTerminate);
+                }
+
                 if (result instanceof Error) {
                     // Reject if we get an error
-                    self.terminate();
                     reject(result);
                 } else {
                     resolve(result);
@@ -85,10 +93,6 @@ Boss.prototype = {
             // TODO:  if details.argument is an easily measurable payload (i.e. a long string),
             // use an ArrayBuffer to speed the transfer.
             worker.postMessage(details);
-        }).finally(function() {
-            // Set a timeout to terminate the worker if it is not used quickly enough
-            var callTerminate = _.bind(self.terminate, self);
-            self.terminateTimeoutHandle = setTimeout(callTerminate, self.WorkerTimeoutMillis);
         });
     },
 

@@ -122,10 +122,14 @@ function findByIndexes(context, indexes) {
 function parseData(data) {
     if (_.isString(data)) {
         data = JSON.parse(data);
+
+        if (!_.isArray(data)) {
+            throw new Error('Data provided as a string should represent an array');
+        }
     }
 
-    if (!_.isArray(data)) {
-        throw new Error('Data must be either an array or a JSON string representing an array');
+    if (data && !_.isArray(data)) {
+        throw new Error('Data should be an array or a JSON string representing an array');
     }
 
     return data;

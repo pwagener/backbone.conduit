@@ -11,7 +11,8 @@ var _ = require('underscore');
 var fakeWorkerMethods = [
     require('./../src/worker/setData'),
     require('./../src/worker/prepare'),
-    require('./../src/worker/mergeData')
+    require('./../src/worker/mergeData'),
+    require('./../src/worker/sortBy')
 ];
 
 

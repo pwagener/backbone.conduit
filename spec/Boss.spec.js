@@ -134,7 +134,7 @@ describe('The Boss module', function() {
 
     // TODO:  this funtionality was lost in a merge; will pull it back after sparseData is
     // delivered.
-    xit('can optionally terminate its worker immediately', function(done) {
+    it('can optionally terminate its worker immediately', function(done) {
         var boss = new Boss({
             Worker: makeMockWorker(this.sinon, { blah: 'true' }),
             fileLocation: '/fake/location',
@@ -145,15 +145,12 @@ describe('The Boss module', function() {
             method: 'foo'
         }).then(function() {
             // The worker is terminated synchronously after the promise resolves, so ...
-            _.defer(function() {
-                //noinspection BadExpressionStatementJS
-                expect(boss.worker).to.be.null;
-                done();
-            });
+            expect(boss.worker).to.be.null;
+            done();
         });
     });
 
-    xit('can optionally terminate its worker after a number of milliseconds', function(done) {
+    it('can optionally terminate its worker after a number of milliseconds', function(done) {
         // To make for a fast-enough test we'll ask it to maintain the worker for 100ms
         var boss = new Boss({
             Worker: makeMockWorker(this.sinon, { blah: 'true' }),

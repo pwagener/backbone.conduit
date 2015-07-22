@@ -6,7 +6,7 @@ Just bear in mind if you're looking for the Collection performance magic, it's n
 this file.  This is just glue & rendering to make the examples not look too terrible.  I
 make no claims on this being good code; I'm a data guy.
 
-Check out the BasicCollection.js, ConduitCollection.js, and SparseCollection.js
+Check out the ConduitCollection.js and SparseCollection.js
 files to see how this example leverages Backbone.Conduit.
 
 Happy Browsing!
@@ -311,13 +311,21 @@ var MeasuringView = window.MeasuringView = Backbone.View.extend({
         var timing = this.timing;
         timing.endEvent(this._modelsCreatedEvent);
 
-        var length = this.collection.length;
-        this.collection.getSummaryPromise(3).then(function(summary) {
-            timing.annotate('Collection has <strong>' + length + '</strong> items.  ' +
-                'The first three entries:<br/>' + summary);
+        var sortEvent = this.timing.startEvent('Sorting Collection', {
+            async: _.contains(this.asyncDataEvents, 'sort')
         });
 
-        this._measurementComplete();
+        var self = this;
+        this.collection.getSortByNamePromise().then(function() {
+            self.timing.endEvent(sortEvent);
+            var length = self.collection.length;
+            self.collection.getSummaryPromise(3).then(function(summary) {
+                timing.annotate('Collection has <strong>' + length + '</strong> items.  ' +
+                    'The first three entries:<br/>' + summary);
+            });
+
+            self._measurementComplete();
+        });
     },
 
     _measurementComplete: function() {
