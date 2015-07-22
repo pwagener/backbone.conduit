@@ -84,8 +84,6 @@
 
 	        var handler = handlers[method];
 	        if (handler) {
-	            // TODO:  would be wonderful if the 'ping' would allow us to set a debug
-	            // flag or something.
 	            var result = handler(argument);
 	            global.postMessage(result);
 	        } else {
@@ -102,7 +100,7 @@
 	            __webpack_require__(4),
 	            __webpack_require__(5)
 	        ]
-	}
+	};
 
 
 	//noinspection JSUnresolvedVariable
@@ -267,13 +265,17 @@
 	 * This module provides sorting for the worker
 	 */
 	var _ = __webpack_require__(7);
+	var dataUtils = __webpack_require__(6);
 
 	module.exports = {
-	    name: 'sort',
+	    name: 'sortBy',
 
-	    method: function(options) {
-	        var data = options.data;
-	        var comparator = options.comparator;
+	    method: function(argument) {
+	        var self = dataUtils.getDataContext(this);
+
+	        var data = self.data;
+	        var comparator = argument.comparator;
+	        var direction = argument.direction || 'asc';
 
 	        var evaluator;
 	        if (_.isString(comparator)) {
@@ -281,11 +283,13 @@
 	                return item[comparator];
 	            }
 	        } else {
-	            evaluator = comparator;
+	            throw new Error('Provide a property name as "comparator"');
 	        }
 
-	        data = _.sortBy(data, evaluator);
-	        return data;
+	        self.data = _.sortBy(data, evaluator);
+	        if (direction === 'desc') {
+	            self.data = self.data.reverse();
+	        }
 	    }
 	};
 
@@ -417,10 +421,14 @@
 	function parseData(data) {
 	    if (_.isString(data)) {
 	        data = JSON.parse(data);
+
+	        if (!_.isArray(data)) {
+	            throw new Error('Data provided as a string should represent an array');
+	        }
 	    }
 
-	    if (!_.isArray(data)) {
-	        throw new Error('Data must be either an array or a JSON string representing an array');
+	    if (data && !_.isArray(data)) {
+	        throw new Error('Data should be an array or a JSON string representing an array');
 	    }
 
 	    return data;

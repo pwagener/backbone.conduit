@@ -679,6 +679,31 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return this._conduitHaul(options);
 	}
 
+	/**
+	 * Method to sort the data asynchronously.  This permanently modifies the array
+	 * on the worker.  If successful, it removes any models on the UI thread that
+	 * were previously prepared.
+	 * @param sortSpec The sort specification.  Contains:
+	 *   - comparator (required) The name of the property to sort by
+	 *   - direction (optional) The direction to sort in.  Defaults to ascending; to
+	 *     sort descending set this to 'desc'.
+	 * @return {Promise} A promise that resolves when the sorting is completed.
+	 */
+	function sortAsync(sortSpec) {
+	    var self = this;
+	    return this._boss.makePromise({
+	        method: 'sortBy',
+	        argument: sortSpec
+	    }).then(function() {
+	        // Sort was successful; remove any local models.
+	        // NOTE:  we could work around doing this by just re-preparing the
+	        // models we have locally ...
+	        self.models = [];
+	        self.trigger('sort');
+	    });
+
+	}
+
 	function _ensureBoss() {
 	    if (!this._boss) {
 	        this._boss = new Boss({
@@ -705,8 +730,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    isPrepared: isPrepared,
 
+	    sortAsync: sortAsync,
+
 	    // This overrides the corresponding method from the 'haul' module to plug into the data return path
-	    // TODO:  is this necessary, since we are wholly overriding 'haul'?
 	    _onHaulSuccess: _onHaulSuccess,
 
 	    _sparseSet: _sparseSet
@@ -967,6 +993,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	};
 
+
 /***/ },
 /* 11 */
 /***/ function(module, exports, __webpack_require__) {
@@ -1159,9 +1186,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	            throw new Error("You must provide 'Worker'");
 	        }
 
-	        if (_.isUndefined(options.autoTerminate)) {
-	            options.autoTerminate = 1000;
-	        }
 	        this.autoTerminate = options.autoTerminate;
 	    },
 
@@ -1193,9 +1217,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	            worker.onmessage = function(event) {
 	                var result = event.data;
 
+	                if (self.autoTerminate === true) {
+	                    self.terminate();
+	                } else if (self.autoTerminate) {
+	                    // Set a timeout for how long this worker will stay available
+	                    // before we terminate it automatically
+	                    var callTerminate = _.bind(self.terminate, self);
+	                    self.terminateTimeoutHandle = setTimeout(callTerminate, self.autoTerminate);
+	                }
+
 	                if (result instanceof Error) {
 	                    // Reject if we get an error
-	                    self.terminate();
 	                    reject(result);
 	                } else {
 	                    resolve(result);
@@ -1212,16 +1244,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	            // TODO:  if details.argument is an easily measurable payload (i.e. a long string),
 	            // use an ArrayBuffer to speed the transfer.
 	            worker.postMessage(details);
-	        }).finally(function() {
-
-	            if (self.autoTerminate === true) {
-	                // terminate immediately
-	                self.terminate();
-	            } else if (_.isNumber(self.autoTerminate)) {
-	                // Set a timeout to terminate the worker if it is not used quickly enough
-	                var callTerminate = _.bind(self.terminate, self);
-	                self.terminateTimeoutHandle = setTimeout(callTerminate, self.autoTerminate);
-	            }
 	        });
 	    },
 

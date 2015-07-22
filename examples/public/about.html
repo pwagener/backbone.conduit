@@ -93,14 +93,22 @@
         <h2>What The Demo Does</h2>
         <p>
             The goal of this demo is to explore how long it takes to prepare large data sets for use by an application.
-            Loading data into a Backbone collection can be though of as three steps: Fetch the data,
-            parse the received data into JSON, and creating the <code>Backbone.Model</code> instances.
-            After that, the application shows the first three entries in the collection.
+            Loading data into a Backbone collection in this demo can be broken down into four steps:
+        </p>
+        <ol>
+            <li>Fetch the Data</li>
+            <li>Parse the Data into JSON</li>
+            <li>Create the <code>Backbone.Model</code> instances</li>
+            <li>Sort the Data</li>
+        </ol>
+        <p>
+            After that, the application shows the first three entries in the collection in a simple bit of HTML.
         </p>
         <p>
-            While not that interesting for demo purposes, the data set used here is real.  It contains all the NYC
-            Restaurant Health Grades from January 2013 until July 2015.  The application loads static JSON
-            files from the server, where each entry looks like:
+            While not that interesting for demo purposes, the data set used here is real.  The largest data set contains
+            all the NYC Restaurant Health Grades from January 2013 until July 2015 (~ 221K entries); the smaller
+            data sets are just truncated versions.  The demo loads static JSON files from the server, where each entry
+            looks like:
         <pre>   {"name":"Morris Park Bake Sho","zip":10462,"grade":"A","date":"02/09/2015"}</pre>
 
         <hr/>
@@ -114,29 +122,28 @@
             other work.
         </p>
 
-        <h3>Experiment #1: Benchmarking Backbone.Collection</h3>
+        <h4>Example #1: Benchmarking Backbone.Collection</h4>
         <p>
-            The first experiment uses a basic <code>Backbone.Collection</code>.  Both the <strong>Parse JSON</strong> and
-            <strong>Create Models</strong> steps are <span class="label label-warning">synchronous</span>.  For
-            smaller-sized data sets, this performs fine.  But larger data sets cause significant hangs in the browser,
-            even with very fast hardware.
+            The first example uses a basic <code>Backbone.Collection</code>.  The <strong>Parse JSON</strong>,
+            <strong>Create Models</strong>, and <strong>Sort Collection</strong> steps are
+            <span class="label label-warning">synchronous</span>.  For smaller-sized data sets, this performs fine.
+            But larger data sets cause significant hangs in the browser, even with very fast hardware.
         </p>
 
-        <h3>Experiment #2: Optimized Model Creation via Conduit.QuickCollection</h3>
+        <h4>Example #2: Optimized Model Creation via Conduit.QuickCollection</h4>
         <p>
-            As Experiment #1 shows, the <strong>Model Creation</strong> step is very expensive.  Experiment #2 demonstrates
+            As Example #1 shows, the <strong>Model Creation</strong> step is very expensive.  Example #2 demonstrates
             performance differences when we treat this as a first class problem.  A <code>Conduit.QuickCollection</code>
             is optimized to create models ~ 50% faster than the benchmark.  The result is better performance,
             but still shows some lag with the largest data sizes due to the
-            <span class="label label-warning">synchronous</span> nature of the
-            <strong>Parse JSON</strong> and <strong>Create Models</strong> steps.
+            <span class="label label-warning">synchronous</span> nature of the final three steps.
         </p>
 
-        <h3>Experiment #3:  Web Worker Data Management via Conduit.SparseCollection</h3>
+        <h4>Example #3:  Web Worker Data Management via Conduit.SparseCollection</h4>
         <p>
-            This experiment uses a <code>Conduit.SparseCollection</code>, which shifts as much of the data management
+            This example uses a <code>Conduit.SparseCollection</code>, which shifts as much of the data management
             work as possible to another thread of execution.  The result is a slower <strong>Parse JSON</strong> step,
-            but all three steps are now <span class="label label-success">Asynchronous</span>.  Even better, the final
+            but all four steps are now <span class="label label-success">Asynchronous</span>.  Even better, the final
             <strong>Create Models</strong> step does vastly less work:  it creates <code>Backbone.Model</code>
             instances only when completely necessary; in this case <mark>only three models are created</mark>,
             because that is all we need.
@@ -149,7 +156,8 @@
             The <code>Backbone.Conduit</code> plugin <a href="http://pwagener.github.io/backbone.conduit/">is in active development</a>.  The
             <a href="http://pwagener.github.io/backbone.conduit/QuickCollection/">Conduit.QuickCollection</a> is a drop-in replacement
             for a <code>Backbone.Collection</code> for most use cases.  The <code>Conduit.SparseCollection</code> is an
-            experimental module that is not yet fully implemented.  If you're interested in following along, check out the
+            experimental module that is not yet fully implemented but, as these examples show, is very promising.  If
+            you're interested in following along, check out the
             <a href="http://pwagener.github.io/backbone.conduit/sparseData"><code>sparseData module</code>
             in the documentation</a>.
         </p>

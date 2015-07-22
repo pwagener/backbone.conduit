@@ -38,8 +38,6 @@ var enableHandlers = function(global, handlerModules) {
 
         var handler = handlers[method];
         if (handler) {
-            // TODO:  would be wonderful if the 'ping' would allow us to set a debug
-            // flag or something.
             var result = handler(argument);
             global.postMessage(result);
         } else {
@@ -54,9 +52,9 @@ var getDefaultHandlers = function() {
             require('./setData'),
             require('./mergeData'),
             require('./prepare'),
-            require('./sort')
+            require('./sortBy')
         ]
-}
+};
 
 
 //noinspection JSUnresolvedVariable
