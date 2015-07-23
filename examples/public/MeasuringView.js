@@ -268,16 +268,15 @@ var MeasuringView = window.MeasuringView = Backbone.View.extend({
         // Disable Clicks
         this.undelegateEvents();
 
-        this.buttonLabel.text('Fetching Data ...');
+        this.buttonLabel.text('Fetch Data');
         this.button.addClass('disabled');
 
         this.buttonIcon.removeClass('glyphicon-play glyphicon-repeat');
         this.buttonIcon.addClass('loading');
 
         // Fetch the data file to kick things off
-        this.timing.startCycle('Total Cycle Time');
 
-        this._requestDataEvent = this.timing.startEvent('Fetching Data', {
+        this._requestDataEvent = this.timing.startEvent('Fetch Data', {
             async: _.contains(this.asyncDataEvents, 'fetch')
         });
         var dataFile = this.itemDropDown.getCurrent().file;
@@ -289,8 +288,10 @@ var MeasuringView = window.MeasuringView = Backbone.View.extend({
     },
 
     _onJsonReceived: function() {
+        this.timing.startCycle('Time to Parse/Create/Sort:');
+
         this.timing.endEvent(this._requestDataEvent);
-        this._parsingJsonEvent = this.timing.startEvent('Parsing JSON', {
+        this._parsingJsonEvent = this.timing.startEvent('Parse JSON', {
             async: _.contains(this.asyncDataEvents, 'parse')
         });
         this.listenToOnce(this.collection, 'jsonParsed', this._onJsonParsed);
@@ -299,15 +300,16 @@ var MeasuringView = window.MeasuringView = Backbone.View.extend({
     _onJsonParsed: function() {
         this.timing.endEvent(this._parsingJsonEvent);
         this.listenToOnce(this.collection, 'sync', this._onSync);
-        this._modelsCreatedEvent = this.timing.startEvent('Creating Models', {
+        this._modelsCreatedEvent = this.timing.startEvent('Create Models', {
             async: _.contains(this.asyncDataEvents, 'create')
         });
     },
 
     _onSync: function() {
         var timing = this.timing;
+        timing.endEvent(this._modelsCreatedEvent);
 
-        var sortEvent = this.timing.startEvent('Sorting Collection', {
+        var sortEvent = this.timing.startEvent('Sort Collection', {
             async: _.contains(this.asyncDataEvents, 'sort')
         });
 
@@ -317,7 +319,6 @@ var MeasuringView = window.MeasuringView = Backbone.View.extend({
             return self.collection.getSummaryPromise(3);
         }).then(function(summary) {
             var length = self.collection.length;
-            timing.endEvent(self._modelsCreatedEvent);
             timing.annotate('Collection has <strong>' + length + '</strong> items.  ' +
                 'The first three entries:<br/>' + summary);
 
