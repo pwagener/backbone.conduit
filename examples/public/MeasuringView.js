@@ -29,11 +29,7 @@ function now() {
 var TimingEventCollection = Backbone.Collection.extend({
 
     comparator: function(item) {
-        if (item.get('summary')) {
-            return item.get('end');
-        } else {
-            return item.get('start');
-        }
+        return item.get('end');
     },
 
     beginning: null,
@@ -45,6 +41,7 @@ var TimingEventCollection = Backbone.Collection.extend({
     annotate: function(label) {
         this.add({
             start: now(),
+            end: now(),
             name: label,
             annotation: true
         });
@@ -309,7 +306,6 @@ var MeasuringView = window.MeasuringView = Backbone.View.extend({
 
     _onSync: function() {
         var timing = this.timing;
-        timing.endEvent(this._modelsCreatedEvent);
 
         var sortEvent = this.timing.startEvent('Sorting Collection', {
             async: _.contains(this.asyncDataEvents, 'sort')
@@ -318,11 +314,12 @@ var MeasuringView = window.MeasuringView = Backbone.View.extend({
         var self = this;
         this.collection.getSortByNamePromise().then(function() {
             self.timing.endEvent(sortEvent);
+            return self.collection.getSummaryPromise(3);
+        }).then(function(summary) {
             var length = self.collection.length;
-            self.collection.getSummaryPromise(3).then(function(summary) {
-                timing.annotate('Collection has <strong>' + length + '</strong> items.  ' +
-                    'The first three entries:<br/>' + summary);
-            });
+            timing.endEvent(self._modelsCreatedEvent);
+            timing.annotate('Collection has <strong>' + length + '</strong> items.  ' +
+                'The first three entries:<br/>' + summary);
 
             self._measurementComplete();
         });
