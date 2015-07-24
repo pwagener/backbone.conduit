@@ -65,7 +65,7 @@ var BasicCollection = window.BasicCollection = Backbone.Collection.extend({
     },
 
     /**
-     * TODO:
+     * Sort the collection with a Promise.
      * @return A promise that, when resolved, indicates the collection has been sorted by name.
      * This allows us to treat the BasicCollection, ConduitCollection, and SparseCollection the
      * same with respect to sorting.
@@ -73,7 +73,14 @@ var BasicCollection = window.BasicCollection = Backbone.Collection.extend({
     getSortByNamePromise: function() {
         var collection = this;
         return new Promise(function(resolve) {
-            collection.comparator = 'name';
+            collection.comparator = function(item) {
+                if (item && item.has('date')) {
+                    var timestamp = new Date(item.get('date')).getTime();
+                    return (Number.MAX_VALUE - timestamp) + '-' + item.get('name');
+                } else {
+                    return Number.MAX_VALUE;
+                }
+            };
             collection.sort();
             collection.comparator = null;
             resolve();

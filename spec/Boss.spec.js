@@ -66,25 +66,25 @@ describe('The Boss module', function() {
     describe('when instantiated', function() {
         var boss, responseData;
 
-        beforeEach(function() {
-            responseData = { bar: "baz" };
+        beforeEach(function () {
+            responseData = {bar: "baz"};
             boss = new Boss({
                 Worker: makeMockWorker(this.sinon, responseData),
                 fileLocation: '/fake/location'
             });
         });
 
-        it('starts without an associated worker', function() {
+        it('starts without an associated worker', function () {
             //noinspection BadExpressionStatementJS
             expect(boss.worker).to.be.undefined;
         });
 
-        it('requires a named "method" to create a promise', function() {
-            var bound = _.bind(boss.makePromise, boss, { foo: "bar" });
+        it('requires a named "method" to create a promise', function () {
+            var bound = _.bind(boss.makePromise, boss, {foo: "bar"});
             expect(bound).to.throw(Error);
         });
 
-        it('creates a promise when one is requested', function() {
+        it('creates a promise when one is requested', function () {
             var promise = boss.makePromise({
                 method: 'foo'
             });
@@ -93,7 +93,7 @@ describe('The Boss module', function() {
             expect(when.isPromiseLike(promise)).to.be.true;
         });
 
-        it('has an associated worker once the promise is created', function() {
+        it('has an associated worker once the promise is created', function () {
             var promise = boss.makePromise({
                 method: 'foo'
             });
@@ -101,39 +101,37 @@ describe('The Boss module', function() {
             expect(boss.worker).to.be.an('object');
         });
 
-        it('posts a message to the worker', function(done) {
+        it('posts a message to the worker', function (done) {
             var promise = boss.makePromise({
                 method: 'foo'
             });
 
-            promise.then(function(response) {
+            promise.then(function (response) {
                 //noinspection BadExpressionStatementJS
                 expect(boss.worker.postMessage.called).to.be.true;
                 done();
             });
         });
 
-        it('resolves the promise with the data from the worker', function(done) {
+        it('resolves the promise with the data from the worker', function (done) {
             boss.makePromise({
                 method: 'foo'
-            }).then(function(response) {
+            }).then(function (response) {
                 expect(response).to.equal(responseData);
                 done();
             });
         });
 
-        it('keeps the worker after the promise resolves', function(done) {
+        it('keeps the worker after the promise resolves', function (done) {
             boss.makePromise({
                 method: 'foo'
-            }).then(function() {
+            }).then(function () {
                 expect(boss.worker).to.be.an('object');
                 done();
             });
         });
     });
 
-    // TODO:  this funtionality was lost in a merge; will pull it back after sparseData is
-    // delivered.
     it('can optionally terminate its worker immediately', function(done) {
         var boss = new Boss({
             Worker: makeMockWorker(this.sinon, { blah: 'true' }),

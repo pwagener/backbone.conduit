@@ -74,7 +74,7 @@ function prepare(items) {
     var self = this;
     return this._boss.makePromise({
         method: 'prepare',
-        argument: items
+        arguments: [ items ]
     }).then(function(models) {
         var converted = self._sparseSet(models);
         return(converted);
@@ -205,10 +205,12 @@ function _fillOrRefillOnWorker(data, options) {
     var idKey = context.model.idAttribute;
     var bossPromise = context._boss.makePromise({
         method: method,
-        argument: {
-            data: data,
-            idKey: idKey
-        }
+        arguments: [
+            {
+                data: data,
+                idKey: idKey
+            }
+        ]
     });
 
     return bossPromise.then(function(length) {
@@ -261,7 +263,7 @@ function sortAsync(sortSpec) {
     var self = this;
     return this._boss.makePromise({
         method: 'sortBy',
-        argument: sortSpec
+        arguments: [ sortSpec ]
     }).then(function() {
         // Sort was successful; remove any local models.
         // NOTE:  we could work around doing this by just re-preparing the
@@ -274,10 +276,29 @@ function sortAsync(sortSpec) {
 
 function _ensureBoss() {
     if (!this._boss) {
+
+        var components = [
+            './conduit.worker.dataManagement.js'
+        ];
+
+        var extras = config.getComponents();
+        _.each(extras, function(component) {
+            components.push(component);
+        });
+
         this._boss = new Boss({
             Worker: config.getWorkerConstructor(),
             fileLocation: config.getWorkerPath(),
-            autoTerminate: false
+            autoTerminate: false,
+
+            // Use the Backbone.Conduit config for the debug configuration
+            debug: config.getDebug(),
+            worker: {
+                debug: config.getWorkerDebug(),
+
+                // Include the Conduit components we will leverage
+                components: components
+            }
         });
     }
 }
@@ -323,7 +344,7 @@ var notSupportMethods = [
     'groupBy', 'countBy', 'sortBy', 'indexBy',
 
     // Other various methods
-    "slice", "sort", "pluck", "where", "findWhere", "parse", "clone", "create"
+    "slice", "pluck", "where", "findWhere", "parse", "clone", "create"
 
 ];
 _.each(notSupportMethods, function(method) {
@@ -346,7 +367,9 @@ _.each(notSupportedWriteMethods, function(method) {
 var notSupportedConduitMethods = [
     { called: 'reset', use: 'refill' },
     { called: 'set', use: 'fill' },
-    { called: 'fetch', use: 'haul' }
+    { called: 'fetch', use: 'haul' },
+    { called: 'sortBy', use: 'sortAsync' },
+    { called: 'sortBy', use: 'sortAsync' }
 ];
 _.each(notSupportedConduitMethods, function(methodObj) {
     mixinObj[methodObj.called] = function() {

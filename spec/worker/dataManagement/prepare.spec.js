@@ -1,11 +1,12 @@
 'use strict';
 
 var _ = require('underscore');
+var mockConduitWorker = require('../mockConduitWorker');
+var dataUtils = require('../../../src/worker/dataManagement/dataUtils');
 
-var workerPrepare = require('./../../src/worker/prepare');
-var dataUtils = require('./../../src/worker/dataUtils');
+var workerPrepare = require('./../../../src/worker/dataManagement/prepare');
 
-describe('The worker/prepare module', function() {
+describe('The dataManagement/prepare module', function() {
 
     it('provides the name as "prepare"', function() {
         expect(workerPrepare.name).to.equal('prepare');
@@ -15,10 +16,11 @@ describe('The worker/prepare module', function() {
         var context;
 
         beforeEach(function() {
-            context = {
-            };
-            dataUtils.initStore(context);
-            dataUtils.addTo(context, this.getSampleData());
+            mockConduitWorker.reset();
+            dataUtils.initStore({ reset: true });
+            dataUtils.addTo(this.getSampleData());
+
+            context = mockConduitWorker.get();
 
             context.prepare = _.bind(workerPrepare.method, context)
         });

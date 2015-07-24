@@ -1,10 +1,11 @@
 'use strict';
 
 var _ = require('underscore');
+var mockConduitWorker = require('../mockConduitWorker');
 
-var workerSort = require('./../../src/worker/sortBy');
+var workerSort = require('./../../../src/worker/dataManagement/sortBy');
 
-describe("The worker/sort module", function() {
+describe("The dataManagement/sort module", function() {
     it('provides the name as "sortBy"', function() {
         expect(workerSort.name).to.equal("sortBy");
     });
@@ -12,9 +13,9 @@ describe("The worker/sort module", function() {
     describe('when data is available', function() {
         var context, boundSort;
         beforeEach(function() {
-            context = {
-                data: this.getSampleData()
-            };
+            mockConduitWorker.reset();
+            mockConduitWorker.set('data', this.getSampleData());
+            context = mockConduitWorker.get();
 
             boundSort = _.bind(workerSort.method, context);
         });

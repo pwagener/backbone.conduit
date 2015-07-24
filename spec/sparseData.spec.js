@@ -5,10 +5,21 @@ var Backbone = require('backbone');
 var when = require('when');
 
 var mockServer = require('./mockServer');
+var InThreadBoss = require('./InThreadBoss');
+var mockConduitWorker = require('./worker/mockConduitWorker');
 
 var sparseData = require('./../src/sparseData');
-var InThreadBoss = require('./InThreadBoss');
 
+function makeInThreadBoss() {
+    mockConduitWorker.reset();
+    return new InThreadBoss([
+        require('./../src/worker/dataManagement/setData'),
+        require('./../src/worker/dataManagement/prepare'),
+        require('./../src/worker/dataManagement/mergeData'),
+        require('./../src/worker/dataManagement/sortBy')
+
+    ]);
+}
 
 describe("The sparseData module", function() {
     var Collection;
@@ -102,11 +113,7 @@ describe("The sparseData module", function() {
         var bossPromiseSpy, collection;
 
         beforeEach(function() {
-            var mockBoss = {
-                makePromise: function() {
-                    return when.resolve();
-                }
-            };
+            var mockBoss = makeInThreadBoss();
 
             bossPromiseSpy = this.sinon.spy(mockBoss, 'makePromise');
             collection = new Collection();
@@ -177,7 +184,7 @@ describe("The sparseData module", function() {
         beforeEach(function() {
             var data = this.getSampleData();
             collection = new Collection();
-            collection._boss = testBoss = new InThreadBoss();
+            collection._boss = testBoss = makeInThreadBoss();
             mockServer.add({
                 url: '/foo',
                 data: data
@@ -252,7 +259,8 @@ describe("The sparseData module", function() {
         beforeEach(function() {
             // We mock out an in-thread-like boss
             collection = new Collection();
-            collection._boss = new InThreadBoss();
+            collection._boss = makeInThreadBoss();
+
             collection.refill(this.getSampleData());
         });
 
@@ -318,7 +326,7 @@ describe("The sparseData module", function() {
         beforeEach(function(done) {
             // We mock out an in-thread-like boss
             collection = new Collection();
-            collection._boss = new InThreadBoss();
+            collection._boss = makeInThreadBoss();
             collection.refill(this.getSampleData());
 
             // Then prepare some subset of that data

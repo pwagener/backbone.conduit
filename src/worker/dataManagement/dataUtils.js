@@ -10,24 +10,12 @@
 
 var _ = require('underscore');
 
-/**
- * Different browsers treat the global context of a worker differently.  This
- * method will return the context that we should store our data in.
- * @param context
- */
-function getDataContext(context) {
-    if (!context) {
-        context = this || global;
-    }
-
-    if (!context) {
-        throw new Error('Cannot determine worker context');
-    }
-
-    return context;
+function _getContext() {
+    return ConduitWorker;
 }
 
-function initStore(context, options) {
+function initStore(options) {
+    var context = _getContext();
     options = options || {};
 
     if (options.reset || !context.data) {
@@ -41,11 +29,14 @@ function initStore(context, options) {
     }
 }
 
+// TODO:  get rid of this
 function _isInitialized(context) {
     return _.isArray(context.data);
 }
 
-function addTo(context, data) {
+function addTo(data) {
+    var context = _getContext();
+
     data = data || [];
 
     var byId = context._byId;
@@ -71,15 +62,17 @@ function addTo(context, data) {
     });
 }
 
-function findById(context, id) {
+function findById(id) {
+    var context = _getContext();
     if (_isInitialized(context)) {
         return context._byId[id];
     }
 }
 
-function findByIds(context, idArray) {
+function findByIds(idArray) {
     var matches = [];
 
+    var context = _getContext();
     if (_isInitialized(context)) {
         for (var i = 0; i < idArray.length; i++) {
             var match = context._byId[idArray[i]];
@@ -92,15 +85,16 @@ function findByIds(context, idArray) {
     return matches;
 }
 
-function findByIndex(context, index) {
+function findByIndex(index) {
+    var context = _getContext();
     if (_isInitialized(context)) {
         return context.data[index];
     }
 }
 
-function findByIndexes(context, indexes) {
+function findByIndexes(indexes) {
     var found = [];
-
+    var context = _getContext();
     if (_isInitialized(context)) {
         for (var i = indexes.min; i <= indexes.max; i++) {
             var data = context.data[i];
@@ -135,9 +129,12 @@ function parseData(data) {
     return data;
 }
 
-module.exports = {
+function length() {
+    var context = _getContext();
+    return context.data.length;
+}
 
-    getDataContext: getDataContext,
+module.exports = {
 
     initStore: initStore,
 
@@ -153,7 +150,5 @@ module.exports = {
 
     parseData: parseData,
 
-    length: function(context) {
-        return context.data.length;
-    }
+    length: length
 };
