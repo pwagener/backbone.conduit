@@ -47,15 +47,21 @@
 	'use strict';
 
 	/**
-	 * This serves as the main module of the Conduit Worker bundle,
-	 * 'backbone.conduit-worker.js', which is loaded in a Worker context.
+	 * This provides a Conduit.Worker component for managing data on the worker.
 	 */
 
-	var managedContext = __webpack_require__(1);
+	if (typeof ConduitWorker !== 'undefined') {
+	    // Register our component
+	    ConduitWorker.registerComponent({
+	        name: 'dataManagement',
 
-	if (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScope) {
-	    // We're in a worker context.  Enable the base handlers we expose
-	    managedContext.enableCoreHandlers();
+	        methods: [
+	            __webpack_require__(1),
+	            __webpack_require__(2),
+	            __webpack_require__(3),
+	            __webpack_require__(4)
+	        ]
+	    });
 	}
 
 
@@ -63,207 +69,34 @@
 /* 1 */
 /***/ function(module, exports, __webpack_require__) {
 
-	/* WEBPACK VAR INJECTION */(function(global) {'use strict';
+	'use strict';
 
 	/**
-	 * Collection of methods for working with/managing the worker context.  Externally, this module creates
-	 * the 'ConduitWorker' namespace that worker methods use to plug themselves into Conduit.  Internally,
-	 * this module sets up the 'onmessage(..)' and 'postMessage(...)' methods in the global Worker context to allow it
-	 * to communicate with the main thread.
+	 * This worker method handler stores data on the worker.
 	 */
+	var _ = __webpack_require__(6);
 
-	var _ = __webpack_require__(5);
-	var util = __webpack_require__(4);
-
-	var managedContext;
-
-	/**
-	 * Function to register a new plugin component with Conduit.  This is bound to the ConduitWorker context.
-	 * @param component The component to register.  Should contain:
-	 *   - name:  The component name
-	 *   - handlers: Array of the handlers to enable
-	 *   -
-	 * @private
-	 */
-	function _registerComponent(component) {
-	    var name = component.name;
-	    if (!name) {
-	        throw new Error('Conduit component must have a "name"');
-	    } else {
-	        var methods = component.methods || [];
-	        debug('Registering component "' + name + '" (' + methods.length + ' methods)');
-	        this.components[name] = component;
-	        _enableHandlers(this, methods);
-	    }
-
-	}
-
-	/**
-	 * Function to register additional method handlers to the worker.  This is bound
-	 * to the ConduitWorker context.
-	 * @param context the context to add the handlers to
-	 * @param handlerModules An array of handler modules to consider when receiving a message
-	 */
-	function _enableHandlers(context, handlerModules) {
-
-	    // Set up handlers for all the methods we currently support
-	    var handlers = context.handlers;
-	    _.each(handlerModules, function(handler) {
-	        var name = handler.name;
-
-	        if (!_.isString(name)) {
-	            throw new Error('Handler did not provide a name');
-	        }
-
-	        var method = _.bind(handler.method, context);
-	        if (!_.isFunction(method)) {
-	            throw new Error('Handler "' + name + '" did not provide a "method" function');
-	        }
-
-	        handlers[handler.name] = method;
-	    });
-	}
-
-	/**
-	 * The function we use to handle messages passed into the worker
-	 * @param event The message event
-	 * @private
-	 */
-	function _onMessage(event) {
-	    var method = event.data.method;
-	    var args = event.data.arguments;
-
-	    var ConduitWorker = _getConduitWorker();
-	    var handler = ConduitWorker.handlers[method];
-	    if (handler) {
-	        debug('Executing "' + method + '"');
-	        var result = handler.apply(ConduitWorker, args);
-	        managedContext.postMessage(result);
-	        debug('Completed "' + method + '"');
-	    } else {
-	        var msg = "No such Conduit worker method: '" + method + "'";
-	        debug(msg);
-	        managedContext.postMessage(new Error(msg));
-	    }
-
-	}
-
-	function _initContext(optionalContext) {
-	    var context = managedContext = optionalContext || this || global;
-
-	    if (!context) {
-	        throw new Error('Failed to find worker managed context');
-	    }
-
-	    if (!context.ConduitWorker) {
-	        var ConduitWorker = context.ConduitWorker = {
-	            // The configuration of this worker
-	            config: {},
-
-	            // The set of registered components
-	            components: {},
-
-	            // The handlers we may use to process a message from the main thread.
-	            handlers: {},
-
-	            // Method that allows components to print a debug message:
-	            debug: debug
-	        };
-
-	        // Method that components can use to add their own method handlers
-	        ConduitWorker.registerComponent = _.bind(_registerComponent, ConduitWorker);
-	        context.onmessage = _onMessage;
-
-	        debug('Initialized ConduitWorker');
-	    }
-	}
-
-
-
-	function debug(msg) {
-	    if (_getConduitWorker().config.debug) {
-	        var currentdate = new Date();
-	        var now = currentdate.getHours() + ":"
-	            + currentdate.getMinutes() + ":"
-	            + currentdate.getSeconds() + '-' + currentdate.getMilliseconds();
-	        var line = now + ' conduit.worker: ' + msg;
-	        managedContext.console.log(line);
-	    }
-	}
-
-	/**
-	 * Retrieve the ConduitWorker namespace, which (unless it has been "set(...)"), will be the global
-	 * context.
-	 * @return {*}
-	 * @private
-	 */
-	function _getConduitWorker() {
-	    if (!managedContext) {
-	        _initContext();
-	    }
-
-	    return managedContext.ConduitWorker;
-	}
-
-	function setAsGlobal(context) {
-	    _initContext(context);
-	}
-
-
-	function configure(config) {
-	    config = config || {};
-
-	    var conduitWorker = _getConduitWorker();
-	    conduitWorker.config = config;
-
-	    // Import any component that is listed in the configuration
-	    _.each(config.components, function(component) {
-	        debug('Loading component: ' + component);
-	        managedContext.importScripts(component);
-	    });
-
-	    debug('ConduitWorker context configured: ' + util.inspect(config));
-
-	}
-
-	function enableCoreHandlers() {
-	    var conduitWorker = _getConduitWorker();
-	    conduitWorker.registerComponent({
-	        name: 'core',
-
-	        methods: [
-	            __webpack_require__(2),
-	            __webpack_require__(3)
-	        ]
-	    });
-	}
+	var dataUtils = __webpack_require__(5);
 
 	module.exports = {
 
-	    /**
-	     * Set the global context; this is only useful for testing.
-	     */
-	    setAsGlobal: setAsGlobal,
+	    name: 'setData',
 
-	    /**
-	     * If the worker has been configured to print debug messages, this will print 'em.
-	     * TODO:  is this necessary to expose?  Shouldn't be, since the provided
-	     * context has a link to it.
-	     */
-	    debug: debug,
+	    method: function(argument) {
+	        argument = argument || {};
+	        var data = argument.data || [];
+	        data = dataUtils.parseData(data);
 
-	    /**
-	     * Method to enable the built-in method handlers we expose
-	     */
-	    enableCoreHandlers: enableCoreHandlers,
+	        // We're resetting the data completely
+	        dataUtils.initStore({
+	            reset: true,
+	            idKey: argument.idKey
+	        });
 
-	    /**
-	     * Set the configuration for the context
-	     */
-	    configure: configure
-
+	        dataUtils.addTo(data);
+	        return dataUtils.length();
+	    }
 	};
-	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
 /* 2 */
@@ -272,16 +105,30 @@
 	'use strict';
 
 	/**
-	 * This module provides a method for the worker to respond to a "ping" method,
-	 * which responds with the timestamp of when it was called.
+	 * Module used to merge existing data sets on the worker
 	 */
 
-	module.exports = {
-	    name: 'ping',
+	var _ = __webpack_require__(6);
 
-	    method: function() {
-	        return new Date().toUTCString();
+	var dataUtils = __webpack_require__(5);
+
+	module.exports = {
+
+	    name: 'mergeData',
+
+	    method: function(argument) {
+	        argument = argument || {};
+	        var data = argument.data || [];
+	        data = dataUtils.parseData(data);
+
+	        dataUtils.initStore({
+	            idKey: argument.idKey
+	        });
+
+	        dataUtils.addTo(data);
+	        return dataUtils.length();
 	    }
+
 	};
 
 /***/ },
@@ -291,16 +138,43 @@
 	'use strict';
 
 	/**
-	 * This module allows you to pass a configuration into the worker's context
+	 * This worker method handler returns data from the worker.
 	 */
-	var managedContext = __webpack_require__(1);
-	var util = __webpack_require__(4);
+
+	var _ = __webpack_require__(6);
+
+	var dataUtils = __webpack_require__(5);
 
 	module.exports = {
-	    name: 'configure',
 
-	    method: function(configuration) {
-	        managedContext.configure(configuration);
+	    name: 'prepare',
+
+	    /**
+	     * Prepare to use the data in the main thread.  The data should already be
+	     * in the context of the method as 'this.data'; typically it will have been
+	     * placed there by using the 'setData' or 'mergeData' method.
+	     * @param options Should contain either:
+	     *   o id:  The single ID of the item
+	     *   o ids: An array of IDs to return
+	     *   o index: The index of the item
+	     *   o indexes: An object specifying 'min' and 'max' of indexes to return
+	     * @return {*} Either the single item or an array of items, depending how it
+	     * was called
+	     */
+	    method: function(options) {
+	        var found;
+
+	        if (!_.isUndefined(options.id)) {
+	            found = dataUtils.findById(options.id);
+	        } else if (_.isArray(options.ids)) {
+	            found = dataUtils.findByIds(options.ids);
+	        } else if (_.isNumber(options.index)) {
+	            found = dataUtils.findByIndex(options.index);
+	        } else if (_.isObject(options.indexes)) {
+	            found = dataUtils.findByIndexes(options.indexes);
+	        }
+
+	        return found;
 	    }
 	};
 
@@ -308,597 +182,200 @@
 /* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
-	/* WEBPACK VAR INJECTION */(function(global, process) {// Copyright Joyent, Inc. and other Node contributors.
-	//
-	// Permission is hereby granted, free of charge, to any person obtaining a
-	// copy of this software and associated documentation files (the
-	// "Software"), to deal in the Software without restriction, including
-	// without limitation the rights to use, copy, modify, merge, publish,
-	// distribute, sublicense, and/or sell copies of the Software, and to permit
-	// persons to whom the Software is furnished to do so, subject to the
-	// following conditions:
-	//
-	// The above copyright notice and this permission notice shall be included
-	// in all copies or substantial portions of the Software.
-	//
-	// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-	// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-	// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-	// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-	// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-	// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-	// USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-	var formatRegExp = /%[sdj%]/g;
-	exports.format = function(f) {
-	  if (!isString(f)) {
-	    var objects = [];
-	    for (var i = 0; i < arguments.length; i++) {
-	      objects.push(inspect(arguments[i]));
-	    }
-	    return objects.join(' ');
-	  }
-
-	  var i = 1;
-	  var args = arguments;
-	  var len = args.length;
-	  var str = String(f).replace(formatRegExp, function(x) {
-	    if (x === '%%') return '%';
-	    if (i >= len) return x;
-	    switch (x) {
-	      case '%s': return String(args[i++]);
-	      case '%d': return Number(args[i++]);
-	      case '%j':
-	        try {
-	          return JSON.stringify(args[i++]);
-	        } catch (_) {
-	          return '[Circular]';
-	        }
-	      default:
-	        return x;
-	    }
-	  });
-	  for (var x = args[i]; i < len; x = args[++i]) {
-	    if (isNull(x) || !isObject(x)) {
-	      str += ' ' + x;
-	    } else {
-	      str += ' ' + inspect(x);
-	    }
-	  }
-	  return str;
-	};
-
-
-	// Mark that a method should not be used.
-	// Returns a modified function which warns once by default.
-	// If --no-deprecation is set, then it is a no-op.
-	exports.deprecate = function(fn, msg) {
-	  // Allow for deprecating things in the process of starting up.
-	  if (isUndefined(global.process)) {
-	    return function() {
-	      return exports.deprecate(fn, msg).apply(this, arguments);
-	    };
-	  }
-
-	  if (process.noDeprecation === true) {
-	    return fn;
-	  }
-
-	  var warned = false;
-	  function deprecated() {
-	    if (!warned) {
-	      if (process.throwDeprecation) {
-	        throw new Error(msg);
-	      } else if (process.traceDeprecation) {
-	        console.trace(msg);
-	      } else {
-	        console.error(msg);
-	      }
-	      warned = true;
-	    }
-	    return fn.apply(this, arguments);
-	  }
-
-	  return deprecated;
-	};
-
-
-	var debugs = {};
-	var debugEnviron;
-	exports.debuglog = function(set) {
-	  if (isUndefined(debugEnviron))
-	    debugEnviron = process.env.NODE_DEBUG || '';
-	  set = set.toUpperCase();
-	  if (!debugs[set]) {
-	    if (new RegExp('\\b' + set + '\\b', 'i').test(debugEnviron)) {
-	      var pid = process.pid;
-	      debugs[set] = function() {
-	        var msg = exports.format.apply(exports, arguments);
-	        console.error('%s %d: %s', set, pid, msg);
-	      };
-	    } else {
-	      debugs[set] = function() {};
-	    }
-	  }
-	  return debugs[set];
-	};
-
+	'use strict';
 
 	/**
-	 * Echos the value of a value. Trys to print the value out
-	 * in the best way possible given the different types.
-	 *
-	 * @param {Object} obj The object to print out.
-	 * @param {Object} opts Optional options object that alters the output.
+	 * This module provides sorting for the worker
 	 */
-	/* legacy: obj, showHidden, depth, colors*/
-	function inspect(obj, opts) {
-	  // default options
-	  var ctx = {
-	    seen: [],
-	    stylize: stylizeNoColor
-	  };
-	  // legacy...
-	  if (arguments.length >= 3) ctx.depth = arguments[2];
-	  if (arguments.length >= 4) ctx.colors = arguments[3];
-	  if (isBoolean(opts)) {
-	    // legacy...
-	    ctx.showHidden = opts;
-	  } else if (opts) {
-	    // got an "options" object
-	    exports._extend(ctx, opts);
-	  }
-	  // set default options
-	  if (isUndefined(ctx.showHidden)) ctx.showHidden = false;
-	  if (isUndefined(ctx.depth)) ctx.depth = 2;
-	  if (isUndefined(ctx.colors)) ctx.colors = false;
-	  if (isUndefined(ctx.customInspect)) ctx.customInspect = true;
-	  if (ctx.colors) ctx.stylize = stylizeWithColor;
-	  return formatValue(ctx, obj, ctx.depth);
-	}
-	exports.inspect = inspect;
+	var _ = __webpack_require__(6);
+	var dataUtils = __webpack_require__(5);
 
+	module.exports = {
+	    name: 'sortBy',
 
-	// http://en.wikipedia.org/wiki/ANSI_escape_code#graphics
-	inspect.colors = {
-	  'bold' : [1, 22],
-	  'italic' : [3, 23],
-	  'underline' : [4, 24],
-	  'inverse' : [7, 27],
-	  'white' : [37, 39],
-	  'grey' : [90, 39],
-	  'black' : [30, 39],
-	  'blue' : [34, 39],
-	  'cyan' : [36, 39],
-	  'green' : [32, 39],
-	  'magenta' : [35, 39],
-	  'red' : [31, 39],
-	  'yellow' : [33, 39]
-	};
+	    method: function(argument) {
+	        var comparator = argument.comparator;
+	        var direction = argument.direction || 'asc';
 
-	// Don't use 'blue' not visible on cmd.exe
-	inspect.styles = {
-	  'special': 'cyan',
-	  'number': 'yellow',
-	  'boolean': 'yellow',
-	  'undefined': 'grey',
-	  'null': 'bold',
-	  'string': 'green',
-	  'date': 'magenta',
-	  // "name": intentionally not styling
-	  'regexp': 'red'
-	};
-
-
-	function stylizeWithColor(str, styleType) {
-	  var style = inspect.styles[styleType];
-
-	  if (style) {
-	    return '\u001b[' + inspect.colors[style][0] + 'm' + str +
-	           '\u001b[' + inspect.colors[style][1] + 'm';
-	  } else {
-	    return str;
-	  }
-	}
-
-
-	function stylizeNoColor(str, styleType) {
-	  return str;
-	}
-
-
-	function arrayToHash(array) {
-	  var hash = {};
-
-	  array.forEach(function(val, idx) {
-	    hash[val] = true;
-	  });
-
-	  return hash;
-	}
-
-
-	function formatValue(ctx, value, recurseTimes) {
-	  // Provide a hook for user-specified inspect functions.
-	  // Check that value is an object with an inspect function on it
-	  if (ctx.customInspect &&
-	      value &&
-	      isFunction(value.inspect) &&
-	      // Filter out the util module, it's inspect function is special
-	      value.inspect !== exports.inspect &&
-	      // Also filter out any prototype objects using the circular check.
-	      !(value.constructor && value.constructor.prototype === value)) {
-	    var ret = value.inspect(recurseTimes, ctx);
-	    if (!isString(ret)) {
-	      ret = formatValue(ctx, ret, recurseTimes);
-	    }
-	    return ret;
-	  }
-
-	  // Primitive types cannot have properties
-	  var primitive = formatPrimitive(ctx, value);
-	  if (primitive) {
-	    return primitive;
-	  }
-
-	  // Look up the keys of the object.
-	  var keys = Object.keys(value);
-	  var visibleKeys = arrayToHash(keys);
-
-	  if (ctx.showHidden) {
-	    keys = Object.getOwnPropertyNames(value);
-	  }
-
-	  // IE doesn't make error fields non-enumerable
-	  // http://msdn.microsoft.com/en-us/library/ie/dww52sbt(v=vs.94).aspx
-	  if (isError(value)
-	      && (keys.indexOf('message') >= 0 || keys.indexOf('description') >= 0)) {
-	    return formatError(value);
-	  }
-
-	  // Some type of object without properties can be shortcutted.
-	  if (keys.length === 0) {
-	    if (isFunction(value)) {
-	      var name = value.name ? ': ' + value.name : '';
-	      return ctx.stylize('[Function' + name + ']', 'special');
-	    }
-	    if (isRegExp(value)) {
-	      return ctx.stylize(RegExp.prototype.toString.call(value), 'regexp');
-	    }
-	    if (isDate(value)) {
-	      return ctx.stylize(Date.prototype.toString.call(value), 'date');
-	    }
-	    if (isError(value)) {
-	      return formatError(value);
-	    }
-	  }
-
-	  var base = '', array = false, braces = ['{', '}'];
-
-	  // Make Array say that they are Array
-	  if (isArray(value)) {
-	    array = true;
-	    braces = ['[', ']'];
-	  }
-
-	  // Make functions say that they are functions
-	  if (isFunction(value)) {
-	    var n = value.name ? ': ' + value.name : '';
-	    base = ' [Function' + n + ']';
-	  }
-
-	  // Make RegExps say that they are RegExps
-	  if (isRegExp(value)) {
-	    base = ' ' + RegExp.prototype.toString.call(value);
-	  }
-
-	  // Make dates with properties first say the date
-	  if (isDate(value)) {
-	    base = ' ' + Date.prototype.toUTCString.call(value);
-	  }
-
-	  // Make error with message first say the error
-	  if (isError(value)) {
-	    base = ' ' + formatError(value);
-	  }
-
-	  if (keys.length === 0 && (!array || value.length == 0)) {
-	    return braces[0] + base + braces[1];
-	  }
-
-	  if (recurseTimes < 0) {
-	    if (isRegExp(value)) {
-	      return ctx.stylize(RegExp.prototype.toString.call(value), 'regexp');
-	    } else {
-	      return ctx.stylize('[Object]', 'special');
-	    }
-	  }
-
-	  ctx.seen.push(value);
-
-	  var output;
-	  if (array) {
-	    output = formatArray(ctx, value, recurseTimes, visibleKeys, keys);
-	  } else {
-	    output = keys.map(function(key) {
-	      return formatProperty(ctx, value, recurseTimes, visibleKeys, key, array);
-	    });
-	  }
-
-	  ctx.seen.pop();
-
-	  return reduceToSingleString(output, base, braces);
-	}
-
-
-	function formatPrimitive(ctx, value) {
-	  if (isUndefined(value))
-	    return ctx.stylize('undefined', 'undefined');
-	  if (isString(value)) {
-	    var simple = '\'' + JSON.stringify(value).replace(/^"|"$/g, '')
-	                                             .replace(/'/g, "\\'")
-	                                             .replace(/\\"/g, '"') + '\'';
-	    return ctx.stylize(simple, 'string');
-	  }
-	  if (isNumber(value))
-	    return ctx.stylize('' + value, 'number');
-	  if (isBoolean(value))
-	    return ctx.stylize('' + value, 'boolean');
-	  // For some reason typeof null is "object", so special case here.
-	  if (isNull(value))
-	    return ctx.stylize('null', 'null');
-	}
-
-
-	function formatError(value) {
-	  return '[' + Error.prototype.toString.call(value) + ']';
-	}
-
-
-	function formatArray(ctx, value, recurseTimes, visibleKeys, keys) {
-	  var output = [];
-	  for (var i = 0, l = value.length; i < l; ++i) {
-	    if (hasOwnProperty(value, String(i))) {
-	      output.push(formatProperty(ctx, value, recurseTimes, visibleKeys,
-	          String(i), true));
-	    } else {
-	      output.push('');
-	    }
-	  }
-	  keys.forEach(function(key) {
-	    if (!key.match(/^\d+$/)) {
-	      output.push(formatProperty(ctx, value, recurseTimes, visibleKeys,
-	          key, true));
-	    }
-	  });
-	  return output;
-	}
-
-
-	function formatProperty(ctx, value, recurseTimes, visibleKeys, key, array) {
-	  var name, str, desc;
-	  desc = Object.getOwnPropertyDescriptor(value, key) || { value: value[key] };
-	  if (desc.get) {
-	    if (desc.set) {
-	      str = ctx.stylize('[Getter/Setter]', 'special');
-	    } else {
-	      str = ctx.stylize('[Getter]', 'special');
-	    }
-	  } else {
-	    if (desc.set) {
-	      str = ctx.stylize('[Setter]', 'special');
-	    }
-	  }
-	  if (!hasOwnProperty(visibleKeys, key)) {
-	    name = '[' + key + ']';
-	  }
-	  if (!str) {
-	    if (ctx.seen.indexOf(desc.value) < 0) {
-	      if (isNull(recurseTimes)) {
-	        str = formatValue(ctx, desc.value, null);
-	      } else {
-	        str = formatValue(ctx, desc.value, recurseTimes - 1);
-	      }
-	      if (str.indexOf('\n') > -1) {
-	        if (array) {
-	          str = str.split('\n').map(function(line) {
-	            return '  ' + line;
-	          }).join('\n').substr(2);
+	        var evaluator;
+	        if (_.isString(comparator)) {
+	            evaluator = function (item) {
+	                return item[comparator];
+	            }
+	        } else if (_.isObject(comparator) && comparator.method) {
+	            evaluator = ConduitWorker.handlers[comparator.method];
 	        } else {
-	          str = '\n' + str.split('\n').map(function(line) {
-	            return '   ' + line;
-	          }).join('\n');
+	            throw new Error('Provide a property name as "comparator" or a registered method as { method }');
 	        }
-	      }
-	    } else {
-	      str = ctx.stylize('[Circular]', 'special');
+
+	        ConduitWorker.data = _.sortBy(ConduitWorker.data, evaluator);
+	        if (direction === 'desc') {
+	            ConduitWorker.data = ConduitWorker.data.reverse();
+	        }
 	    }
-	  }
-	  if (isUndefined(name)) {
-	    if (array && key.match(/^\d+$/)) {
-	      return str;
-	    }
-	    name = JSON.stringify('' + key);
-	    if (name.match(/^"([a-zA-Z_][a-zA-Z_0-9]*)"$/)) {
-	      name = name.substr(1, name.length - 2);
-	      name = ctx.stylize(name, 'name');
-	    } else {
-	      name = name.replace(/'/g, "\\'")
-	                 .replace(/\\"/g, '"')
-	                 .replace(/(^"|"$)/g, "'");
-	      name = ctx.stylize(name, 'string');
-	    }
-	  }
-
-	  return name + ': ' + str;
-	}
-
-
-	function reduceToSingleString(output, base, braces) {
-	  var numLinesEst = 0;
-	  var length = output.reduce(function(prev, cur) {
-	    numLinesEst++;
-	    if (cur.indexOf('\n') >= 0) numLinesEst++;
-	    return prev + cur.replace(/\u001b\[\d\d?m/g, '').length + 1;
-	  }, 0);
-
-	  if (length > 60) {
-	    return braces[0] +
-	           (base === '' ? '' : base + '\n ') +
-	           ' ' +
-	           output.join(',\n  ') +
-	           ' ' +
-	           braces[1];
-	  }
-
-	  return braces[0] + base + ' ' + output.join(', ') + ' ' + braces[1];
-	}
-
-
-	// NOTE: These type checking functions intentionally don't use `instanceof`
-	// because it is fragile and can be easily faked with `Object.create()`.
-	function isArray(ar) {
-	  return Array.isArray(ar);
-	}
-	exports.isArray = isArray;
-
-	function isBoolean(arg) {
-	  return typeof arg === 'boolean';
-	}
-	exports.isBoolean = isBoolean;
-
-	function isNull(arg) {
-	  return arg === null;
-	}
-	exports.isNull = isNull;
-
-	function isNullOrUndefined(arg) {
-	  return arg == null;
-	}
-	exports.isNullOrUndefined = isNullOrUndefined;
-
-	function isNumber(arg) {
-	  return typeof arg === 'number';
-	}
-	exports.isNumber = isNumber;
-
-	function isString(arg) {
-	  return typeof arg === 'string';
-	}
-	exports.isString = isString;
-
-	function isSymbol(arg) {
-	  return typeof arg === 'symbol';
-	}
-	exports.isSymbol = isSymbol;
-
-	function isUndefined(arg) {
-	  return arg === void 0;
-	}
-	exports.isUndefined = isUndefined;
-
-	function isRegExp(re) {
-	  return isObject(re) && objectToString(re) === '[object RegExp]';
-	}
-	exports.isRegExp = isRegExp;
-
-	function isObject(arg) {
-	  return typeof arg === 'object' && arg !== null;
-	}
-	exports.isObject = isObject;
-
-	function isDate(d) {
-	  return isObject(d) && objectToString(d) === '[object Date]';
-	}
-	exports.isDate = isDate;
-
-	function isError(e) {
-	  return isObject(e) &&
-	      (objectToString(e) === '[object Error]' || e instanceof Error);
-	}
-	exports.isError = isError;
-
-	function isFunction(arg) {
-	  return typeof arg === 'function';
-	}
-	exports.isFunction = isFunction;
-
-	function isPrimitive(arg) {
-	  return arg === null ||
-	         typeof arg === 'boolean' ||
-	         typeof arg === 'number' ||
-	         typeof arg === 'string' ||
-	         typeof arg === 'symbol' ||  // ES6 symbol
-	         typeof arg === 'undefined';
-	}
-	exports.isPrimitive = isPrimitive;
-
-	exports.isBuffer = __webpack_require__(6);
-
-	function objectToString(o) {
-	  return Object.prototype.toString.call(o);
-	}
-
-
-	function pad(n) {
-	  return n < 10 ? '0' + n.toString(10) : n.toString(10);
-	}
-
-
-	var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
-	              'Oct', 'Nov', 'Dec'];
-
-	// 26 Feb 16:19:34
-	function timestamp() {
-	  var d = new Date();
-	  var time = [pad(d.getHours()),
-	              pad(d.getMinutes()),
-	              pad(d.getSeconds())].join(':');
-	  return [d.getDate(), months[d.getMonth()], time].join(' ');
-	}
-
-
-	// log is just a thin wrapper to console.log that prepends a timestamp
-	exports.log = function() {
-	  console.log('%s - %s', timestamp(), exports.format.apply(exports, arguments));
 	};
-
-
-	/**
-	 * Inherit the prototype methods from one constructor into another.
-	 *
-	 * The Function.prototype.inherits from lang.js rewritten as a standalone
-	 * function (not on Function.prototype). NOTE: If this file is to be loaded
-	 * during bootstrapping this function needs to be rewritten using some native
-	 * functions as prototype setup using normal JavaScript does not work as
-	 * expected during bootstrapping (see mirror.js in r114903).
-	 *
-	 * @param {function} ctor Constructor function which needs to inherit the
-	 *     prototype.
-	 * @param {function} superCtor Constructor function to inherit prototype from.
-	 */
-	exports.inherits = __webpack_require__(8);
-
-	exports._extend = function(origin, add) {
-	  // Don't do anything if add isn't an object
-	  if (!add || !isObject(add)) return origin;
-
-	  var keys = Object.keys(add);
-	  var i = keys.length;
-	  while (i--) {
-	    origin[keys[i]] = add[keys[i]];
-	  }
-	  return origin;
-	};
-
-	function hasOwnProperty(obj, prop) {
-	  return Object.prototype.hasOwnProperty.call(obj, prop);
-	}
-	
-	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(7)))
 
 /***/ },
 /* 5 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	/**
+	 * This module provides the utility methods for managing data on the worker.
+	 * Typically shared amongst several core worker modules.
+	 *
+	 * Much of the logic here is in managing the quick lookup collections (i.e. _byId)
+	 * that allow us to not constantly iterate over the whole set.
+	 */
+
+	var _ = __webpack_require__(6);
+
+	function _getContext() {
+	    return ConduitWorker;
+	}
+
+	function initStore(options) {
+	    var context = _getContext();
+	    options = options || {};
+
+	    if (options.reset || !context.data) {
+	        context.data = [];
+	        context._idKey = options.idKey || 'id';
+	        context._byId = {};
+	    }
+
+	    if (context._idKey && options.idKey && (context._idKey != options.idKey)) {
+	        throw new Error('Cannot change the ID key of existing data');
+	    }
+	}
+
+	// TODO:  get rid of this
+	function _isInitialized(context) {
+	    return _.isArray(context.data);
+	}
+
+	function addTo(data) {
+	    var context = _getContext();
+
+	    data = data || [];
+
+	    var byId = context._byId;
+	    var idKey = context._idKey;
+	    _.each(data, function(item) {
+	        var id = item[idKey];
+	        var existing = byId[id];
+	        if (existing) {
+	            // Must merge item properties
+	            var keys = _.keys(item);
+	            _.each(keys, function(key) {
+	                existing[key] = item[key];
+	            });
+	        } else {
+	            // Brand new element or overwriting
+	            if (id) {
+	                byId[id] = item;
+	            }
+
+	            // Add the index where the data exists
+	            item._dataIndex = context.data.push(item) - 1;
+	        }
+	    });
+	}
+
+	function findById(id) {
+	    var context = _getContext();
+	    if (_isInitialized(context)) {
+	        return context._byId[id];
+	    }
+	}
+
+	function findByIds(idArray) {
+	    var matches = [];
+
+	    var context = _getContext();
+	    if (_isInitialized(context)) {
+	        for (var i = 0; i < idArray.length; i++) {
+	            var match = context._byId[idArray[i]];
+	            if (!_.isUndefined(match)) {
+	                matches.push(match);
+	            }
+	        }
+	    }
+
+	    return matches;
+	}
+
+	function findByIndex(index) {
+	    var context = _getContext();
+	    if (_isInitialized(context)) {
+	        return context.data[index];
+	    }
+	}
+
+	function findByIndexes(indexes) {
+	    var found = [];
+	    var context = _getContext();
+	    if (_isInitialized(context)) {
+	        for (var i = indexes.min; i <= indexes.max; i++) {
+	            var data = context.data[i];
+	            if (!_.isUndefined(data)) {
+	                found.push(data);
+	            }
+	        }
+	    }
+
+	    return found;
+	}
+
+
+	/**
+	 * 'setData' and 'mergeData' can both accept either an array of items, or a string of JSON.
+	 * @param data An array of data, or a string that can be JSON.parse-ed into an array.  If
+	 * neither of those are true, this throws an error.
+	 */
+	function parseData(data) {
+	    if (_.isString(data)) {
+	        data = JSON.parse(data);
+
+	        if (!_.isArray(data)) {
+	            throw new Error('Data provided as a string should represent an array');
+	        }
+	    }
+
+	    if (data && !_.isArray(data)) {
+	        throw new Error('Data should be an array or a JSON string representing an array');
+	    }
+
+	    return data;
+	}
+
+	function length() {
+	    var context = _getContext();
+	    return context.data.length;
+	}
+
+	module.exports = {
+
+	    initStore: initStore,
+
+	    addTo: addTo,
+
+	    findById: findById,
+
+	    findByIds: findByIds,
+
+	    findByIndex: findByIndex,
+
+	    findByIndexes: findByIndexes,
+
+	    parseData: parseData,
+
+	    length: length
+	};
+
+/***/ },
+/* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;//     Underscore.js 1.8.3
@@ -2449,110 +1926,6 @@
 	    }.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 	  }
 	}.call(this));
-
-
-/***/ },
-/* 6 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = function isBuffer(arg) {
-	  return arg && typeof arg === 'object'
-	    && typeof arg.copy === 'function'
-	    && typeof arg.fill === 'function'
-	    && typeof arg.readUInt8 === 'function';
-	}
-
-/***/ },
-/* 7 */
-/***/ function(module, exports, __webpack_require__) {
-
-	// shim for using process in browser
-
-	var process = module.exports = {};
-	var queue = [];
-	var draining = false;
-
-	function drainQueue() {
-	    if (draining) {
-	        return;
-	    }
-	    draining = true;
-	    var currentQueue;
-	    var len = queue.length;
-	    while(len) {
-	        currentQueue = queue;
-	        queue = [];
-	        var i = -1;
-	        while (++i < len) {
-	            currentQueue[i]();
-	        }
-	        len = queue.length;
-	    }
-	    draining = false;
-	}
-	process.nextTick = function (fun) {
-	    queue.push(fun);
-	    if (!draining) {
-	        setTimeout(drainQueue, 0);
-	    }
-	};
-
-	process.title = 'browser';
-	process.browser = true;
-	process.env = {};
-	process.argv = [];
-	process.version = ''; // empty string to avoid regexp issues
-	process.versions = {};
-
-	function noop() {}
-
-	process.on = noop;
-	process.addListener = noop;
-	process.once = noop;
-	process.off = noop;
-	process.removeListener = noop;
-	process.removeAllListeners = noop;
-	process.emit = noop;
-
-	process.binding = function (name) {
-	    throw new Error('process.binding is not supported');
-	};
-
-	// TODO(shtylman)
-	process.cwd = function () { return '/' };
-	process.chdir = function (dir) {
-	    throw new Error('process.chdir is not supported');
-	};
-	process.umask = function() { return 0; };
-
-
-/***/ },
-/* 8 */
-/***/ function(module, exports, __webpack_require__) {
-
-	if (typeof Object.create === 'function') {
-	  // implementation from standard node.js 'util' module
-	  module.exports = function inherits(ctor, superCtor) {
-	    ctor.super_ = superCtor
-	    ctor.prototype = Object.create(superCtor.prototype, {
-	      constructor: {
-	        value: ctor,
-	        enumerable: false,
-	        writable: true,
-	        configurable: true
-	      }
-	    });
-	  };
-	} else {
-	  // old school shim for old browsers
-	  module.exports = function inherits(ctor, superCtor) {
-	    ctor.super_ = superCtor
-	    var TempCtor = function () {}
-	    TempCtor.prototype = superCtor.prototype
-	    ctor.prototype = new TempCtor()
-	    ctor.prototype.constructor = ctor
-	  }
-	}
 
 
 /***/ }

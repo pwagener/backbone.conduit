@@ -19,9 +19,13 @@ module.exports = function(config) {
             'node_modules/sinon/pkg/sinon.js',
             'spec/browser/browserSpec.bundle.js',
 
-            // The worker file isn't included by default, but is served
+            // The worker files aren't included by default, but is served
             {
                 pattern: 'dist/backbone.conduit-worker.js',
+                included: true
+            },
+            {
+                pattern: 'dist/conduit.worker.dataManagement.js',
                 included: true
             }
 

@@ -8,7 +8,7 @@
 module.exports = {
     name: 'ping',
 
-    method: function(options) {
+    method: function() {
         return new Date().toUTCString();
     }
 };

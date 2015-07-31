@@ -10,24 +10,23 @@ module.exports = {
     name: 'sortBy',
 
     method: function(argument) {
-        var self = dataUtils.getDataContext(this);
-
-        var data = self.data;
         var comparator = argument.comparator;
         var direction = argument.direction || 'asc';
 
         var evaluator;
         if (_.isString(comparator)) {
-            evaluator = function(item) {
+            evaluator = function (item) {
                 return item[comparator];
             }
+        } else if (_.isObject(comparator) && comparator.method) {
+            evaluator = ConduitWorker.handlers[comparator.method];
         } else {
-            throw new Error('Provide a property name as "comparator"');
+            throw new Error('Provide a property name as "comparator" or a registered method as { method }');
         }
 
-        self.data = _.sortBy(data, evaluator);
+        ConduitWorker.data = _.sortBy(ConduitWorker.data, evaluator);
         if (direction === 'desc') {
-            self.data = self.data.reverse();
+            ConduitWorker.data = ConduitWorker.data.reverse();
         }
     }
 };

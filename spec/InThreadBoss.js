@@ -8,17 +8,9 @@
 var when = require('when');
 var _ = require('underscore');
 
-var fakeWorkerMethods = [
-    require('./../src/worker/setData'),
-    require('./../src/worker/prepare'),
-    require('./../src/worker/mergeData'),
-    require('./../src/worker/sortBy')
-];
-
-
-function Boss() {
+function Boss(workerHandlers) {
     var self = this;
-    _.each(fakeWorkerMethods, function(methodDefinition) {
+    _.each(workerHandlers, function(methodDefinition) {
         self[methodDefinition.name] = function() {
             return methodDefinition.method.apply(self, arguments);
         }
@@ -26,7 +18,8 @@ function Boss() {
 }
 
 Boss.prototype.makePromise = function(details) {
-    var result = this[details.method](details.argument);
+    var method = this[details.method];
+    var result = method.apply(this, details.arguments);
     return when.resolve(result);
 };
 

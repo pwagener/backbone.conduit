@@ -35,14 +35,30 @@ Boss.prototype = {
             throw new Error("You must provide 'Worker'");
         }
 
-        this.autoTerminate = options.autoTerminate;
+        // Default to one second
+        this.autoTerminate = _.isUndefined(options.autoTerminate) ? 1000 : options.autoTerminate;
+
+        // The configuration we will provide to any new worker
+        this.debug = options.debug;
+        this.workerConfig = _.extend({}, options.worker);
+    },
+
+    _scheduleTermination: function () {
+        if (this.autoTerminate === true) {
+            this.terminate();
+        } else if (this.autoTerminate && !this.terminateTimeoutHandle) {
+            // Set a timeout for how long this worker will stay available
+            // before we terminate it automatically
+            var callTerminate = _.bind(this.terminate, this);
+            this.terminateTimeoutHandle = setTimeout(callTerminate, this.autoTerminate);
+        }
     },
 
     /**
      * Get a promise that will be resolved when the worker finishes
      * @param details Details for the method call:
      *   o method (required) The name of the method to call
-     *   o argument (optional) The single argument that will be passed to the
+     *   o arguments (optional) The array of arguments that will be passed to the
      *     worker method you are calling
      * @return A Promise that will be resolved or rejected based on calling
      *   the method you are calling.
@@ -57,42 +73,31 @@ Boss.prototype = {
             delete this.terminateTimeoutHandle;
         }
 
-        this._ensureWorker();
         var self = this;
 
-        //noinspection JSUnresolvedFunction
-        return when.promise(function(resolve, reject) {
-            var worker = self.worker;
-            worker.onmessage = function(event) {
-                var result = event.data;
+        return this._ensureWorker().then(function(worker) {
+            return when.promise(function(resolve, reject) {
+                worker.onmessage = function(event) {
+                    var result = event.data;
+                    self._scheduleTermination();
 
-                if (self.autoTerminate === true) {
+                    if (result instanceof Error) {
+                        // Reject if we get an error
+                        reject(result);
+                    } else {
+                        resolve(result);
+                    }
+                };
+
+                // Reject if we get an error.  This occurs, for instance, when the worker
+                // path is invalid
+                worker.onerror = function(err) {
                     self.terminate();
-                } else if (self.autoTerminate) {
-                    // Set a timeout for how long this worker will stay available
-                    // before we terminate it automatically
-                    var callTerminate = _.bind(self.terminate, self);
-                    self.terminateTimeoutHandle = setTimeout(callTerminate, self.autoTerminate);
-                }
+                    reject(err);
+                };
 
-                if (result instanceof Error) {
-                    // Reject if we get an error
-                    reject(result);
-                } else {
-                    resolve(result);
-                }
-            };
-
-            // Reject if we get an error.  This occurs, for instance, when the worker
-            // path is invalid
-            worker.onerror = function(err) {
-                self.terminate();
-                reject(err);
-            };
-
-            // TODO:  if details.argument is an easily measurable payload (i.e. a long string),
-            // use an ArrayBuffer to speed the transfer.
-            worker.postMessage(details);
+                worker.postMessage(details);
+            });
         });
     },
 
@@ -101,6 +106,7 @@ Boss.prototype = {
      */
     terminate: function() {
         if(this.worker) {
+            this._debug('Terminating worker');
             if (_.isFunction(this.worker.terminate)) {
                 this.worker.terminate();
             }
@@ -109,14 +115,47 @@ Boss.prototype = {
     },
 
     /**
-     * Make sure our worker actually exists.  Create one if it does not
+     * Make sure our worker actually exists.  Create one if it does not with the correct
+     * configuration.
+     * @return A promise that resolves to the pro
      * @private
      */
     _ensureWorker: function () {
-        if (!this.worker) {
-            // Note this will never throw an error; construction always succeeds
-            // regardless of whether the path is valid or not
-            this.worker = new this.WorkerConstructor(this.WorkerFileLocation);
+        var self = this;
+        return when.promise(function(resolve, reject) {
+            var worker = self.worker;
+            if (!worker) {
+                // Note this will never throw an error; construction always succeeds
+                // regardless of whether the path is valid or not
+                self._debug('Creating new worker (autoTerminate: ' + self.autoTerminate + ')');
+                worker = self.worker = new self.WorkerConstructor(self.WorkerFileLocation);
+                // Pass the worker the configuration it should have
+                worker.onerror = function(err) {
+                    self.terminate();
+                    reject(err);
+                };
+                worker.onmessage = function() {
+                    resolve(worker);
+                };
+                worker.postMessage({
+                    method: 'configure',
+                    arguments: [ self.workerConfig ]
+                });
+            } else {
+                // Our worker is already ready
+                resolve(worker);
+            }
+        });
+    },
+
+    _debug: function(msg) {
+        if (this.debug) {
+            var currentdate = new Date();
+            var now = currentdate.getHours() + ":"
+                + currentdate.getMinutes() + ":"
+                + currentdate.getSeconds() + '-' + currentdate.getMilliseconds();
+
+            console.log(now + ' conduit.boss: ' + msg)
         }
     }
 };

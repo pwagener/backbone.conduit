@@ -18,8 +18,9 @@ var Boss = require('./Boss');
  * and similar structures.
  * @private
  */
-function _createProbePromise(Worker, path, fileName, debug) {
-    if (debug) {
+function _createProbePromise(Worker, path, fileName, debugSet) {
+    var debug;
+    if (debugSet) {
         debug = function(msg) {
             console.log(msg)
         }
@@ -34,19 +35,23 @@ function _createProbePromise(Worker, path, fileName, debug) {
         fileLocation: fullPath
     });
 
+    // TODO:  clean up this promise chain
     //noinspection JSUnresolvedFunction
     return when.promise(function(resolve) {
         try {
             boss.makePromise({
                 method: 'ping',
-                autoTerminate: true
+                autoTerminate: true,
+                arguments: [
+                    { debug: debugSet }
+                ]
             }).done(function(response) {
                 // Ping succeeded.  We found a functional worker
                 debug('Located worker at "' + fullPath + '" at "' + response + '"');
                 resolve(fullPath);
-            }, function() {
+            }, function(err) {
                 // Worker loaded, but ping error (yikes)
-                debug('Worker at "' + fullPath + '" did not respond');
+                debug('Worker at "' + fullPath + '" did not respond.  Error: ' + err);
                 resolve();
             });
         } catch (err) {

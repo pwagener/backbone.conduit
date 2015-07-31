@@ -25,17 +25,16 @@ module.exports = {
      * was called
      */
     method: function(options) {
-        var self = dataUtils.getDataContext(this);
         var found;
 
         if (!_.isUndefined(options.id)) {
-            found = dataUtils.findById(self, options.id);
+            found = dataUtils.findById(options.id);
         } else if (_.isArray(options.ids)) {
-            found = dataUtils.findByIds(self, options.ids);
+            found = dataUtils.findByIds(options.ids);
         } else if (_.isNumber(options.index)) {
-            found = dataUtils.findByIndex(self, options.index);
+            found = dataUtils.findByIndex(options.index);
         } else if (_.isObject(options.indexes)) {
-            found = dataUtils.findByIndexes(self, options.indexes);
+            found = dataUtils.findByIndexes(options.indexes);
         }
 
         return found;

@@ -164,26 +164,27 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var WorkerConstructor = options.Worker ? options.Worker : Worker;
 	    setValue(workerConstructorKey, WorkerConstructor);
 
-	    // TODO:  chain this promise
-	    return when.promise(function(resolve, reject) {
-	        var paths = options.paths || findDefaultWorkerPath();
+	    var debug = options.debug;
+	    setValue('debug', debug);
 
-	        if (_.isString(paths)) {
-	            paths = [ paths ];
-	        }
-	        var searchOptions = {
-	            Worker: WorkerConstructor,
-	            fileName: workerFileName,
-	            paths: paths,
-	            debug: options.debug
-	        };
+	    var paths = options.paths || findDefaultWorkerPath();
 
-	        workerProbe.searchPaths(searchOptions).then(function(foundPath) {
-	            setValue(workerPathKey, foundPath);
-	            resolve();
-	        }).catch(function() {
-	            reject(new Error('Did not find worker file in ' + paths));
-	        });
+	    if (_.isString(paths)) {
+	        paths = [ paths ];
+	    }
+	    var searchOptions = {
+	        Worker: WorkerConstructor,
+	        fileName: workerFileName,
+	        paths: paths,
+	        debug: debug
+	    };
+
+	    return workerProbe.searchPaths(searchOptions).then(function(foundPath) {
+	        setValue(workerPathKey, foundPath);
+	        setValue('workerDebug', options.workerDebug);
+	        setValue('extraComponents', options.components);
+	    }).catch(function() {
+	        throw new Error('Did not find worker file in ' + paths);
 	    });
 	}
 
@@ -253,7 +254,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	     * by applications.  Note this will throw an error if 'isWorkerEnabled' returns
 	     * false.
 	     */
-	    getWorkerConstructor: getWorkerConstructor
+	    getWorkerConstructor: getWorkerConstructor,
+
+	    getDebug: function() {
+	        return getValue('debug');
+	    },
+
+	    getWorkerDebug: function() {
+	        return getValue('workerDebug');
+	    },
+
+	    getExtraComponents: function() {
+	        return getValue('extraComponents');
+	    }
 	};
 
 /***/ },
@@ -506,7 +519,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var self = this;
 	    return this._boss.makePromise({
 	        method: 'prepare',
-	        argument: items
+	        arguments: [ items ]
 	    }).then(function(models) {
 	        var converted = self._sparseSet(models);
 	        return(converted);
@@ -637,10 +650,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var idKey = context.model.idAttribute;
 	    var bossPromise = context._boss.makePromise({
 	        method: method,
-	        argument: {
-	            data: data,
-	            idKey: idKey
-	        }
+	        arguments: [
+	            {
+	                data: data,
+	                idKey: idKey
+	            }
+	        ]
 	    });
 
 	    return bossPromise.then(function(length) {
@@ -693,7 +708,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var self = this;
 	    return this._boss.makePromise({
 	        method: 'sortBy',
-	        argument: sortSpec
+	        arguments: [ sortSpec ]
 	    }).then(function() {
 	        // Sort was successful; remove any local models.
 	        // NOTE:  we could work around doing this by just re-preparing the
@@ -706,10 +721,29 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	function _ensureBoss() {
 	    if (!this._boss) {
+
+	        var components = [
+	            './conduit.worker.dataManagement.js'
+	        ];
+
+	        var extras = config.getExtraComponents();
+	        _.each(extras, function(component) {
+	            components.push(component);
+	        });
+
 	        this._boss = new Boss({
 	            Worker: config.getWorkerConstructor(),
 	            fileLocation: config.getWorkerPath(),
-	            autoTerminate: false
+	            autoTerminate: false,
+
+	            // Use the Backbone.Conduit config for the debug configuration
+	            debug: config.getDebug(),
+	            worker: {
+	                debug: config.getWorkerDebug(),
+
+	                // Include the Conduit components we will leverage
+	                components: components
+	            }
 	        });
 	    }
 	}
@@ -755,7 +789,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    'groupBy', 'countBy', 'sortBy', 'indexBy',
 
 	    // Other various methods
-	    "slice", "sort", "pluck", "where", "findWhere", "parse", "clone", "create"
+	    "slice", "pluck", "where", "findWhere", "parse", "clone", "create"
 
 	];
 	_.each(notSupportMethods, function(method) {
@@ -778,7 +812,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	var notSupportedConduitMethods = [
 	    { called: 'reset', use: 'refill' },
 	    { called: 'set', use: 'fill' },
-	    { called: 'fetch', use: 'haul' }
+	    { called: 'fetch', use: 'haul' },
+	    { called: 'sortBy', use: 'sortAsync' },
+	    { called: 'sortBy', use: 'sortAsync' }
 	];
 	_.each(notSupportedConduitMethods, function(methodObj) {
 	    mixinObj[methodObj.called] = function() {
@@ -893,8 +929,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * and similar structures.
 	 * @private
 	 */
-	function _createProbePromise(Worker, path, fileName, debug) {
-	    if (debug) {
+	function _createProbePromise(Worker, path, fileName, debugSet) {
+	    var debug;
+	    if (debugSet) {
 	        debug = function(msg) {
 	            console.log(msg)
 	        }
@@ -909,19 +946,23 @@ return /******/ (function(modules) { // webpackBootstrap
 	        fileLocation: fullPath
 	    });
 
+	    // TODO:  clean up this promise chain
 	    //noinspection JSUnresolvedFunction
 	    return when.promise(function(resolve) {
 	        try {
 	            boss.makePromise({
 	                method: 'ping',
-	                autoTerminate: true
+	                autoTerminate: true,
+	                arguments: [
+	                    { debug: debugSet }
+	                ]
 	            }).done(function(response) {
 	                // Ping succeeded.  We found a functional worker
 	                debug('Located worker at "' + fullPath + '" at "' + response + '"');
 	                resolve(fullPath);
-	            }, function() {
+	            }, function(err) {
 	                // Worker loaded, but ping error (yikes)
-	                debug('Worker at "' + fullPath + '" did not respond');
+	                debug('Worker at "' + fullPath + '" did not respond.  Error: ' + err);
 	                resolve();
 	            });
 	        } catch (err) {
@@ -1186,14 +1227,30 @@ return /******/ (function(modules) { // webpackBootstrap
 	            throw new Error("You must provide 'Worker'");
 	        }
 
-	        this.autoTerminate = options.autoTerminate;
+	        // Default to one second
+	        this.autoTerminate = _.isUndefined(options.autoTerminate) ? 1000 : options.autoTerminate;
+
+	        // The configuration we will provide to any new worker
+	        this.debug = options.debug;
+	        this.workerConfig = _.extend({}, options.worker);
+	    },
+
+	    _scheduleTermination: function () {
+	        if (this.autoTerminate === true) {
+	            this.terminate();
+	        } else if (this.autoTerminate && !this.terminateTimeoutHandle) {
+	            // Set a timeout for how long this worker will stay available
+	            // before we terminate it automatically
+	            var callTerminate = _.bind(this.terminate, this);
+	            this.terminateTimeoutHandle = setTimeout(callTerminate, this.autoTerminate);
+	        }
 	    },
 
 	    /**
 	     * Get a promise that will be resolved when the worker finishes
 	     * @param details Details for the method call:
 	     *   o method (required) The name of the method to call
-	     *   o argument (optional) The single argument that will be passed to the
+	     *   o arguments (optional) The array of arguments that will be passed to the
 	     *     worker method you are calling
 	     * @return A Promise that will be resolved or rejected based on calling
 	     *   the method you are calling.
@@ -1208,42 +1265,31 @@ return /******/ (function(modules) { // webpackBootstrap
 	            delete this.terminateTimeoutHandle;
 	        }
 
-	        this._ensureWorker();
 	        var self = this;
 
-	        //noinspection JSUnresolvedFunction
-	        return when.promise(function(resolve, reject) {
-	            var worker = self.worker;
-	            worker.onmessage = function(event) {
-	                var result = event.data;
+	        return this._ensureWorker().then(function(worker) {
+	            return when.promise(function(resolve, reject) {
+	                worker.onmessage = function(event) {
+	                    var result = event.data;
+	                    self._scheduleTermination();
 
-	                if (self.autoTerminate === true) {
+	                    if (result instanceof Error) {
+	                        // Reject if we get an error
+	                        reject(result);
+	                    } else {
+	                        resolve(result);
+	                    }
+	                };
+
+	                // Reject if we get an error.  This occurs, for instance, when the worker
+	                // path is invalid
+	                worker.onerror = function(err) {
 	                    self.terminate();
-	                } else if (self.autoTerminate) {
-	                    // Set a timeout for how long this worker will stay available
-	                    // before we terminate it automatically
-	                    var callTerminate = _.bind(self.terminate, self);
-	                    self.terminateTimeoutHandle = setTimeout(callTerminate, self.autoTerminate);
-	                }
+	                    reject(err);
+	                };
 
-	                if (result instanceof Error) {
-	                    // Reject if we get an error
-	                    reject(result);
-	                } else {
-	                    resolve(result);
-	                }
-	            };
-
-	            // Reject if we get an error.  This occurs, for instance, when the worker
-	            // path is invalid
-	            worker.onerror = function(err) {
-	                self.terminate();
-	                reject(err);
-	            };
-
-	            // TODO:  if details.argument is an easily measurable payload (i.e. a long string),
-	            // use an ArrayBuffer to speed the transfer.
-	            worker.postMessage(details);
+	                worker.postMessage(details);
+	            });
 	        });
 	    },
 
@@ -1252,6 +1298,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	     */
 	    terminate: function() {
 	        if(this.worker) {
+	            this._debug('Terminating worker');
 	            if (_.isFunction(this.worker.terminate)) {
 	                this.worker.terminate();
 	            }
@@ -1260,14 +1307,47 @@ return /******/ (function(modules) { // webpackBootstrap
 	    },
 
 	    /**
-	     * Make sure our worker actually exists.  Create one if it does not
+	     * Make sure our worker actually exists.  Create one if it does not with the correct
+	     * configuration.
+	     * @return A promise that resolves to the pro
 	     * @private
 	     */
 	    _ensureWorker: function () {
-	        if (!this.worker) {
-	            // Note this will never throw an error; construction always succeeds
-	            // regardless of whether the path is valid or not
-	            this.worker = new this.WorkerConstructor(this.WorkerFileLocation);
+	        var self = this;
+	        return when.promise(function(resolve, reject) {
+	            var worker = self.worker;
+	            if (!worker) {
+	                // Note this will never throw an error; construction always succeeds
+	                // regardless of whether the path is valid or not
+	                self._debug('Creating new worker (autoTerminate: ' + self.autoTerminate + ')');
+	                worker = self.worker = new self.WorkerConstructor(self.WorkerFileLocation);
+	                // Pass the worker the configuration it should have
+	                worker.onerror = function(err) {
+	                    self.terminate();
+	                    reject(err);
+	                };
+	                worker.onmessage = function() {
+	                    resolve(worker);
+	                };
+	                worker.postMessage({
+	                    method: 'configure',
+	                    arguments: [ self.workerConfig ]
+	                });
+	            } else {
+	                // Our worker is already ready
+	                resolve(worker);
+	            }
+	        });
+	    },
+
+	    _debug: function(msg) {
+	        if (this.debug) {
+	            var currentdate = new Date();
+	            var now = currentdate.getHours() + ":"
+	                + currentdate.getMinutes() + ":"
+	                + currentdate.getSeconds() + '-' + currentdate.getMilliseconds();
+
+	            console.log(now + ' conduit.boss: ' + msg)
 	        }
 	    }
 	};

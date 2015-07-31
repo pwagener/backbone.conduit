@@ -12,19 +12,17 @@ module.exports = {
     name: 'setData',
 
     method: function(argument) {
-        var self = dataUtils.getDataContext(this);
-
         argument = argument || {};
         var data = argument.data || [];
         data = dataUtils.parseData(data);
 
         // We're resetting the data completely
-        dataUtils.initStore(self, {
+        dataUtils.initStore({
             reset: true,
             idKey: argument.idKey
         });
 
-        dataUtils.addTo(self, data);
-        return dataUtils.length(self);
+        dataUtils.addTo(data);
+        return dataUtils.length();
     }
 };

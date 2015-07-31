@@ -11,12 +11,9 @@ var ConduitCollection = window.ConduitCollection = window.BasicCollection.extend
      * @param fileName
      */
     fetchDataFile: function(fileName) {
-        this.fileName = fileName || "2008-500.json";
+        this.fileName = fileName;
 
-        // Clear out our current set of data
-        this.refill({ silent: true});
-
-        this.haul();
+        this.haul({ reset: true });
     }
 
     // That's it.  No need for any extra functionality, as ConduitCollection is now

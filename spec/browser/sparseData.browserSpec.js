@@ -29,12 +29,13 @@ describe('The sparseData module', function() {
         });
 
         config.enableWorker({
-            paths: 'base/dist',
-            debug: true
+            paths: 'base/dist'
         }).then(function() {
             collection.haul({
                 success: function() { done() }
             });
+        }).catch(function(err) {
+            throw new Error('Failed to set up: ' + err);
         });
     });
 

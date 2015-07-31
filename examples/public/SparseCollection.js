@@ -5,12 +5,11 @@ var SparseCollection = window.SparseCollection = window.BasicCollection.extend({
     fetchDataFile: function(fileName) {
         this.fileName = fileName;
 
-        // Clear out our current set of data
-        var collection = this;
-        this.refill(null, { silent: true }).then(function() {
-            return collection.haul();
-        }).catch(function(err) {
-            console.log('Failed! ', err);
+        // Like in the Conduit Collection, we use 'haul()'.  But the version of 'haul()'
+        // from the 'sparseData' module (mixed in at the end of the file) ensures the received
+        // data is parsed & stored on the worker thread.
+        this.haul({
+            reset: true
         });
     },
 
@@ -27,7 +26,9 @@ var SparseCollection = window.SparseCollection = window.BasicCollection.extend({
      */
     getSortByNamePromise: function() {
         return this.sortAsync({
-            comparator: 'name'
+            comparator: {
+                method: 'evaluateByDateAndName'
+            }
         });
     },
 
@@ -47,10 +48,19 @@ var SparseCollection = window.SparseCollection = window.BasicCollection.extend({
 
 });
 
-// Enable the Backbone.Conduit worker ...
+// Enable the Backbone.Conduit worker with ...
 Backbone.Conduit.config.enableWorker({
+    // ... The absolute path to look for the worker file
     paths: '/lib',
-    debug: true
+
+    // ... Extended Conduit Worker sorting functionality
+    components: [
+        '/sorters.js'
+    ],
+
+    // Show debugging messages for both the main & worker threads
+    debug: true,
+    workerDebug: true
 });
 
 // Since we're extending 'BasicCollection', we choose to just mix in the 'sparseData'

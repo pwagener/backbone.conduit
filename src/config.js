@@ -72,26 +72,27 @@ function enableWorker(options) {
     var WorkerConstructor = options.Worker ? options.Worker : Worker;
     setValue(workerConstructorKey, WorkerConstructor);
 
-    // TODO:  chain this promise
-    return when.promise(function(resolve, reject) {
-        var paths = options.paths || findDefaultWorkerPath();
+    var debug = options.debug;
+    setValue('debug', debug);
 
-        if (_.isString(paths)) {
-            paths = [ paths ];
-        }
-        var searchOptions = {
-            Worker: WorkerConstructor,
-            fileName: workerFileName,
-            paths: paths,
-            debug: options.debug
-        };
+    var paths = options.paths || findDefaultWorkerPath();
 
-        workerProbe.searchPaths(searchOptions).then(function(foundPath) {
-            setValue(workerPathKey, foundPath);
-            resolve();
-        }).catch(function() {
-            reject(new Error('Did not find worker file in ' + paths));
-        });
+    if (_.isString(paths)) {
+        paths = [ paths ];
+    }
+    var searchOptions = {
+        Worker: WorkerConstructor,
+        fileName: workerFileName,
+        paths: paths,
+        debug: debug
+    };
+
+    return workerProbe.searchPaths(searchOptions).then(function(foundPath) {
+        setValue(workerPathKey, foundPath);
+        setValue('workerDebug', options.workerDebug);
+        setValue('components', options.components);
+    }).catch(function() {
+        throw new Error('Did not find worker file in ' + paths);
     });
 }
 
@@ -161,5 +162,17 @@ module.exports = {
      * by applications.  Note this will throw an error if 'isWorkerEnabled' returns
      * false.
      */
-    getWorkerConstructor: getWorkerConstructor
+    getWorkerConstructor: getWorkerConstructor,
+
+    getDebug: function() {
+        return getValue('debug');
+    },
+
+    getWorkerDebug: function() {
+        return getValue('workerDebug');
+    },
+
+    getComponents: function() {
+        return getValue('components');
+    }
 };

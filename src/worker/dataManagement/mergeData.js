@@ -13,18 +13,16 @@ module.exports = {
     name: 'mergeData',
 
     method: function(argument) {
-        var self = dataUtils.getDataContext(this);
-
         argument = argument || {};
         var data = argument.data || [];
         data = dataUtils.parseData(data);
 
-        dataUtils.initStore(self, {
+        dataUtils.initStore({
             idKey: argument.idKey
         });
 
-        dataUtils.addTo(self, data);
-        return dataUtils.length(self);
+        dataUtils.addTo(data);
+        return dataUtils.length();
     }
 
 };

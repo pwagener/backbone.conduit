@@ -93,23 +93,30 @@
         <h2>What The Demo Does</h2>
         <p>
             The goal of this demo is to explore how long it takes to prepare large data sets for use by an application.
-            Loading data into a Backbone collection in this demo can be broken down into four steps:
+            This demo shows loading data into a Backbone collection broken down into four steps typically taken
+            by many applications:
         </p>
         <ol>
             <li>Fetch the Data</li>
             <li>Parse the Data into JSON</li>
             <li>Create the <code>Backbone.Model</code> instances</li>
-            <li>Sort the Data</li>
+            <li>Sort the Data in a non-trivial way (here by date, then by name)</li>
         </ol>
         <p>
             After that, the application shows the first three entries in the collection in a simple bit of HTML.
         </p>
         <p>
             While not that interesting for demo purposes, the data set used here is real.  The largest data set contains
-            all the NYC Restaurant Health Grades from January 2013 until July 2015 (~ 221K entries); the smaller
+            all the NYC Restaurant Health Grades over the past several years (~ 221K entries); the smaller
             data sets are just truncated versions.  The demo loads static JSON files from the server, where each entry
             looks like:
-        <pre>   {"name":"Morris Park Bake Sho","zip":10462,"grade":"A","date":"02/09/2015"}</pre>
+    <pre>
+        [
+            {"name":"Morris Park Bake Sho","zip":10462,"grade":"A","date":"02/09/2015"},
+            {"name":"Wendy's","zip":11225,"grade":"A","date":"12/30/2014"},
+            {"name":"Dj Reynolds Pub And","zip":10019,"grade":"A","date":"09/06/2014"},
+            ...
+        ]</pre>
 
         <hr/>
 
@@ -146,7 +153,7 @@
             but all four steps are now <span class="label label-success">Asynchronous</span>.  Even better, the final
             <strong>Create Models</strong> step does vastly less work:  it creates <code>Backbone.Model</code>
             instances only when completely necessary; in this case <mark>only three models are created</mark>,
-            because that is all we need.
+            because that is all we need.  The end result is significantly faster performance, even at very large scale.
         </p>
 
         <hr/>

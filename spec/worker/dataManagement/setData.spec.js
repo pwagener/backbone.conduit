@@ -2,13 +2,14 @@
 
 var _ = require('underscore');
 
-var workerSetData = require('./../../src/worker/setData');
+var workerSetData = require('./../../../src/worker/dataManagement/setData');
+var mockConduitWorker = require('../mockConduitWorker');
 
-
-describe('The worker/setData module', function() {
+describe('The dataManagement/setData module', function() {
     var context;
     beforeEach(function() {
-        context = {};
+        mockConduitWorker.reset();
+        context = mockConduitWorker.get();
         context.setData = _.bind(workerSetData.method, context)
     });
 
