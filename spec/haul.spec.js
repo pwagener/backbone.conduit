@@ -6,10 +6,9 @@ var _ = require('underscore');
 var haul = require('./../src/haul');
 var when = require('when');
 
-// TODO:  migrate usages to 'this.callThenResolve'
-function callThenResolve(collection, method) {
+function callThenResolve(collection, method, arg) {
     return when.promise(function(resolve) {
-        collection[method]().then(function() {
+        collection[method](arg).then(function() {
             resolve(collection);
         });
     });
@@ -65,8 +64,7 @@ describe("The haul module", function() {
         });
 
         it('populates the collection', function(done) {
-            var promised = callThenResolve(collection, 'haul');
-            promised.done(function(collection) {
+            callThenResolve(collection, 'haul').then(function(collection) {
                 expect(collection).to.have.length(3);
                 done();
             });
@@ -74,8 +72,7 @@ describe("The haul module", function() {
 
         it('calls "fill" by default', function(done) {
             var fillSpy = this.sinon.spy(collection, 'fill');
-            var promised = callThenResolve(collection, 'haul');
-            promised.then(function() {
+            callThenResolve(collection, 'haul').then(function() {
                 expect(fillSpy.callCount).to.equal(1);
                 done();
             });
@@ -83,12 +80,7 @@ describe("The haul module", function() {
 
         it('calls "refill" when "reset" is requested', function(done) {
             var refillSpy = this.sinon.spy(collection, 'refill');
-            var promise = when.promise(function(resolve) {
-                collection.haul({ reset: true }).then(function() {
-                    resolve(collection);
-                });
-            });
-            promise.then(function() {
+            callThenResolve(collection, 'haul', {reset: true}).then(function() {
                 expect(refillSpy.callCount).to.equal(1);
                 done();
             });
@@ -103,6 +95,5 @@ describe("The haul module", function() {
             collection.comparator = 'name';
             collection.haul({ sort: true });
         });
-
     });
 });

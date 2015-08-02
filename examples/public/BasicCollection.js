@@ -7,6 +7,10 @@ var BasicCollection = window.BasicCollection = Backbone.Collection.extend({
 
     model: window.HealthScoreModel,
 
+    // The list of events this collection performs that are asynchronous.  Used by the UI to
+    // describe each event; not necessary for any non-demo application
+    asyncDataEvents: [ 'fetch' ],
+
     /**
      * Set the filename this collection will fetch.  Note this has the side-effect of resetting this
      * collection as well.
@@ -25,7 +29,13 @@ var BasicCollection = window.BasicCollection = Backbone.Collection.extend({
         return  "data/" + this.fileName;
     },
 
-    // TODO: justify this!
+    /**
+     * We override 'sync' on this collection so we can trigger events when the JSON is received and parsed.
+     * This has no effect on the speed of any collection-based operations, and is only necessary to make the demo
+     * application more consistent.
+     *
+     * In other words, nothing interesting to see here....
+     */
     sync: function(method, model, options) {
         options = options || {};
 
@@ -42,6 +52,7 @@ var BasicCollection = window.BasicCollection = Backbone.Collection.extend({
                 return response;
             };
         }
+
         _.extend(options, {
             converters: {
                 'text json': function(response) {
@@ -56,12 +67,24 @@ var BasicCollection = window.BasicCollection = Backbone.Collection.extend({
     },
 
     /**
-     * This method is used by the UI to determine which events are synchronous or asynchronous
-     * for each collection type.
-     * @return an array of well-known strings that can be interprted by MeasuringView.
+     * This will filter this collection and return *another* collection that only contains
+     * the most recent grade for each restaurant.
+     * @return {*|PromiseConstructor}
      */
-    getAsyncDataEvents: function() {
-        return [ 'fetch' ];
+    filterToMostRecent: function() {
+        var hashes = {};
+
+        var evaluator = function(item) {
+            var hash = item.get('name') + item.get('zip');
+            if (hashes[hash]) {
+                return false;
+            } else {
+                hashes[hash] = true;
+                return true;
+            }
+        };
+
+        return this.filter(evaluator);
     },
 
     /**
@@ -70,40 +93,33 @@ var BasicCollection = window.BasicCollection = Backbone.Collection.extend({
      * This allows us to treat the BasicCollection, ConduitCollection, and SparseCollection the
      * same with respect to sorting.
      */
-    getSortByNamePromise: function() {
-        var collection = this;
-        return new Promise(function(resolve) {
-            collection.comparator = function(item) {
-                if (item && item.has('date')) {
-                    var timestamp = new Date(item.get('date')).getTime();
-                    return (Number.MAX_VALUE - timestamp) + '-' + item.get('name');
-                } else {
-                    return Number.MAX_VALUE;
-                }
-            };
-            collection.sort();
-            collection.comparator = null;
-            resolve();
-        });
+    sortByNameAndDate: function() {
+        this.comparator = function(item) {
+            if (item && item.has('date')) {
+                var timestamp = new Date(item.get('date')).getTime();
+                return (Number.MAX_VALUE - timestamp) + '-' + item.get('name');
+            } else {
+                return Number.MAX_VALUE;
+            }
+        };
+        this.sort();
+        this.comparator = null;
     },
 
     /**
      * This method is to provide a little bit of logic that we can run after the collection
      * has received its data.
-     * @return A promise that will contain a summary  of "numToSummarize" entries.  Why a Promise?
+     * @return {String} A promise that will contain a summary  of "numToSummarize" entries.  Why a Promise?
      * That way the 'MeasuringView' can be suitable to Backbone.Collection and ConduitCollection,
      * but also the SparseCollection.
      */
-    getSummaryPromise: function(numToSummarize) {
-        var collection = this;
-        return new Promise(function(resolve) {
-            var result = '';
-            for (var i = 0; i < numToSummarize; i++) {
-                var model = collection.at(i);
-                result += model.summarize() + '<br/>';
-            }
+    getSummary: function(numToSummarize) {
+        var result = '';
+        for (var i = 0; i < numToSummarize; i++) {
+            var model = this.at(i);
+            result += model.summarize() + '<br/>';
+        }
 
-            resolve(result);
-        });
+        return result;
     }
 });

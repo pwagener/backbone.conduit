@@ -11,7 +11,7 @@ var dataUtils = require('./dataUtils');
 module.exports = {
 
     name: 'mergeData',
-
+    bindToWorker: true,
     method: function(argument) {
         argument = argument || {};
         var data = argument.data || [];

@@ -319,18 +319,17 @@
 
     <!-- Implement the Conduit.SparseCollection Example -->
     <script>
-        var sparseCollection = new SparseCollection();
-        var sparseCollectionView = new MeasuringView({
-            el: $('#sparse'),
-            collection: sparseCollection,
-            title: 'Sparse Collection'
-        });
+        SparseCollection.enableWorker().then(function() {
+            var sparseCollection = new SparseCollection();
+            var sparseCollectionView = new SparseMeasuringView({
+                el: $('#sparse'),
+                collection: sparseCollection,
+                title: 'Sparse Collection'
+            });
 
-        sparseCollectionView.render();
+            sparseCollectionView.render();
+        });
     </script>
 
-
-
 </body>
-
 </html>

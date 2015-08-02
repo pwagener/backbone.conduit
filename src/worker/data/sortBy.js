@@ -8,10 +8,11 @@ var dataUtils = require('./dataUtils');
 
 module.exports = {
     name: 'sortBy',
+    bindToWorker: true,
 
-    method: function(argument) {
-        var comparator = argument.comparator;
-        var direction = argument.direction || 'asc';
+    method: function(sortSpec) {
+        var comparator = sortSpec.comparator;
+        var direction = sortSpec.direction || 'asc';
 
         var evaluator;
         if (_.isString(comparator)) {
@@ -24,9 +25,14 @@ module.exports = {
             throw new Error('Provide a property name as "comparator" or a registered method as { method }');
         }
 
-        ConduitWorker.data = _.sortBy(ConduitWorker.data, evaluator);
-        if (direction === 'desc') {
-            ConduitWorker.data = ConduitWorker.data.reverse();
-        }
+        var projectionFunction = function(toSort) {
+            var data = _.sortBy(toSort, evaluator);
+            if (direction === 'desc') {
+                data = data.reverse();
+            }
+            return data;
+        };
+
+        dataUtils.applyProjection(projectionFunction);
     }
 };

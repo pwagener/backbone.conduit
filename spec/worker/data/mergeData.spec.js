@@ -3,20 +3,19 @@
 /**
  * Tests for the mergeData worker module
  */
-
 var _ = require('underscore');
 
-var workerMergeData = require('./../../../src/worker/dataManagement/mergeData');
 var mockConduitWorker = require('../mockConduitWorker');
+var dataUtils = require('../../../src/worker/data/dataUtils');
 
+var workerMergeData = require('./../../../src/worker/data/mergeData');
 
-describe('The dataManagement/mergeData module', function() {
+describe('The data/mergeData module', function() {
     var context;
 
     beforeEach(function() {
         mockConduitWorker.reset();
-        context = mockConduitWorker.get();
-        context.mergeData = _.bind(workerMergeData.method, context)
+        context = mockConduitWorker.bindModule(workerMergeData);
     });
 
     it('provides the name as "mergeData"', function() {
@@ -29,20 +28,27 @@ describe('The dataManagement/mergeData module', function() {
         });
 
         expect(length).to.equal(3);
-        expect(context.data[1].name).to.equal('one');
+        var data = dataUtils.getData();
+        expect(data[1].name).to.equal('one');
     });
 
     describe('when data is added initially', function() {
+        var data;
         beforeEach(function() {
+            dataUtils.initStore({ reset: true });
+            context = mockConduitWorker.bindModule(workerMergeData);
+
             var length = context.mergeData({
                 data: this.getSampleData()
             });
 
             expect(length).to.equal(3);
+
+            data = dataUtils.getData();
         });
 
         it('contains the data', function() {
-            expect(context.data[1]).to.have.property('name', 'one');
+            expect(data[1]).to.have.property('name', 'one');
         });
 
         it('can merge more data by "id"', function() {
@@ -54,26 +60,32 @@ describe('The dataManagement/mergeData module', function() {
             });
 
             expect(length).to.equal(4);
-            expect(context.data[2]).to.have.property('name', 'THREE');
+            data = dataUtils.getData();
+            expect(data[2]).to.have.property('name', 'THREE');
         });
 
         it('can merge in nothing', function() {
             var length = context.mergeData();
-
             expect(length).to.equal(3);
-            expect(context.data[2]).to.have.property('name', 'three');
+            data = dataUtils.getData();
+            expect(data[2]).to.have.property('name', 'three');
         });
 
     });
 
     describe('when the data is added with an idKey', function() {
+        var data;
         beforeEach(function() {
-            var length = context.mergeData({
-                data: this.getSampleData(),
+            dataUtils.initStore({
+                reset: true,
                 idKey: 'name'
+            });
+            var length = context.mergeData({
+                data: this.getSampleData()
             });
 
             expect(length).to.equal(3);
+            data = dataUtils.getData();
         });
 
         it('merges data by the alternative ID property', function() {
@@ -84,7 +96,8 @@ describe('The dataManagement/mergeData module', function() {
             });
 
             expect(length).to.equal(3);
-            expect(context.data[0]).to.have.property('alt', 'duo');
+            data = dataUtils.getData();
+            expect(data[0]).to.have.property('alt', 'duo');
         });
     });
 });

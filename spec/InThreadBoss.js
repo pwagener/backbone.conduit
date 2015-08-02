@@ -8,7 +8,7 @@
 var when = require('when');
 var _ = require('underscore');
 
-function Boss(workerHandlers) {
+function InThreadBoss(workerHandlers) {
     var self = this;
     _.each(workerHandlers, function(methodDefinition) {
         self[methodDefinition.name] = function() {
@@ -17,10 +17,10 @@ function Boss(workerHandlers) {
     });
 }
 
-Boss.prototype.makePromise = function(details) {
+InThreadBoss.prototype.makePromise = function(details) {
     var method = this[details.method];
     var result = method.apply(this, details.arguments);
     return when.resolve(result);
 };
 
-module.exports = Boss;
+module.exports = InThreadBoss;

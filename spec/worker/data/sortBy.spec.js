@@ -3,9 +3,10 @@
 var _ = require('underscore');
 var mockConduitWorker = require('../mockConduitWorker');
 
-var workerSort = require('./../../../src/worker/dataManagement/sortBy');
+var workerSort = require('./../../../src/worker/data/sortBy');
+var dataUtils = require('../../../src/worker/data/dataUtils');
 
-describe("The dataManagement/sort module", function() {
+describe("The data/sortBy module", function() {
     it('provides the name as "sortBy"', function() {
         expect(workerSort.name).to.equal("sortBy");
     });
@@ -14,10 +15,11 @@ describe("The dataManagement/sort module", function() {
         var context, boundSort;
         beforeEach(function() {
             mockConduitWorker.reset();
-            mockConduitWorker.set('data', this.getSampleData());
             context = mockConduitWorker.get();
-
             boundSort = _.bind(workerSort.method, context);
+
+            dataUtils.initStore({ reset: true });
+            dataUtils.addTo(this.getSampleData());
         });
 
         it('sorts by property ascending', function() {
@@ -25,7 +27,8 @@ describe("The dataManagement/sort module", function() {
                 comparator: 'name'
             });
 
-            expect(context.data[1]).to.have.property('name', 'three');
+            var data = dataUtils.getData();
+            expect(data[1]).to.have.property('name', 'three');
         });
 
         it('sorts by a property descending when requested', function() {
@@ -34,7 +37,10 @@ describe("The dataManagement/sort module", function() {
                 direction: 'desc'
             });
 
-            expect(context.data[2]).to.have.property('name', 'one');
+            var data = dataUtils.getData();
+            expect(data[2]).to.have.property('name', 'one');
         });
+
+        // TODO: test for a function comparator
     });
 });

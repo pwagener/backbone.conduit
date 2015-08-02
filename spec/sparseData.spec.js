@@ -13,10 +13,10 @@ var sparseData = require('./../src/sparseData');
 function makeInThreadBoss() {
     mockConduitWorker.reset();
     return new InThreadBoss([
-        require('./../src/worker/dataManagement/setData'),
-        require('./../src/worker/dataManagement/prepare'),
-        require('./../src/worker/dataManagement/mergeData'),
-        require('./../src/worker/dataManagement/sortBy')
+        require('./../src/worker/data/setData'),
+        require('./../src/worker/data/prepare'),
+        require('./../src/worker/data/mergeData'),
+        require('./../src/worker/data/sortBy')
 
     ]);
 }

@@ -695,6 +695,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	/**
+	 * Any sort/filter/map that has been applied to this collection alters the
+	 * data that is exposed from the worker thread.  To "go back", you reset the projection
+	 * back to the original data.
+	 * @return {Promise} A promise that resolves when the projection has been reset.
+	 */
+	function resetProjection() {
+	    _ensureBoss.call(this);
+	    return this._boss.makePromise({
+	        method: 'resetProjection'
+	    });
+	}
+
+	/**
 	 * Method to sort the data asynchronously.  This permanently modifies the array
 	 * on the worker.  If successful, it removes any models on the UI thread that
 	 * were previously prepared.
@@ -705,7 +718,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @return {Promise} A promise that resolves when the sorting is completed.
 	 */
 	function sortAsync(sortSpec) {
+	    _ensureBoss.call(this);
 	    var self = this;
+
 	    return this._boss.makePromise({
 	        method: 'sortBy',
 	        arguments: [ sortSpec ]
@@ -716,14 +731,26 @@ return /******/ (function(modules) { // webpackBootstrap
 	        self.models = [];
 	        self.trigger('sort');
 	    });
+	}
 
+	function filterAsync(filterSpec) {
+	    _ensureBoss.call(this);
+	    var self = this;
+	    return this._boss.makePromise({
+	        method: 'filter',
+	        arguments: [ filterSpec ]
+	    }).then(function(length) {
+	        self.length = length;
+	        self.models = [];
+	        self.trigger('filter');
+	    });
 	}
 
 	function _ensureBoss() {
 	    if (!this._boss) {
 
 	        var components = [
-	            './conduit.worker.dataManagement.js'
+	            './conduit.worker.data.js'
 	        ];
 
 	        var extras = config.getComponents();
@@ -764,7 +791,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    isPrepared: isPrepared,
 
+	    resetProjection: resetProjection,
+
 	    sortAsync: sortAsync,
+
+	    filterAsync: filterAsync,
 
 	    // This overrides the corresponding method from the 'haul' module to plug into the data return path
 	    _onHaulSuccess: _onHaulSuccess,
@@ -779,17 +810,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	var notSupportMethods = [
 	    // Underscore methods
 	    'forEach', 'each', 'map', 'collect', 'reduce', 'foldl',
-	    'inject', 'reduceRight', 'foldr', 'find', 'detect', 'filter', 'select',
+	    'inject', 'reduceRight', 'foldr', 'detect', 'select',
 	    'reject', 'every', 'all', 'some', 'any', 'include', 'contains', 'invoke',
 	    'max', 'min', 'toArray', 'size', 'first', 'head', 'take', 'initial', 'rest',
 	    'tail', 'drop', 'last', 'without', 'difference', 'indexOf', 'shuffle',
 	    'lastIndexOf', 'isEmpty', 'chain', 'sample', 'partition',
 
 	    // Underscore attribute methods
-	    'groupBy', 'countBy', 'sortBy', 'indexBy',
+	    'groupBy', 'countBy', 'indexBy',
 
 	    // Other various methods
-	    "slice", "pluck", "where", "findWhere", "parse", "clone", "create"
+	    "slice", "pluck", "parse", "clone", "create"
 
 	];
 	_.each(notSupportMethods, function(method) {
@@ -813,8 +844,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	    { called: 'reset', use: 'refill' },
 	    { called: 'set', use: 'fill' },
 	    { called: 'fetch', use: 'haul' },
+
+	    { called: 'sort', use: 'sortAsync' },
 	    { called: 'sortBy', use: 'sortAsync' },
-	    { called: 'sortBy', use: 'sortAsync' }
+
+	    { called: 'filter', use: 'filterAsync' },
+	    { called: 'find', use: 'filterAsync' },
+	    { called: 'where', use: 'filterAsync' },
+	    { called: 'findWhere', use: 'filterAsync' }
 	];
 	_.each(notSupportedConduitMethods, function(methodObj) {
 	    mixinObj[methodObj.called] = function() {
