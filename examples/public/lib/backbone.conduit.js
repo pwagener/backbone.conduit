@@ -182,7 +182,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return workerProbe.searchPaths(searchOptions).then(function(foundPath) {
 	        setValue(workerPathKey, foundPath);
 	        setValue('workerDebug', options.workerDebug);
-	        setValue('extraComponents', options.components);
+	        setValue('components', options.components);
 	    }).catch(function() {
 	        throw new Error('Did not find worker file in ' + paths);
 	    });
@@ -264,8 +264,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	        return getValue('workerDebug');
 	    },
 
-	    getExtraComponents: function() {
-	        return getValue('extraComponents');
+	    getComponents: function() {
+	        return getValue('components');
 	    }
 	};
 
@@ -726,7 +726,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	            './conduit.worker.dataManagement.js'
 	        ];
 
-	        var extras = config.getExtraComponents();
+	        var extras = config.getComponents();
 	        _.each(extras, function(component) {
 	            components.push(component);
 	        });
@@ -1141,7 +1141,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	    };
 
 	    // Build the prototype for the Model, overriding any 'set' behavior, and finding all the Backbone-y prototype
-	    // methods we can find.
+	    // methods we can find.  Note that we include the Backbone.Model.prototype here so that any call to
+	    // "... instanceof Backbone.Model" will return true.
+	    ConduitModel.prototype = new Backbone.Model();
 	    _.extend(ConduitModel.prototype,
 	        OriginalModel.prototype,
 	        OriginalModel.__super__

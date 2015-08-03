@@ -83,6 +83,14 @@ describe("The refill module", function() {
                     instance.refill([ { id: 4, name: "four" }]);
                     expect(instance.length).to.equal(1);
                 });
+
+                it('allows resetting with models instead of raw data', function() {
+                    var models = instance.models;
+                    instance.refill(models);
+
+                    expect(instance).to.have.length(3);
+                    expect(instance.at(0).toJSON()).to.have.property('name', 'two');
+                });
             });
 
             describe('and a sort is requested of "refill"', function() {

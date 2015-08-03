@@ -1,7 +1,7 @@
 {
   "name": "backbone.conduit",
   "description": "Moving data through backbone",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "scripts": {
     "test": "gulp test",
     "perf": "gulp perf",
@@ -38,7 +38,6 @@
     "gulp-json-editor": "^2.1.1",
     "gulp-mocha": "^1.0.0",
     "gulp-rename": "^1.2.0",
-    "gulp-s3-upload": "^1.0.5",
     "gulp-webpack": "^0.4.1",
     "jquery": "^2.1.1",
     "jsdom": "3.1.2",
