@@ -1,6 +1,6 @@
 {
   "name": "backbone.conduit",
-  "version": "0.6.1",
+  "version": "0.6.3",
   "description": "Moving data through backbone",
   "main": "dist/backbone.conduit.js",
   "keywords": [

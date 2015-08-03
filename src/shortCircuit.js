@@ -100,7 +100,9 @@ function generateConduitModel(OriginalModel) {
     };
 
     // Build the prototype for the Model, overriding any 'set' behavior, and finding all the Backbone-y prototype
-    // methods we can find.
+    // methods we can find.  Note that we include the Backbone.Model.prototype here so that any call to
+    // "... instanceof Backbone.Model" will return true.
+    ConduitModel.prototype = new Backbone.Model();
     _.extend(ConduitModel.prototype,
         OriginalModel.prototype,
         OriginalModel.__super__
