@@ -95,7 +95,6 @@
 	        this.components[name] = component;
 	        _enableHandlers(this, methods);
 	    }
-
 	}
 
 	/**
@@ -115,7 +114,13 @@
 	            throw new Error('Handler did not provide a name');
 	        }
 
-	        var method = _.bind(handler.method, context);
+	        var method;
+	        if (handler.bindToWorker) {
+	            method = _.bind(handler.method, context);
+	        } else {
+	            method = handler.method;
+	        }
+
 	        if (!_.isFunction(method)) {
 	            throw new Error('Handler "' + name + '" did not provide a "method" function');
 	        }
@@ -230,7 +235,6 @@
 	    var conduitWorker = _getConduitWorker();
 	    conduitWorker.registerComponent({
 	        name: 'core',
-
 	        methods: [
 	            __webpack_require__(2),
 	            __webpack_require__(3)
@@ -298,7 +302,7 @@
 
 	module.exports = {
 	    name: 'configure',
-
+	    bindToWorker: true,
 	    method: function(configuration) {
 	        managedContext.configure(configuration);
 	    }

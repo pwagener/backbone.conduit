@@ -7,13 +7,15 @@
 if (typeof ConduitWorker !== 'undefined') {
     // Register our component
     ConduitWorker.registerComponent({
-        name: 'dataManagement',
+        name: 'data',
 
         methods: [
             require('./setData'),
             require('./mergeData'),
             require('./prepare'),
-            require('./sortBy')
+            require('./sortBy'),
+            require('./filter'),
+            require('./resetProjection')
         ]
     });
 }

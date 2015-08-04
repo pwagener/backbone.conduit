@@ -30,7 +30,6 @@ function _registerComponent(component) {
         this.components[name] = component;
         _enableHandlers(this, methods);
     }
-
 }
 
 /**
@@ -50,7 +49,13 @@ function _enableHandlers(context, handlerModules) {
             throw new Error('Handler did not provide a name');
         }
 
-        var method = _.bind(handler.method, context);
+        var method;
+        if (handler.bindToWorker) {
+            method = _.bind(handler.method, context);
+        } else {
+            method = handler.method;
+        }
+
         if (!_.isFunction(method)) {
             throw new Error('Handler "' + name + '" did not provide a "method" function');
         }
@@ -165,7 +170,6 @@ function enableCoreHandlers() {
     var conduitWorker = _getConduitWorker();
     conduitWorker.registerComponent({
         name: 'core',
-
         methods: [
             require('./ping'),
             require('./configure')

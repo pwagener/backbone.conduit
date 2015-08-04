@@ -93,21 +93,25 @@
         <h2>What The Demo Does</h2>
         <p>
             The goal of this demo is to explore how long it takes to prepare large data sets for use by an application.
-            This demo shows loading data into a Backbone collection broken down into four steps typically taken
-            by many applications:
+            This demo shows loading data into a Backbone collection broken down into five steps typically taken
+            by an application:
         </p>
         <ol>
             <li>Fetch the Data</li>
             <li>Parse the Data into JSON</li>
             <li>Create the <code>Backbone.Model</code> instances</li>
-            <li>Sort the Data in a non-trivial way (here by date, then by name)</li>
+            <li>Filter the data in a non-trivial way; here, only the most recent entry for each restaurant</li>
+            <li>Sort the Data in a non-trivial way; here by date, then by name</li>
         </ol>
         <p>
             After that, the application shows the first three entries in the collection in a simple bit of HTML.
         </p>
+
+        <hr/>
+
+        <h2>About The Data</h2>
         <p>
-            While not that interesting for demo purposes, the data set used here is real.  The largest data set contains
-            all the NYC Restaurant Health Grades over the past several years (~ 221K entries); the smaller
+            The data set used here is all the NYC Restaurant Health Grades over the past several years (~ 221K entries); the smaller
             data sets are just truncated versions.  The demo loads static JSON files from the server, where each entry
             looks like:
     <pre>
@@ -117,6 +121,12 @@
             {"name":"Dj Reynolds Pub And","zip":10019,"grade":"A","date":"09/06/2014"},
             ...
         ]</pre>
+
+        <p>
+            Like most real-world data, this stuff is far from perfect.  Many restaurants have duplicate entries; some
+            don't have dates on them at all.  This forces us to write sorting & filtering methods that handle these
+            typical real-world data inconsistencies.
+        </p>
 
         <hr/>
 
@@ -133,28 +143,46 @@
         <p>
             The first example uses a basic <code>Backbone.Collection</code>.  The <strong>Parse JSON</strong>,
             <strong>Create Models</strong>, and <strong>Sort Collection</strong> steps are
-            <span class="label label-warning">synchronous</span>.  For smaller-sized data sets, this performs fine.
-            But larger data sets cause significant hangs in the browser, even with very fast hardware.
+            <span class="label label-warning">synchronous</span>. Some interesting things to note on this implementation:
         </p>
+            <ul>
+                <li>The smallest size, 5K items, performs moderately well on fast hardware</li>
+                <li>Larger sizes start to hang the browser pretty significantly because of the synchronous steps</li>
+                <li>At 100K or larger, the "Create Models" step dominates the time taken</li>
+            </ul>
 
         <h4>Example #2: Optimized Model Creation via Conduit.QuickCollection</h4>
         <p>
             As Example #1 shows, the <strong>Model Creation</strong> step is very expensive.  Example #2 demonstrates
-            performance differences when we treat this as a first class problem.  A <code>Conduit.QuickCollection</code>
-            is optimized to create models ~ 50% faster than the benchmark.  The result is better performance,
-            but still shows some lag with the largest data sizes due to the
-            <span class="label label-warning">synchronous</span> nature of the final three steps.
+            performance differences when we treat this as a first class problem.  The  <code>Collection</code> used here
+            mixes in the same behavior available in <code>Backbone.Conduit.QuickCollection</code> functionality, which
+            is optimized to create models ~ 45% faster than the benchmark.  As a result:
         </p>
+        <ul>
+            <li>Performance of the "Create Models" step is ~ 45% better</li>
+            <li>The "Filter Collection" and "Sort Collection" stages are virtually identical</li>
+            <li>The UI still hangs significantly with larger data sizes due to the
+                <span class="label label-warning">synchronous</span> nature of the final steps.</li>
+        </ul>
 
         <h4>Example #3:  Web Worker Data Management via Conduit.SparseCollection</h4>
         <p>
-            This example uses a <code>Conduit.SparseCollection</code>, which shifts as much of the data management
-            work as possible to another thread of execution.  The result is a slower <strong>Parse JSON</strong> step,
-            but all four steps are now <span class="label label-success">Asynchronous</span>.  Even better, the final
-            <strong>Create Models</strong> step does vastly less work:  it creates <code>Backbone.Model</code>
-            instances only when completely necessary; in this case <mark>only three models are created</mark>,
-            because that is all we need.  The end result is significantly faster performance, even at very large scale.
+            This example mixes in the same behavior available in a <code>Conduit.SparseCollection</code>.  This shifts
+            as much of the data management work as possible to another thread of execution on a Web Worker.  This allows
+            all of the steps to be <span class="label label-success">asynchronous</span>, allowing the UI thread to work
+            smoothly even at large data sizes.  Also:
         </p>
+        <ul>
+            <li>The "Parse JSON" step takes longer, as we first copy the data over to the worker thread</li>
+            <li>Sorting and Filtering are somewhat faster; this is because we are dealing with raw data instead of
+            <code>Backbone.Model</code>-based data analysis</li>
+            <li>The "Create Models" step is the very last one, and does vastly less work:  it creates <code>Backbone.Model</code>
+                instances only when completely necessary; in this case <mark>only three models are created</mark>,
+                because that is all we need</li>
+            <li>This implementation can scale up to whatever memory requirements your client has, and the UI
+            will continue to be fully responsive</li>
+        </ul>
+
 
         <hr/>
 

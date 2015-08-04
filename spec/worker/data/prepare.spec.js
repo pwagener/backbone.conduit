@@ -2,11 +2,11 @@
 
 var _ = require('underscore');
 var mockConduitWorker = require('../mockConduitWorker');
-var dataUtils = require('../../../src/worker/dataManagement/dataUtils');
+var dataUtils = require('../../../src/worker/data/dataUtils');
 
-var workerPrepare = require('./../../../src/worker/dataManagement/prepare');
+var workerPrepare = require('./../../../src/worker/data/prepare');
 
-describe('The dataManagement/prepare module', function() {
+describe('The data/prepare module', function() {
 
     it('provides the name as "prepare"', function() {
         expect(workerPrepare.name).to.equal('prepare');

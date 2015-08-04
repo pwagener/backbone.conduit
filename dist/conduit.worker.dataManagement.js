@@ -53,13 +53,14 @@
 	if (typeof ConduitWorker !== 'undefined') {
 	    // Register our component
 	    ConduitWorker.registerComponent({
-	        name: 'dataManagement',
+	        name: 'data',
 
 	        methods: [
 	            __webpack_require__(1),
 	            __webpack_require__(2),
 	            __webpack_require__(3),
-	            __webpack_require__(4)
+	            __webpack_require__(4),
+	            __webpack_require__(5)
 	        ]
 	    });
 	}
@@ -74,9 +75,9 @@
 	/**
 	 * This worker method handler stores data on the worker.
 	 */
-	var _ = __webpack_require__(6);
+	var _ = __webpack_require__(7);
 
-	var dataUtils = __webpack_require__(5);
+	var dataUtils = __webpack_require__(6);
 
 	module.exports = {
 
@@ -108,9 +109,9 @@
 	 * Module used to merge existing data sets on the worker
 	 */
 
-	var _ = __webpack_require__(6);
+	var _ = __webpack_require__(7);
 
-	var dataUtils = __webpack_require__(5);
+	var dataUtils = __webpack_require__(6);
 
 	module.exports = {
 
@@ -141,9 +142,9 @@
 	 * This worker method handler returns data from the worker.
 	 */
 
-	var _ = __webpack_require__(6);
+	var _ = __webpack_require__(7);
 
-	var dataUtils = __webpack_require__(5);
+	var dataUtils = __webpack_require__(6);
 
 	module.exports = {
 
@@ -187,15 +188,15 @@
 	/**
 	 * This module provides sorting for the worker
 	 */
-	var _ = __webpack_require__(6);
-	var dataUtils = __webpack_require__(5);
+	var _ = __webpack_require__(7);
+	var dataUtils = __webpack_require__(6);
 
 	module.exports = {
 	    name: 'sortBy',
 
-	    method: function(argument) {
-	        var comparator = argument.comparator;
-	        var direction = argument.direction || 'asc';
+	    method: function(sortSpec) {
+	        var comparator = sortSpec.comparator;
+	        var direction = sortSpec.direction || 'asc';
 
 	        var evaluator;
 	        if (_.isString(comparator)) {
@@ -208,15 +209,72 @@
 	            throw new Error('Provide a property name as "comparator" or a registered method as { method }');
 	        }
 
-	        ConduitWorker.data = _.sortBy(ConduitWorker.data, evaluator);
-	        if (direction === 'desc') {
-	            ConduitWorker.data = ConduitWorker.data.reverse();
-	        }
+	        var projectionFunction = function(original) {
+	            var data = _.sortBy(original, evaluator);
+	            if (direction === 'desc') {
+	                data = data.reverse();
+	            }
+	            return data;
+	        };
+
+	        dataUtils.applyProjection(projectionFunction);
 	    }
 	};
 
 /***/ },
 /* 5 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	/**
+	 * This module provides filtering for the worker.
+	 */
+	var _ = __webpack_require__(7);
+	var dataUtils = __webpack_require__(6);
+
+	module.exports = {
+	    name: 'filter',
+
+	    /**
+	     *
+	     * @param filterSpec
+	     */
+	    method: function(filterSpec) {
+
+	        var filterFunc;
+	        if (_.isString(filterSpec)) {
+	            // Find the evaluator from the registered components
+	            var evaluator = ConduitWorker.handlers[filterSpec];
+
+	            if (!_.isFunction(evaluator)) {
+	                throw new Error('No registered handler found for "' + filterSpec + '"');
+	            }
+
+	            var filterContext = {};
+	            filterFunc = function(toFilter) {
+	                return _.filter(toFilter, evaluator, filterContext);
+	            }
+	        } else if (_.isObject(filterSpec)) {
+	            filterFunc = function(toFilterLike) {
+	                return _.where(toFilterLike, filterSpec);
+	            };
+	        } else {
+	            throw new Error('Filter requires either a string naming an evaluator function or properties to match');
+	        }
+
+	        dataUtils.applyProjection(filterFunc);
+
+	        // Return the array of IDs that match.  Note this could be faster if we
+	        // accessed the _byId array directly & returned the IDs from that set of keys.
+	        var data = dataUtils.getData();
+	        return _.pluck(data, 'id');
+	        // TODO:  if the data doesn't have IDs, this is worthless
+	    }
+	};
+
+/***/ },
+/* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -229,20 +287,26 @@
 	 * that allow us to not constantly iterate over the whole set.
 	 */
 
-	var _ = __webpack_require__(6);
+	var _ = __webpack_require__(7);
 
-	function _getContext() {
+	function _getContext(skipInit) {
+	    if (!ConduitWorker._data && !skipInit) {
+	        // We haven't been initialized yet
+	        initStore();
+	    }
+
 	    return ConduitWorker;
 	}
 
 	function initStore(options) {
-	    var context = _getContext();
+	    var context = _getContext(true);
 	    options = options || {};
 
-	    if (options.reset || !context.data) {
-	        context.data = [];
+	    if (options.reset || !context._data) {
+	        context._data = [];
 	        context._idKey = options.idKey || 'id';
 	        context._byId = {};
+	        resetProjection();
 	    }
 
 	    if (context._idKey && options.idKey && (context._idKey != options.idKey)) {
@@ -250,9 +314,39 @@
 	    }
 	}
 
-	// TODO:  get rid of this
-	function _isInitialized(context) {
-	    return _.isArray(context.data);
+	function getData() {
+	    var context = _getContext();
+	    return context._projectedData;
+	}
+
+	function _rebuildByIdAndDataIndexes() {
+	    var data = getData();
+	    var context = _getContext();
+
+	    var byId = context._byId = {};
+	    var idKey = context._idKey;
+	    var index = 0;
+	    _.each(data, function(item) {
+	        var id = item[idKey];
+	        byId[id] = item;
+	        item._dataIndex = index;
+	        index++;
+	    });
+	}
+
+	function applyProjection(toApply) {
+	    var context = _getContext();
+
+	    context._projectedData = toApply(getData());
+	    _rebuildByIdAndDataIndexes();
+
+	    context._projections.push(toApply);
+	}
+
+	function resetProjection() {
+	    var context = _getContext();
+	    context._projectedData = context._data;
+	    context._projections = [];
 	}
 
 	function addTo(data) {
@@ -278,28 +372,32 @@
 	            }
 
 	            // Add the index where the data exists
-	            item._dataIndex = context.data.push(item) - 1;
+	            item._dataIndex = context._data.push(item) - 1;
 	        }
 	    });
+
+	    // If we had any projections applied, we must re-apply them in-order, then re-index all the data.
+	    _.each(context._projections, function(projection) {
+	        context._projectedData = projection(context._data);
+	    });
+	    _rebuildByIdAndDataIndexes();
 	}
 
 	function findById(id) {
 	    var context = _getContext();
-	    if (_isInitialized(context)) {
-	        return context._byId[id];
-	    }
+	    return context._byId[id];
 	}
 
 	function findByIds(idArray) {
 	    var matches = [];
 
 	    var context = _getContext();
-	    if (_isInitialized(context)) {
-	        for (var i = 0; i < idArray.length; i++) {
-	            var match = context._byId[idArray[i]];
-	            if (!_.isUndefined(match)) {
-	                matches.push(match);
-	            }
+	    for (var i = 0; i < idArray.length; i++) {
+	        var match = context._byId[idArray[i]];
+	        if (_.isUndefined(match)) {
+	            matches.push(null);
+	        } else {
+	            matches.push(match);
 	        }
 	    }
 
@@ -307,21 +405,17 @@
 	}
 
 	function findByIndex(index) {
-	    var context = _getContext();
-	    if (_isInitialized(context)) {
-	        return context.data[index];
-	    }
+	    var data = getData();
+	    return data[index];
 	}
 
 	function findByIndexes(indexes) {
 	    var found = [];
-	    var context = _getContext();
-	    if (_isInitialized(context)) {
-	        for (var i = indexes.min; i <= indexes.max; i++) {
-	            var data = context.data[i];
-	            if (!_.isUndefined(data)) {
-	                found.push(data);
-	            }
+	    var allData = getData();
+	    for (var i = indexes.min; i <= indexes.max; i++) {
+	        var data = allData[i];
+	        if (!_.isUndefined(data)) {
+	            found.push(data);
 	        }
 	    }
 
@@ -351,14 +445,38 @@
 	}
 
 	function length() {
-	    var context = _getContext();
-	    return context.data.length;
+	    var data = getData();
+	    return data.length;
 	}
 
 	module.exports = {
 
 	    initStore: initStore,
 
+	    /**
+	     * Get the current view of the data we are exposing.  If the data has not been
+	     * sorted/filtered/mapped, then this is the full, original data set.  Otherwise,
+	     * this is the version of the data that has gone through those projections.
+	     */
+	    getData: getData,
+
+	    /**
+	     * Apply a given function to the data.
+	     * @param toApply The function that will receive the full data set, and should return the projected data
+	     * set.
+	     */
+	    applyProjection: applyProjection,
+
+	    /**
+	     * Remove any projections.  After calling this, then 'getCurrentData' will return
+	     * the original data set.
+	     */
+	    resetProjection: resetProjection,
+
+	    /**
+	     * Add data to the existing data set.  Note that if any projections have been applied, they will be re-applied
+	     * in-order after the addition.
+	     */
 	    addTo: addTo,
 
 	    findById: findById,
@@ -375,7 +493,7 @@
 	};
 
 /***/ },
-/* 6 */
+/* 7 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;//     Underscore.js 1.8.3

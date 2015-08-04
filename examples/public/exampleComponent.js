@@ -17,11 +17,32 @@ var evaluateByDateAndName = {
     }
 };
 
+var filterToMostRecent = {
+    name: 'filterToMostRecent',
+
+    method: function(item) {
+        var hashes = this.itemHashes;
+        if (!hashes) {
+            hashes = this.itemHashes = {};
+        }
+
+        var hash = (item.name ? item.name : '') +
+            (item.zip ? item.zip : '');
+        if (hashes[hash]) {
+            return false;
+        } else {
+            hashes[hash] = true;
+            return true;
+        }
+    }
+};
+
 if (typeof ConduitWorker !== 'undefined') {
     ConduitWorker.registerComponent({
         name: 'exampleComponent',
         methods:         [
-            evaluateByDateAndName
+            evaluateByDateAndName,
+            filterToMostRecent
         ]
     });
 }

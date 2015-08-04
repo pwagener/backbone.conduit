@@ -233,8 +233,6 @@ var MeasuringView = window.MeasuringView = Backbone.View.extend({
         this.listenTo(this.collection, 'parseStart', this._onParseStart);
 
         this.title = options.title;
-
-        this.asyncDataEvents = this.collection.getAsyncDataEvents();
     },
 
     render: function() {
@@ -248,7 +246,6 @@ var MeasuringView = window.MeasuringView = Backbone.View.extend({
             timingLog.render();
 
             this.listenTo(this.timing, 'add', _.debounce(function() {
-                    // TODO:  this does not work well for the slower tables, but close ....
                     var $timingLog = timingLog.$el;
                     var scrollTarget = $timingLog.get(0).scrollHeight;
                     $timingLog.stop().animate({ scrollTop: scrollTarget }, '500', 'swing');
@@ -276,9 +273,7 @@ var MeasuringView = window.MeasuringView = Backbone.View.extend({
 
         // Fetch the data file to kick things off
 
-        this._requestDataEvent = this.timing.startEvent('Fetch Data', {
-            async: _.contains(this.asyncDataEvents, 'fetch')
-        });
+        this._requestDataEvent = this.timing.startEvent('Fetch Data', this._getEventOptions('fetch'));
         var dataFile = this.itemDropDown.getCurrent().file;
         this.collection.fetchDataFile(dataFile);
         this.listenToOnce(this.collection, 'jsonReceived', this._onJsonReceived);
@@ -287,46 +282,56 @@ var MeasuringView = window.MeasuringView = Backbone.View.extend({
         return true;
     },
 
+    _getEventOptions: function(event) {
+        return {
+            async: _.contains(this.collection.asyncDataEvents, event)
+        }
+    },
+
     _onJsonReceived: function() {
-        this.timing.startCycle('Time to Parse/Create/Sort:');
+        this.timing.startCycle('Time to Parse, Create, Filter & Sort');
 
         this.timing.endEvent(this._requestDataEvent);
-        this._parsingJsonEvent = this.timing.startEvent('Parse JSON', {
-            async: _.contains(this.asyncDataEvents, 'parse')
-        });
+        this._parsingJsonEvent = this.timing.startEvent('Parse JSON', this._getEventOptions('parse'));
         this.listenToOnce(this.collection, 'jsonParsed', this._onJsonParsed);
     },
 
     _onJsonParsed: function() {
         this.timing.endEvent(this._parsingJsonEvent);
         this.listenToOnce(this.collection, 'sync', this._onSync);
-        this._modelsCreatedEvent = this.timing.startEvent('Create Models', {
-            async: _.contains(this.asyncDataEvents, 'create')
-        });
+        this._modelsCreatedEvent = this.timing.startEvent('Create Models', this._getEventOptions('create'));
     },
 
     _onSync: function() {
         var timing = this.timing;
         timing.endEvent(this._modelsCreatedEvent);
 
-        var sortEvent = this.timing.startEvent('Sort Collection', {
-            async: _.contains(this.asyncDataEvents, 'sort')
-        });
+        // Now that we have parsed/sync'ed data:  filter it
+        var collection = this.collection;
+        var event = timing.startEvent('Filter Collection', this._getEventOptions('filter'));
+        var filteredModels = collection.filterToMostRecent();
+        // Set the filtered models
+        if (collection instanceof ConduitCollection) {
+            collection.refill(filteredModels);
+        } else {
+            collection.reset(filteredModels);
+        }
+        timing.endEvent(event);
 
-        var self = this;
-        this.collection.getSortByNamePromise().then(function() {
-            self.timing.endEvent(sortEvent);
-            return self.collection.getSummaryPromise(3);
-        }).then(function(summary) {
-            var length = self.collection.length;
-            timing.annotate('Collection has <strong>' + length + '</strong> items.  ' +
-                'The first three entries:<br/>' + summary);
+        // Next up:  sorting
+        event = timing.startEvent('Sort Collection', this._getEventOptions('sort'));
+        collection.sortByNameAndDate();
+        timing.endEvent(event);
 
-            self._measurementComplete();
-        });
+        var summary = collection.getSummary(3);
+        this._measurementComplete(summary);
     },
 
-    _measurementComplete: function() {
+    _measurementComplete: function(summary) {
+        var length = this.collection.length;
+        this.timing.annotate('Filtered/Sorted Collection has <strong>' + length + '</strong> items.  ' +
+            'The first three entries:<br/>' + summary);
+
         this.timing.endCycle();
 
         this.button.removeClass('disabled');
@@ -338,5 +343,45 @@ var MeasuringView = window.MeasuringView = Backbone.View.extend({
 
         this.delegateEvents();
     }
+});
 
+// This view is used for the SparseCollection to show the different event sequence
+//noinspection JSUnusedGlobalSymbols
+var SparseMeasuringView = window.SparseMeasuringView = window.MeasuringView.extend({
+
+    /*
+     * We override '_onJsonParsed' and '_onSync' from the regular view, because the SparseCollection
+     * does some things in a different sequence.  For instance, model creation doens't occur
+     * until the very last moment.
+     */
+
+    _onJsonParsed: function() {
+        this.timing.endEvent(this._parsingJsonEvent);
+        this.listenToOnce(this.collection, 'sync', this._onSync);
+    },
+
+    _onSync: function() {
+        var timing = this.timing;
+
+        // Next Filter the items
+        var self = this;
+        var event = timing.startEvent('Filter Collection', this._getEventOptions('filter'));
+        var collection = this.collection;
+        collection.getFilterToMostRecentPromise().then(function() {
+            timing.endEvent(event);
+
+            // next sort models
+            event = timing.startEvent('Sort Collection', self._getEventOptions('sort'));
+            return collection.getSortByNamePromise();
+        }).then(function() {
+            timing.endEvent(event);
+
+            // Finally get the summary, which creates the models
+            event = timing.startEvent('Create Models', self._getEventOptions('create'));
+            return collection.getSummaryPromise(3);
+        }).then(function(summary) {
+            timing.endEvent(event);
+            self._measurementComplete(summary);
+        });
+    }
 });

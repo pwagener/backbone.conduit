@@ -8,7 +8,7 @@ var util = require('util');
 
 module.exports = {
     name: 'configure',
-
+    bindToWorker: true,
     method: function(configuration) {
         managedContext.configure(configuration);
     }

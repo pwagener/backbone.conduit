@@ -18,10 +18,10 @@ gulp.task('dist:worker', false, ['bower'], function () {
         .pipe(gulp.dest('dist'));
 
     // Produce the dataManagement component
-    gulp.src('src/worker/dataManagement/index.js')
+    gulp.src('src/worker/data/index.js')
         .pipe(webpack({
             output: {
-                filename: 'conduit.worker.dataManagement.js'
+                filename: 'conduit.worker.data.js'
             }
         }))
         .pipe(gulp.dest('dist'));

@@ -8,9 +8,8 @@ var _ = require('underscore');
 var dataUtils = require('./dataUtils');
 
 module.exports = {
-
     name: 'setData',
-
+    bindToWorker: true,
     method: function(argument) {
         argument = argument || {};
         var data = argument.data || [];

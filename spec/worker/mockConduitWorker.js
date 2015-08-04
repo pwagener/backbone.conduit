@@ -3,21 +3,27 @@
 /**
  * This provides a simple way to mock out the ConduitWorker namespace for tests
  */
+var managedContext = require('../../src/worker/managedContext');
+var _ = require('underscore');
 
 function _reset(global) {
-    global.ConduitWorker = {};
+    managedContext.setAsGlobal(global);
 }
 
 module.exports = {
+    // TODO:  might want to rather use 'dataUtils.initStore({ reset: true })' here instead
+    // of recreating the global.
     reset: function(){
         _reset(global);
     },
 
+    // TODO: replace most usages with 'bindModule'
     get: function() {
         return global.ConduitWorker;
     },
 
-    set: function(name, obj) {
-        global.ConduitWorker[name] = obj;
+    bindModule: function(module) {
+        global.ConduitWorker[module.name] = _.bind(module.method, global.ConduitWorker);
+        return global.ConduitWorker;
     }
 };

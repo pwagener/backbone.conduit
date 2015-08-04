@@ -25,7 +25,7 @@ module.exports = function(config) {
                 included: true
             },
             {
-                pattern: 'dist/conduit.worker.dataManagement.js',
+                pattern: 'dist/conduit.worker.data.js',
                 included: true
             }
 

@@ -11,7 +11,7 @@ var dataUtils = require('./dataUtils');
 module.exports = {
 
     name: 'prepare',
-
+    bindToWorker: true,
     /**
      * Prepare to use the data in the main thread.  The data should already be
      * in the context of the method as 'this.data'; typically it will have been
