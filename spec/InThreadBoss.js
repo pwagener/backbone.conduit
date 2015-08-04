@@ -19,6 +19,11 @@ function InThreadBoss(workerHandlers) {
 
 InThreadBoss.prototype.makePromise = function(details) {
     var method = this[details.method];
+
+    if (!method) {
+        throw new Error('No method found on the InThreadBoss: ' + details.method);
+    }
+
     var result = method.apply(this, details.arguments);
     return when.resolve(result);
 };

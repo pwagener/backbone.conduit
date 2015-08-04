@@ -43,6 +43,16 @@ Boss.prototype = {
         this.workerConfig = _.extend({}, options.worker);
     },
 
+    /**
+     * This method can be called to preemptive-ly create the worker.  The worker is typically created automatically as
+     * needed, but if you want/need to create it ahead of time this will do so.  Note it will be created with whatever
+     * autoTerminate behavior you specified to the constructor (default 1 second).
+     * @return {Promise} A promise that resolves when the worker has been created.
+     */
+    createWorkerNow: function() {
+        return this._ensureWorker();
+    },
+
     _scheduleTermination: function () {
         if (this.autoTerminate === true) {
             this.terminate();
@@ -59,7 +69,7 @@ Boss.prototype = {
      * @param details Details for the method call:
      *   o method (required) The name of the method to call
      *   o arguments (optional) The array of arguments that will be passed to the
-     *     worker method you are calling
+     *     worker method you are calling.  TODO: rename this to 'args'
      * @return A Promise that will be resolved or rejected based on calling
      *   the method you are calling.
      */
@@ -92,6 +102,7 @@ Boss.prototype = {
                 // Reject if we get an error.  This occurs, for instance, when the worker
                 // path is invalid
                 worker.onerror = function(err) {
+                    self._debug('Worker call failed: ' + err.message);
                     self.terminate();
                     reject(err);
                 };
@@ -117,7 +128,7 @@ Boss.prototype = {
     /**
      * Make sure our worker actually exists.  Create one if it does not with the correct
      * configuration.
-     * @return A promise that resolves to the pro
+     * @return A promise that resolves to the created worker.
      * @private
      */
     _ensureWorker: function () {

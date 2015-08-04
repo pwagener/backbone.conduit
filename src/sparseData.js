@@ -41,23 +41,13 @@ function at(index) {
 }
 
 /**
- * Implement the private interface of the 'haul' module to plug into the callback when the data is retrieved.
- * @param response The response
- * @param options The options that were originally provided to 'haul'
- * @param origSuccessCallback The original callback on success
- * @private
+ * Create the worker immediately.
+ * @return {Promise} A promise that resolves once the worker has been created.
  */
-function _onHaulSuccess(response, options, origSuccessCallback) {
-    var method = options.reset ? 'refill' : 'fill';
-    var self = this;
-    this[method](response, options).then(function() {
-        // TODO:  respect sorting
-
-        if (origSuccessCallback) origSuccessCallback(self, response, options);
-        self.trigger('sync', self, response, options);
-    });
+function createWorkerNow() {
+    _ensureBoss.call(this);
+    return this._boss.createWorkerNow();
 }
-
 
 /**
  * This method is used to retrieve data from the worker and prepare to use it in the main
@@ -201,7 +191,6 @@ function _fillOrRefillOnWorker(data, options) {
     var context = options.context;
     _ensureBoss.call(context);
 
-    var dataWasString = _.isString(data);
     var idKey = context.model.idAttribute;
     var bossPromise = context._boss.makePromise({
         method: method,
@@ -215,11 +204,6 @@ function _fillOrRefillOnWorker(data, options) {
 
     return bossPromise.then(function(length) {
         context.length = length;
-        if (dataWasString) {
-            // Trigger an event to let anyone know our JSON has been parsed.
-            // TODO:  this is nice for demo purposes, but anything else?
-            context.trigger('jsonParsed');
-        }
     });
 }
 
@@ -233,20 +217,31 @@ function fill(data) {
 }
 
 function haul(options) {
-    options = options ? _.clone(options) : {};
+    options = options || {};
+    _ensureBoss.call(this);
 
-    // Install a specialized jQuery Ajax converter to *not* convert 'text json'.  We will
-    // instead pass that directly to the worker, where it will be parsed.
-    _.extend(options, {
-        converters: {
-            'text json': function(response) {
-                return response;
-            }
+    var url = _.result(this, 'url');
+    var loadOptions = _.extend({
+        url: url
+    }, options);
+
+    var self = this;
+    return this._boss.makePromise({
+        method: 'load',
+        arguments: [ loadOptions ]
+    }).then(function(length) {
+        self.length = length;
+        if (options.success) {
+            options.success(this, null, options);
+        }
+
+        self.trigger('sync', self)
+    }).catch(function(err) {
+        // Call any error handler
+        if (options.error) {
+            options.error(err);
         }
     });
-
-    // Use the original Conduit.haul implementation
-    return this._conduitHaul(options);
 }
 
 /**
@@ -263,18 +258,32 @@ function resetProjection() {
 }
 
 /**
- * Method to sort the data asynchronously.  This permanently modifies the array
+ * Method to sort the data asynchronously.  This reorders the data available
  * on the worker.  If successful, it removes any models on the UI thread that
  * were previously prepared.
- * @param sortSpec The sort specification.  Contains:
- *   - comparator (required) The name of the property to sort by
+ *
+ * Like a regular Backbone.Collection, this uses the value of 'this.comparator' to
+ * specify the sorting. It can be overridden with the method parameter.
+ *
+ * In either case the value should be an object with:
+ *   - property (required) The name of the property to sort by
  *   - direction (optional) The direction to sort in.  Defaults to ascending; to
  *     sort descending set this to 'desc'.
+ * == OR ==
+ *   - method (required) A string naming the ConduitWorker handler method to use to evaluate the item.
+ *
  * @return {Promise} A promise that resolves when the sorting is completed.
  */
 function sortAsync(sortSpec) {
     _ensureBoss.call(this);
     var self = this;
+
+    sortSpec = sortSpec || this.comparator;
+
+    // Error if comparator isn't provided correctly.
+    if (!sortSpec || (!sortSpec.property && !sortSpec.method)) {
+        return when.reject(new Error('Please provide a sort specification'));
+    }
 
     return this._boss.makePromise({
         method: 'sortBy',
@@ -288,12 +297,36 @@ function sortAsync(sortSpec) {
     });
 }
 
-function filterAsync(filterSpec) {
+/**
+ * Method to filter the data asynchronously. This filters the data available on
+ * the worker.  If successful, it remove any models on the UI thread that were
+ * previously prepared.
+ *
+ * To make this method easy to chain, a filter can be specified either as
+ * 'this.filterEvaluator' OR as the argument to this method.  In either case the
+ * filterEvaluator should:
+ *   - An object showing the set of properties to match, similar to underscore's
+ *     '_.where(...)' functionality
+ * == OR ==
+ *   - An object with "method" specifying the name of the method to evaluate each
+ *     item in the collection, similar to underscore's '_.find(...)' functionality
+ *
+ * @param filterEvaluator
+ * @return {*}
+ */
+function filterAsync(filterEvaluator) {
     _ensureBoss.call(this);
     var self = this;
+
+    filterEvaluator = filterEvaluator || this.filterEvaluator;
+
+    if (!filterEvaluator) {
+        return when.reject(new Error('Please provide a filter specification'));
+    }
+
     return this._boss.makePromise({
         method: 'filter',
-        arguments: [ filterSpec ]
+        arguments: [ filterEvaluator ]
     }).then(function(length) {
         self.length = length;
         self.models = [];
@@ -339,8 +372,15 @@ var mixinObj = {
     refill: refill,
     fill: fill,
 
-    // Override 'haul' to be able to pass the raw JSON string to the worker
+    // Override 'haul' so the data request & processing happens on the worker
     haul: haul,
+
+    _sparseSet: _sparseSet,
+
+    /*
+        The public sparseData interface:
+     */
+    createWorkerNow: createWorkerNow,
 
     prepare: prepare,
 
@@ -350,12 +390,9 @@ var mixinObj = {
 
     sortAsync: sortAsync,
 
-    filterAsync: filterAsync,
+    filterAsync: filterAsync
 
-    // This overrides the corresponding method from the 'haul' module to plug into the data return path
-    _onHaulSuccess: _onHaulSuccess,
 
-    _sparseSet: _sparseSet
 };
 
 

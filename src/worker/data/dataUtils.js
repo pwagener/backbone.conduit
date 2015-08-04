@@ -9,6 +9,7 @@
  */
 
 var _ = require('underscore');
+var managedContext = require('../managedContext');
 
 function _getContext(skipInit) {
     if (!ConduitWorker._data && !skipInit) {
@@ -49,7 +50,9 @@ function _rebuildByIdAndDataIndexes() {
     var index = 0;
     _.each(data, function(item) {
         var id = item[idKey];
-        byId[id] = item;
+        if (id !== void 0) {
+            byId[id] = item;
+        }
         item._dataIndex = index;
         index++;
     });
@@ -74,12 +77,18 @@ function addTo(data) {
     var context = _getContext();
 
     data = data || [];
+    if (!_.isArray(data)) {
+        throw new Error('"addTo" requires data in an array');
+    }
 
     var byId = context._byId;
     var idKey = context._idKey;
     _.each(data, function(item) {
         var id = item[idKey];
-        var existing = byId[id];
+        var existing;
+        if (id !== void 0) {
+            existing = byId[id];
+        }
         if (existing) {
             // Must merge item properties
             var keys = _.keys(item);
@@ -102,6 +111,8 @@ function addTo(data) {
         context._projectedData = projection(context._data);
     });
     _rebuildByIdAndDataIndexes();
+
+    managedContext.debug('Added ' + data.length + ' items.  Total length: ' + context._data.length);
 }
 
 function findById(id) {

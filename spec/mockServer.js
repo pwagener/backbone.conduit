@@ -65,27 +65,6 @@ function reset() {
     };
 }
 
-// TODO:  don't know if we even need this
-function fetchAndWait(collection, callback) {
-    var done = false;
-    // noinspection JSHint
-    waitsFor(function() {
-        return done;
-    });
-    var finished = function() {
-        done = true;
-    };
-
-    collection.once('sync', function () {
-        if (callback) {
-            callback();
-        }
-        finished();
-    });
-    collection.fetch();
-}
-
-
 // If we're running in a test context, make sure we always reset ourselves after each test
 //noinspection JSUnresolvedVariable
 var inTestContext = _.isFunction(afterEach);
@@ -120,11 +99,6 @@ module.exports = {
      *  - url: The URL to respond to
      *  - data: The data to return
      */
-    add: add,
-
-    /**
-     * Method to call "fetch" and then wait for it to complete
-     */
-    fetchAndWait: fetchAndWait
+    add: add
 
 };

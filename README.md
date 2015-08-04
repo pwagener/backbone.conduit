@@ -32,8 +32,7 @@ Performance varies, but typically loading data into a `Conduit.QuickCollection` 
 
 ### What's New?
 Release 0.6.X introduces the `Conduit.sparseData` and `Conduit.SparseCollection`, an experiment in managing Backbone
-data in a worker thread.  It's a minimal, read-only implementation, but the scalability of it to hundreds of thousands
-of items is promising.
+data in a worker thread.  Now with asynchronous (and fast) sorting, filtering, and mapping of your data!
 
 ### Interesting.  Can you tell me more?
 - Sure!  [Here's the Documentation](http://pwagener.github.io/backbone.conduit/).

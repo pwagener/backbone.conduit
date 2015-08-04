@@ -79,6 +79,13 @@ describe('The Boss module', function() {
             expect(boss.worker).to.be.undefined;
         });
 
+        it('creates a worker immediately if requested', function (done) {
+            boss.createWorkerNow().then(function() {
+                expect(boss.worker).to.be.an('object');
+                done();
+            });
+        });
+
         it('requires a named "method" to create a promise', function () {
             var bound = _.bind(boss.makePromise, boss, {foo: "bar"});
             expect(bound).to.throw(Error);

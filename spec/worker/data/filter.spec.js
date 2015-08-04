@@ -37,22 +37,32 @@ describe('the data/filter module', function() {
         });
 
         it('returns the length when filtering by a set of properties; AKA "_.where(...)"', function() {
-            var length = context.filter({ name: 'one' });
+            var length = context.filter({
+                where: {
+                    name: 'one'
+                }
+            });
             expect(length).to.equal(1);
         });
 
         it('returns the length when filtering by an evaluation function; AKA "_.filter(...)"', function() {
-            var length = context.filter('nameStartsWithT');
+            var length = context.filter({
+                method: 'nameStartsWithT'
+            });
             expect(length).to.equal(2);
         });
 
         it('returns zero when nothing matches', function() {
-            var length = context.filter({ name: 'four' });
+            var length = context.filter({
+                where: {
+                    name: 'four'
+                }
+            });
             expect(length).to.equal(0);
         });
 
         it('errors when an unregistered evaluator is named', function() {
-            var toError = _.bind(context.filter, context, 'nothingByThisName');
+            var toError = _.bind(context.filter, context, { method: 'nothingByThisName' });
             expect(toError).to.throw(Error);
         });
     });

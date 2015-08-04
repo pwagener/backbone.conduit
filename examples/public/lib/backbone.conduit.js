@@ -99,7 +99,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var _ = __webpack_require__(9);
 	var when = __webpack_require__(13);
 
-	var workerProbe = __webpack_require__(10);
+	var workerProbe = __webpack_require__(11);
 
 	var _values = {};
 
@@ -277,7 +277,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _ = __webpack_require__(9);
 	var Backbone = __webpack_require__(1);
-	var shortCircuit = __webpack_require__(11);
+	var shortCircuit = __webpack_require__(10);
 
 	function fill(models, options) {
 	    // Create the short-circuit
@@ -324,7 +324,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _ = __webpack_require__(9);
 	var Backbone = __webpack_require__(1);
-	var shortCircuit = __webpack_require__(11);
+	var shortCircuit = __webpack_require__(10);
 
 	/**
 	 * Implementation of the refill function as an alternative to Backbone.Collection.reset
@@ -486,23 +486,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	/**
-	 * Implement the private interface of the 'haul' module to plug into the callback when the data is retrieved.
-	 * @param response The response
-	 * @param options The options that were originally provided to 'haul'
-	 * @param origSuccessCallback The original callback on success
-	 * @private
+	 * Create the worker immediately.
+	 * @return {Promise} A promise that resolves once the worker has been created.
 	 */
-	function _onHaulSuccess(response, options, origSuccessCallback) {
-	    var method = options.reset ? 'refill' : 'fill';
-	    var self = this;
-	    this[method](response, options).then(function() {
-	        // TODO:  respect sorting
-
-	        if (origSuccessCallback) origSuccessCallback(self, response, options);
-	        self.trigger('sync', self, response, options);
-	    });
+	function createWorkerNow() {
+	    _ensureBoss.call(this);
+	    return this._boss.createWorkerNow();
 	}
-
 
 	/**
 	 * This method is used to retrieve data from the worker and prepare to use it in the main
@@ -646,7 +636,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var context = options.context;
 	    _ensureBoss.call(context);
 
-	    var dataWasString = _.isString(data);
 	    var idKey = context.model.idAttribute;
 	    var bossPromise = context._boss.makePromise({
 	        method: method,
@@ -660,11 +649,6 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    return bossPromise.then(function(length) {
 	        context.length = length;
-	        if (dataWasString) {
-	            // Trigger an event to let anyone know our JSON has been parsed.
-	            // TODO:  this is nice for demo purposes, but anything else?
-	            context.trigger('jsonParsed');
-	        }
 	    });
 	}
 
@@ -678,20 +662,31 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	function haul(options) {
-	    options = options ? _.clone(options) : {};
+	    options = options || {};
+	    _ensureBoss.call(this);
 
-	    // Install a specialized jQuery Ajax converter to *not* convert 'text json'.  We will
-	    // instead pass that directly to the worker, where it will be parsed.
-	    _.extend(options, {
-	        converters: {
-	            'text json': function(response) {
-	                return response;
-	            }
+	    var url = _.result(this, 'url');
+	    var loadOptions = _.extend({
+	        url: url
+	    }, options);
+
+	    var self = this;
+	    return this._boss.makePromise({
+	        method: 'load',
+	        arguments: [ loadOptions ]
+	    }).then(function(length) {
+	        self.length = length;
+	        if (options.success) {
+	            options.success(this, null, options);
+	        }
+
+	        self.trigger('sync', self)
+	    }).catch(function(err) {
+	        // Call any error handler
+	        if (options.error) {
+	            options.error(err);
 	        }
 	    });
-
-	    // Use the original Conduit.haul implementation
-	    return this._conduitHaul(options);
 	}
 
 	/**
@@ -708,18 +703,32 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	/**
-	 * Method to sort the data asynchronously.  This permanently modifies the array
+	 * Method to sort the data asynchronously.  This reorders the data available
 	 * on the worker.  If successful, it removes any models on the UI thread that
 	 * were previously prepared.
-	 * @param sortSpec The sort specification.  Contains:
-	 *   - comparator (required) The name of the property to sort by
+	 *
+	 * Like a regular Backbone.Collection, this uses the value of 'this.comparator' to
+	 * specify the sorting. It can be overridden with the method parameter.
+	 *
+	 * In either case the value should be an object with:
+	 *   - property (required) The name of the property to sort by
 	 *   - direction (optional) The direction to sort in.  Defaults to ascending; to
 	 *     sort descending set this to 'desc'.
+	 * == OR ==
+	 *   - method (required) A string naming the ConduitWorker handler method to use to evaluate the item.
+	 *
 	 * @return {Promise} A promise that resolves when the sorting is completed.
 	 */
 	function sortAsync(sortSpec) {
 	    _ensureBoss.call(this);
 	    var self = this;
+
+	    sortSpec = sortSpec || this.comparator;
+
+	    // Error if comparator isn't provided correctly.
+	    if (!sortSpec || (!sortSpec.property && !sortSpec.method)) {
+	        return when.reject(new Error('Please provide a sort specification'));
+	    }
 
 	    return this._boss.makePromise({
 	        method: 'sortBy',
@@ -733,12 +742,36 @@ return /******/ (function(modules) { // webpackBootstrap
 	    });
 	}
 
-	function filterAsync(filterSpec) {
+	/**
+	 * Method to filter the data asynchronously. This filters the data available on
+	 * the worker.  If successful, it remove any models on the UI thread that were
+	 * previously prepared.
+	 *
+	 * To make this method easy to chain, a filter can be specified either as
+	 * 'this.filterEvaluator' OR as the argument to this method.  In either case the
+	 * filterEvaluator should:
+	 *   - An object showing the set of properties to match, similar to underscore's
+	 *     '_.where(...)' functionality
+	 * == OR ==
+	 *   - An object with "method" specifying the name of the method to evaluate each
+	 *     item in the collection, similar to underscore's '_.find(...)' functionality
+	 *
+	 * @param filterEvaluator
+	 * @return {*}
+	 */
+	function filterAsync(filterEvaluator) {
 	    _ensureBoss.call(this);
 	    var self = this;
+
+	    filterEvaluator = filterEvaluator || this.filterEvaluator;
+
+	    if (!filterEvaluator) {
+	        return when.reject(new Error('Please provide a filter specification'));
+	    }
+
 	    return this._boss.makePromise({
 	        method: 'filter',
-	        arguments: [ filterSpec ]
+	        arguments: [ filterEvaluator ]
 	    }).then(function(length) {
 	        self.length = length;
 	        self.models = [];
@@ -784,8 +817,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	    refill: refill,
 	    fill: fill,
 
-	    // Override 'haul' to be able to pass the raw JSON string to the worker
+	    // Override 'haul' so the data request & processing happens on the worker
 	    haul: haul,
+
+	    _sparseSet: _sparseSet,
+
+	    /*
+	        The public sparseData interface:
+	     */
+	    createWorkerNow: createWorkerNow,
 
 	    prepare: prepare,
 
@@ -795,12 +835,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    sortAsync: sortAsync,
 
-	    filterAsync: filterAsync,
+	    filterAsync: filterAsync
 
-	    // This overrides the corresponding method from the 'haul' module to plug into the data return path
-	    _onHaulSuccess: _onHaulSuccess,
 
-	    _sparseSet: _sparseSet
 	};
 
 
@@ -944,136 +981,6 @@ return /******/ (function(modules) { // webpackBootstrap
 
 /***/ },
 /* 10 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	/**
-	 * This module attempts to load the worker file from a variety of paths
-	 */
-
-	var _ = __webpack_require__(9);
-	var when = __webpack_require__(13);
-
-	var Boss = __webpack_require__(12);
-
-	/**
-	 * Creates a promise that will attempt to find the worker at a specific
-	 * location.
-	 * @return A promise that will be resolved either with nothing (i.e. the worker
-	 * was not found), or will resolve with the path (i.e. a functional worker was
-	 * found).  The promise is never rejected, allowing it to be used in 'when.all(...)'
-	 * and similar structures.
-	 * @private
-	 */
-	function _createProbePromise(Worker, path, fileName, debugSet) {
-	    var debug;
-	    if (debugSet) {
-	        debug = function(msg) {
-	            console.log(msg)
-	        }
-	    } else {
-	        debug = function() { }
-	    }
-
-	    var fullPath = path + '/' + fileName;
-	    debug('Probing for worker at "' + fullPath + '"');
-	    var boss = new Boss({
-	        Worker: Worker,
-	        fileLocation: fullPath
-	    });
-
-	    // TODO:  clean up this promise chain
-	    //noinspection JSUnresolvedFunction
-	    return when.promise(function(resolve) {
-	        try {
-	            boss.makePromise({
-	                method: 'ping',
-	                autoTerminate: true,
-	                arguments: [
-	                    { debug: debugSet }
-	                ]
-	            }).done(function(response) {
-	                // Ping succeeded.  We found a functional worker
-	                debug('Located worker at "' + fullPath + '" at "' + response + '"');
-	                resolve(fullPath);
-	            }, function(err) {
-	                // Worker loaded, but ping error (yikes)
-	                debug('Worker at "' + fullPath + '" did not respond.  Error: ' + err);
-	                resolve();
-	            });
-	        } catch (err) {
-	            debug('Failed to load worker at "' + fullPath + "'");
-	            resolve();
-	        }
-	    });
-	}
-
-	function searchPaths(options) {
-	    options = options || {};
-
-	    var paths = options.paths;
-	    if (!_.isArray(paths)) {
-	        throw new Error('"searchPaths" requires "paths" in the options');
-	    }
-
-	    var fileName = options.fileName;
-	    if (!_.isString(fileName)) {
-	        throw new Error('"searchPaths" requires "fileName" in the options');
-	    }
-
-	    var Worker = options.Worker;
-	    // Note: checking _.isFunction(Worker) does not work in iOS Safari/Chrome
-	    if (_.isUndefined(Worker)) {
-	        throw new Error('"searchPaths" requires "Worker" in the options');
-	    }
-
-	    var probePromises = [];
-	    _.each(paths, function(path) {
-	        var probePromise = _createProbePromise(options.Worker, path, fileName, options.debug);
-	        probePromises.push(probePromise);
-	    });
-
-	    //noinspection JSUnresolvedFunction
-	    return when.promise(function(resolve, reject) {
-	        when.all(probePromises).then(function(results) {
-	            // Find the first result that returned a string path.
-	            var found;
-	            for (var i = 0; i < results.length; i++) {
-	                if (results[i]) {
-	                    found = results[i];
-	                    break;
-	                }
-	            }
-
-	            if (found) {
-	                resolve(found);
-	            } else {
-	                reject();
-	            }
-	        });
-	    });
-	}
-
-	module.exports = {
-
-	    /**
-	     * Search a collection of paths to see if we can find a functional worker.
-	     * @param global The global environment to use.
-	     * @param options All other options.  Must include:
-	     *    o Worker: The constructor for a Worker object
-	     *    o paths:  The array of paths to search
-	     *    o fileName: The name of the worker file to try to load
-	     * @return A Promise that is resolved with the path to the worker, or rejected
-	     * if a functioning worker cannot be found.
-	     */
-	    searchPaths: searchPaths
-
-	};
-
-
-/***/ },
-/* 11 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -1226,6 +1133,135 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
+/* 11 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	/**
+	 * This module attempts to load the worker file from a variety of paths
+	 */
+
+	var _ = __webpack_require__(9);
+	var when = __webpack_require__(13);
+
+	var Boss = __webpack_require__(12);
+
+	/**
+	 * Creates a promise that will attempt to find the worker at a specific
+	 * location.
+	 * @return A promise that will be resolved either with nothing (i.e. the worker
+	 * was not found), or will resolve with the path (i.e. a functional worker was
+	 * found).  The promise is never rejected, allowing it to be used in 'when.all(...)'
+	 * and similar structures.
+	 * @private
+	 */
+	function _createProbePromise(Worker, path, fileName, debugSet) {
+	    var debug;
+	    if (debugSet) {
+	        debug = function(msg) {
+	            console.log(msg)
+	        }
+	    } else {
+	        debug = function() { }
+	    }
+
+	    var fullPath = path + '/' + fileName;
+	    debug('Probing for worker at "' + fullPath + '"');
+	    var boss = new Boss({
+	        Worker: Worker,
+	        fileLocation: fullPath
+	    });
+
+	    //noinspection JSUnresolvedFunction
+	    return when.promise(function(resolve) {
+	        try {
+	            boss.makePromise({
+	                method: 'ping',
+	                autoTerminate: true,
+	                arguments: [
+	                    { debug: debugSet }
+	                ]
+	            }).then(function(response) {
+	                // Ping succeeded.  We found a functional worker
+	                debug('Located worker at "' + fullPath + '" at "' + response + '"');
+	                resolve(fullPath);
+	            }).catch(function(err) {
+	                // Worker loaded, but ping error (yikes)
+	                debug('Worker at "' + fullPath + '" did not respond.  Error: ' + err);
+	                resolve();
+	            });
+	        } catch (err) {
+	            debug('Failed to load worker at "' + fullPath + "'");
+	            resolve();
+	        }
+	    });
+	}
+
+	function searchPaths(options) {
+	    options = options || {};
+
+	    var paths = options.paths;
+	    if (!_.isArray(paths)) {
+	        throw new Error('"searchPaths" requires "paths" in the options');
+	    }
+
+	    var fileName = options.fileName;
+	    if (!_.isString(fileName)) {
+	        throw new Error('"searchPaths" requires "fileName" in the options');
+	    }
+
+	    var Worker = options.Worker;
+	    // Note: checking _.isFunction(Worker) does not work in iOS Safari/Chrome
+	    if (_.isUndefined(Worker)) {
+	        throw new Error('"searchPaths" requires "Worker" in the options');
+	    }
+
+	    var probePromises = [];
+	    _.each(paths, function(path) {
+	        var probePromise = _createProbePromise(options.Worker, path, fileName, options.debug);
+	        probePromises.push(probePromise);
+	    });
+
+	    //noinspection JSUnresolvedFunction
+	    return when.promise(function(resolve, reject) {
+	        when.all(probePromises).then(function(results) {
+	            // Find the first result that returned a string path.
+	            var found;
+	            for (var i = 0; i < results.length; i++) {
+	                if (results[i]) {
+	                    found = results[i];
+	                    break;
+	                }
+	            }
+
+	            if (found) {
+	                resolve(found);
+	            } else {
+	                reject();
+	            }
+	        });
+	    });
+	}
+
+	module.exports = {
+
+	    /**
+	     * Search a collection of paths to see if we can find a functional worker.
+	     * @param global The global environment to use.
+	     * @param options All other options.  Must include:
+	     *    o Worker: The constructor for a Worker object
+	     *    o paths:  The array of paths to search
+	     *    o fileName: The name of the worker file to try to load
+	     * @return A Promise that is resolved with the path to the worker, or rejected
+	     * if a functioning worker cannot be found.
+	     */
+	    searchPaths: searchPaths
+
+	};
+
+
+/***/ },
 /* 12 */
 /***/ function(module, exports, __webpack_require__) {
 
@@ -1274,6 +1310,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	        this.workerConfig = _.extend({}, options.worker);
 	    },
 
+	    /**
+	     * This method can be called to preemptive-ly create the worker.  The worker is typically created automatically as
+	     * needed, but if you want/need to create it ahead of time this will do so.  Note it will be created with whatever
+	     * autoTerminate behavior you specified to the constructor (default 1 second).
+	     * @return {Promise} A promise that resolves when the worker has been created.
+	     */
+	    createWorkerNow: function() {
+	        return this._ensureWorker();
+	    },
+
 	    _scheduleTermination: function () {
 	        if (this.autoTerminate === true) {
 	            this.terminate();
@@ -1290,7 +1336,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	     * @param details Details for the method call:
 	     *   o method (required) The name of the method to call
 	     *   o arguments (optional) The array of arguments that will be passed to the
-	     *     worker method you are calling
+	     *     worker method you are calling.  TODO: rename this to 'args'
 	     * @return A Promise that will be resolved or rejected based on calling
 	     *   the method you are calling.
 	     */
@@ -1323,6 +1369,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	                // Reject if we get an error.  This occurs, for instance, when the worker
 	                // path is invalid
 	                worker.onerror = function(err) {
+	                    self._debug('Worker call failed: ' + err.message);
 	                    self.terminate();
 	                    reject(err);
 	                };
@@ -1348,7 +1395,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    /**
 	     * Make sure our worker actually exists.  Create one if it does not with the correct
 	     * configuration.
-	     * @return A promise that resolves to the pro
+	     * @return A promise that resolves to the created worker.
 	     * @private
 	     */
 	    _ensureWorker: function () {

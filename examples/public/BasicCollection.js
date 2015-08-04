@@ -26,7 +26,7 @@ var BasicCollection = window.BasicCollection = Backbone.Collection.extend({
             throw new Error("Must provide JSON file name");
         }
 
-        return  "data/" + this.fileName;
+        return  "/data/" + this.fileName;
     },
 
     /**
@@ -39,7 +39,7 @@ var BasicCollection = window.BasicCollection = Backbone.Collection.extend({
     sync: function(method, model, options) {
         options = options || {};
 
-        // force a JSON converter so we can trigger an event when the data returns.
+        // force a JSON converter so we can trigger an event when the data is returned
         var self = this;
 
         var jsonConverter;
@@ -48,7 +48,6 @@ var BasicCollection = window.BasicCollection = Backbone.Collection.extend({
         } else {
             jsonConverter = function(response) {
                 response = $.parseJSON(response);
-                self.trigger('jsonParsed');
                 return response;
             };
         }
@@ -56,8 +55,8 @@ var BasicCollection = window.BasicCollection = Backbone.Collection.extend({
         _.extend(options, {
             converters: {
                 'text json': function(response) {
-                    self.trigger('jsonReceived');
                     response = jsonConverter(response);
+                    self.trigger('dataReceived');
                     return response;
                 }
             }

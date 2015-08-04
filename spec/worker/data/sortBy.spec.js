@@ -12,19 +12,18 @@ describe("The data/sortBy module", function() {
     });
 
     describe('when data is available', function() {
-        var context, boundSort;
+        var context;
         beforeEach(function() {
             mockConduitWorker.reset();
-            context = mockConduitWorker.get();
-            boundSort = _.bind(workerSort.method, context);
+            context = mockConduitWorker.bindModule(workerSort);
 
             dataUtils.initStore({ reset: true });
             dataUtils.addTo(this.getSampleData());
         });
 
         it('sorts by property ascending', function() {
-            boundSort({
-                comparator: 'name'
+            context.sortBy({
+                property: 'name'
             });
 
             var data = dataUtils.getData();
@@ -32,8 +31,8 @@ describe("The data/sortBy module", function() {
         });
 
         it('sorts by a property descending when requested', function() {
-            boundSort({
-                comparator: 'name',
+            context.sortBy({
+                property: 'name',
                 direction: 'desc'
             });
 
@@ -41,6 +40,25 @@ describe("The data/sortBy module", function() {
             expect(data[2]).to.have.property('name', 'one');
         });
 
-        // TODO: test for a function comparator
+        it('sorts by a provided function', function() {
+            context.registerComponent({
+                name: 'testComponent',
+                methods:[{
+                    name: 'byId',
+                    method: function(item) {
+                        return item.id;
+                    }
+                }]
+            });
+
+            context.sortBy({
+                method: 'byId'
+            });
+            var data = dataUtils.getData();
+            var ids = _.pluck(data, 'id');
+
+            expect(ids).to.eql([1, 2, 3]);
+        });
+
     });
 });

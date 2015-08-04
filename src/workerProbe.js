@@ -35,7 +35,6 @@ function _createProbePromise(Worker, path, fileName, debugSet) {
         fileLocation: fullPath
     });
 
-    // TODO:  clean up this promise chain
     //noinspection JSUnresolvedFunction
     return when.promise(function(resolve) {
         try {
@@ -45,11 +44,11 @@ function _createProbePromise(Worker, path, fileName, debugSet) {
                 arguments: [
                     { debug: debugSet }
                 ]
-            }).done(function(response) {
+            }).then(function(response) {
                 // Ping succeeded.  We found a functional worker
                 debug('Located worker at "' + fullPath + '" at "' + response + '"');
                 resolve(fullPath);
-            }, function(err) {
+            }).catch(function(err) {
                 // Worker loaded, but ping error (yikes)
                 debug('Worker at "' + fullPath + '" did not respond.  Error: ' + err);
                 resolve();

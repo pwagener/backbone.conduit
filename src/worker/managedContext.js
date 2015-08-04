@@ -9,6 +9,7 @@
 
 var _ = require('underscore');
 var util = require('util');
+var when = require('when');
 
 var managedContext;
 
@@ -78,14 +79,26 @@ function _onMessage(event) {
     if (handler) {
         debug('Executing "' + method + '"');
         var result = handler.apply(ConduitWorker, args);
-        managedContext.postMessage(result);
-        debug('Completed "' + method + '"');
+
+        // If a promise is returned from a handler we want to wait for it to resolve, so ...
+        if (when.isPromiseLike(result)) {
+            result.then(function() {
+                _onCallComplete(event.data, result);
+            });
+        } else {
+            _onCallComplete(event.data, result);
+        }
+
     } else {
         var msg = "No such Conduit worker method: '" + method + "'";
         debug(msg);
         managedContext.postMessage(new Error(msg));
     }
+}
 
+function _onCallComplete(eventData, result) {
+    managedContext.postMessage(result);
+    debug('Completed "' + eventData.method + '"');
 }
 
 function _initContext(optionalContext) {
@@ -185,13 +198,6 @@ module.exports = {
     setAsGlobal: setAsGlobal,
 
     /**
-     * If the worker has been configured to print debug messages, this will print 'em.
-     * TODO:  is this necessary to expose?  Shouldn't be, since the provided
-     * context has a link to it.
-     */
-    debug: debug,
-
-    /**
      * Method to enable the built-in method handlers we expose
      */
     enableCoreHandlers: enableCoreHandlers,
@@ -199,6 +205,11 @@ module.exports = {
     /**
      * Set the configuration for the context
      */
-    configure: configure
+    configure: configure,
+
+    /**
+     * Write a debug message (if we have been configured to do so)
+     */
+    debug: debug
 
 };

@@ -93,15 +93,14 @@
         <h2>What The Demo Does</h2>
         <p>
             The goal of this demo is to explore how long it takes to prepare large data sets for use by an application.
-            This demo shows loading data into a Backbone collection broken down into five steps typically taken
+            This demo shows loading data into a Backbone collection broken down into four steps typically taken
             by an application:
         </p>
         <ol>
-            <li>Fetch the Data</li>
-            <li>Parse the Data into JSON</li>
+            <li>Fetch & Parse the Raw Data</li>
             <li>Create the <code>Backbone.Model</code> instances</li>
-            <li>Filter the data in a non-trivial way; here, only the most recent entry for each restaurant</li>
-            <li>Sort the Data in a non-trivial way; here by date, then by name</li>
+            <li>Filter the data in a non-trivial way (here, only the most recent entry for each restaurant)</li>
+            <li>Sort the Data in a non-trivial way (here by date, then by name)</li>
         </ol>
         <p>
             After that, the application shows the first three entries in the collection in a simple bit of HTML.
@@ -141,8 +140,8 @@
 
         <h4>Example #1: Benchmarking Backbone.Collection</h4>
         <p>
-            The first example uses a basic <code>Backbone.Collection</code>.  The <strong>Parse JSON</strong>,
-            <strong>Create Models</strong>, and <strong>Sort Collection</strong> steps are
+            The first example uses a basic <code>Backbone.Collection</code>.
+            <strong>Create Models</strong>, <strong>Filter Collection</strong> and <strong>Sort Collection</strong> steps are
             <span class="label label-warning">synchronous</span>. Some interesting things to note on this implementation:
         </p>
             <ul>
@@ -153,36 +152,40 @@
 
         <h4>Example #2: Optimized Model Creation via Conduit.QuickCollection</h4>
         <p>
-            As Example #1 shows, the <strong>Model Creation</strong> step is very expensive.  Example #2 demonstrates
+            As Example #1 shows, the <strong>Model Creation</strong> step is very expensive.  Example #2 shows
             performance differences when we treat this as a first class problem.  The  <code>Collection</code> used here
-            mixes in the same behavior available in <code>Backbone.Conduit.QuickCollection</code> functionality, which
+            mixes in the same behavior available in <code>Conduit.QuickCollection</code> functionality, which
             is optimized to create models ~ 45% faster than the benchmark.  As a result:
         </p>
         <ul>
-            <li>Performance of the "Create Models" step is ~ 45% better</li>
-            <li>The "Filter Collection" and "Sort Collection" stages are virtually identical</li>
+            <li>Performance of the "Create Models" step is consistently better</li>
+            <li>The "Filter Collection" and "Sort Collection" stages are virtually identical to #1</li>
             <li>The UI still hangs significantly with larger data sizes due to the
                 <span class="label label-warning">synchronous</span> nature of the final steps.</li>
         </ul>
 
         <h4>Example #3:  Web Worker Data Management via Conduit.SparseCollection</h4>
         <p>
-            This example mixes in the same behavior available in a <code>Conduit.SparseCollection</code>.  This shifts
-            as much of the data management work as possible to another thread of execution on a Web Worker.  This allows
-            all of the steps to be <span class="label label-success">asynchronous</span>, allowing the UI thread to work
-            smoothly even at large data sizes.  Also:
+            As Example #2 shows, even optimizing the least-scalable step (Model Creation) has it limits.  To really scale,
+            we need to make a fundamental change.  Example #3 demonstrates this change, adding behavior available in a
+            <code>Conduit.SparseCollection</code>.  This shifts  as much of the work as possible to
+            another thread via a Web Worker, including the raw data storage (thus the "Sparse" part of the name).  It
+            also does not create any <code>Backbone.Model</code> instances unless they are explicitly needed.
+        </p>
+        <p>
+            This allows all of the steps to be <span class="label label-success">asynchronous</span>, allowing the UI
+            thread to work smoothly even at large data sizes.  More specifically:
         </p>
         <ul>
-            <li>The "Parse JSON" step takes longer, as we first copy the data over to the worker thread</li>
-            <li>Sorting and Filtering are somewhat faster; this is because we are dealing with raw data instead of
-            <code>Backbone.Model</code>-based data analysis</li>
+            <li>The raw data fetched and stored on the web worker</li>
+            <li>Sorting and Filtering are much faster at large data sized, because we deal with the raw data instead of
+            <code>Backbone.Model</code>s</li>
             <li>The "Create Models" step is the very last one, and does vastly less work:  it creates <code>Backbone.Model</code>
                 instances only when completely necessary; in this case <mark>only three models are created</mark>,
                 because that is all we need</li>
-            <li>This implementation can scale up to whatever memory requirements your client has, and the UI
-            will continue to be fully responsive</li>
+            <li>The technique shown is only limited by how much memory you have available on your client, and how
+                quickly you can get the raw data to the client</li>
         </ul>
-
 
         <hr/>
 
@@ -190,11 +193,19 @@
         <p>
             The <code>Backbone.Conduit</code> plugin <a href="http://pwagener.github.io/backbone.conduit/">is in active development</a>.  The
             <a href="http://pwagener.github.io/backbone.conduit/QuickCollection/">Conduit.QuickCollection</a> is a drop-in replacement
-            for a <code>Backbone.Collection</code> for most use cases.  The <code>Conduit.SparseCollection</code> is an
-            experimental module that is not yet fully implemented but, as these examples show, is very promising.  If
-            you're interested in following along, check out the
+            for a <code>Backbone.Collection</code> for most use cases.  It should be useful anywhere you believe you
+            may have more than a few hundred models.
+        </p>
+        <p>
+            The <code>Conduit.SparseCollection</code> is still somewhat experimental, but is very
+            promising.  The data access pattern is fundamentally different, but all functionality is exposed via Promises
+            using methods that are functional equivalents to a regular <code>Backbone.Collection</code>.  It is not a
+            drop-in replacement, but should definitely be considered when
+        </p>
+        <p>
+            If you're interested in following along with the experimental development of <code>Conduit.SparseCollection</code>, check out the
             <a href="http://pwagener.github.io/backbone.conduit/sparseData"><code>sparseData module</code>
-            in the documentation</a>.
+                documentation</a>.
         </p>
     </div>
 

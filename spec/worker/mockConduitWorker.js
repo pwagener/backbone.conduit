@@ -17,7 +17,6 @@ module.exports = {
         _reset(global);
     },
 
-    // TODO: replace most usages with 'bindModule'
     get: function() {
         return global.ConduitWorker;
     },
