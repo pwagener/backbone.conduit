@@ -15,7 +15,8 @@ if (typeof ConduitWorker !== 'undefined') {
             require('./prepare'),
             require('./sortBy'),
             require('./filter'),
-            require('./resetProjection')
+            require('./resetProjection'),
+            require('./load')
         ]
     });
 }

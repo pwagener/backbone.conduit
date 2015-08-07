@@ -261,6 +261,12 @@ var MeasuringView = window.MeasuringView = Backbone.View.extend({
         }
     },
 
+    _getEventOptions: function(event) {
+        return {
+            async: _.contains(this.collection.asyncDataEvents, event)
+        }
+    },
+
     onButtonClick: function(event) {
         // Disable Clicks
         this.undelegateEvents();
@@ -273,31 +279,23 @@ var MeasuringView = window.MeasuringView = Backbone.View.extend({
 
         // Fetch the data file to kick things off
 
-        this._requestDataEvent = this.timing.startEvent('Fetch Data', this._getEventOptions('fetch'));
         var dataFile = this.itemDropDown.getCurrent().file;
-        this.collection.fetchDataFile(dataFile);
-        this.listenToOnce(this.collection, 'jsonReceived', this._onJsonReceived);
+
+        this._startDataLoadChain(dataFile);
 
         event.preventDefault();
         return true;
     },
 
-    _getEventOptions: function(event) {
-        return {
-            async: _.contains(this.collection.asyncDataEvents, event)
-        }
+    _startDataLoadChain: function(dataFile) {
+        this._requestDataEvent = this.timing.startEvent('Fetch & Parse Data', this._getEventOptions('fetch'));
+        this.collection.fetchDataFile(dataFile);
+        this.listenToOnce(this.collection, 'dataReceived', this._onDataReceived);
     },
 
-    _onJsonReceived: function() {
-        this.timing.startCycle('Time to Parse, Create, Filter & Sort');
-
+    _onDataReceived: function() {
         this.timing.endEvent(this._requestDataEvent);
-        this._parsingJsonEvent = this.timing.startEvent('Parse JSON', this._getEventOptions('parse'));
-        this.listenToOnce(this.collection, 'jsonParsed', this._onJsonParsed);
-    },
-
-    _onJsonParsed: function() {
-        this.timing.endEvent(this._parsingJsonEvent);
+        this.timing.startCycle('Time to Create, Filter & Sort');
         this.listenToOnce(this.collection, 'sync', this._onSync);
         this._modelsCreatedEvent = this.timing.startEvent('Create Models', this._getEventOptions('create'));
     },
@@ -350,29 +348,37 @@ var MeasuringView = window.MeasuringView = Backbone.View.extend({
 var SparseMeasuringView = window.SparseMeasuringView = window.MeasuringView.extend({
 
     /*
-     * We override '_onJsonParsed' and '_onSync' from the regular view, because the SparseCollection
+     * We override '_startDataLoadChain' and '_onSync' from the regular view, because the SparseCollection
      * does some things in a different sequence.  For instance, model creation doens't occur
      * until the very last moment.
      */
 
-    _onJsonParsed: function() {
-        this.timing.endEvent(this._parsingJsonEvent);
-        this.listenToOnce(this.collection, 'sync', this._onSync);
+    _startDataLoadChain: function(dataFile) {
+
+        // First reset any sorting from the previous run
+        var self = this;
+        this.collection.resetProjection().then(function() {
+            self._requestDataEvent = self.timing.startEvent('Fetch Data', self._getEventOptions('fetch'));
+            self.collection.fetchDataFile(dataFile);
+            self.listenToOnce(self.collection, 'sync', self._onSync);
+        });
     },
 
     _onSync: function() {
         var timing = this.timing;
+        timing.endEvent(this._requestDataEvent);
+        this.timing.startCycle('Time to Create, Filter & Sort');
 
         // Next Filter the items
         var self = this;
         var event = timing.startEvent('Filter Collection', this._getEventOptions('filter'));
         var collection = this.collection;
-        collection.getFilterToMostRecentPromise().then(function() {
+        collection.filterAsync().then(function() {
             timing.endEvent(event);
 
             // next sort models
             event = timing.startEvent('Sort Collection', self._getEventOptions('sort'));
-            return collection.getSortByNamePromise();
+            return collection.sortAsync();
         }).then(function() {
             timing.endEvent(event);
 

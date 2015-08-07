@@ -10,16 +10,16 @@ module.exports = {
     name: 'sortBy',
     bindToWorker: true,
 
-    method: function(sortSpec) {
-        var comparator = sortSpec.comparator;
-        var direction = sortSpec.direction || 'asc';
+    method: function(comparator) {
+        var property = comparator.property;
+        var direction = comparator.direction || 'asc';
 
         var evaluator;
-        if (_.isString(comparator)) {
+        if (_.isString(property)) {
             evaluator = function (item) {
-                return item[comparator];
+                return item[property];
             }
-        } else if (_.isObject(comparator) && comparator.method) {
+        } else if (_.isString(comparator.method)) {
             evaluator = ConduitWorker.handlers[comparator.method];
         } else {
             throw new Error('Provide a property name as "comparator" or a registered method as { method }');

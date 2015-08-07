@@ -43,6 +43,7 @@ function expectError(collection, method, errorType) {
 
 
 beforeEach(function () {
+    this.FakeXMLHttpRequest = sinon.FakeXMLHttpRequest;
     this.sinon = sinon.sandbox.create();
 
     this.getSampleData = getSampleData;

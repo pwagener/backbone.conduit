@@ -20,9 +20,7 @@ describe('The data/prepare module', function() {
             dataUtils.initStore({ reset: true });
             dataUtils.addTo(this.getSampleData());
 
-            context = mockConduitWorker.get();
-
-            context.prepare = _.bind(workerPrepare.method, context)
+            context = mockConduitWorker.bindModule(workerPrepare);
         });
 
         it('can return a model by ID', function() {

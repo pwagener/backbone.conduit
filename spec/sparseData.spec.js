@@ -6,18 +6,22 @@ var when = require('when');
 
 var mockServer = require('./mockServer');
 var InThreadBoss = require('./InThreadBoss');
+
 var mockConduitWorker = require('./worker/mockConduitWorker');
 
 var sparseData = require('./../src/sparseData');
 
+
 function makeInThreadBoss() {
     mockConduitWorker.reset();
+
     return new InThreadBoss([
         require('./../src/worker/data/setData'),
         require('./../src/worker/data/prepare'),
         require('./../src/worker/data/mergeData'),
-        require('./../src/worker/data/sortBy')
-
+        require('./../src/worker/data/sortBy'),
+        require('./../src/worker/data/filter'),
+        require('./worker/data/mockLoad')
     ]);
 }
 
@@ -109,7 +113,7 @@ describe("The sparseData module", function() {
         });
     });
 
-    describe('when communicating with the worker boss', function() {
+    describe('when communicating with the boss', function() {
         var bossPromiseSpy, collection;
 
         beforeEach(function() {
@@ -143,33 +147,25 @@ describe("The sparseData module", function() {
             expect(callArgs[0]).to.have.property('method', 'mergeData');
         });
 
-        it('calls "mergeData" when responding to "haul" success', function(done) {
-            var data = this.getSampleData();
-            mockServer.add({
-                url: '/foo',
-                data: data
-            });
-
+        it('calls "load" when running "haul"', function(done) {
             collection.haul().then(function() {
                 expect(bossPromiseSpy.called).to.be.true;
                 var callArgs = bossPromiseSpy.args[0];
-                expect(callArgs[0]).to.have.property('method', 'mergeData');
+                expect(callArgs[0]).to.have.property('method', 'load');
+                var loadArgs = callArgs[0].arguments[0];
+                expect(loadArgs).to.not.have.property('reset');
 
                 done();
             });
         });
 
-        it('calls "setData" when responding to "haul" with reset', function(done) {
-            var data = this.getSampleData();
-            mockServer.add({
-                url: '/foo',
-                data: data
-            });
-
+        it('calls "load" when running "haul" with reset', function(done) {
             collection.haul({ reset: true }).then(function() {
                 expect(bossPromiseSpy.called).to.be.true;
                 var callArgs = bossPromiseSpy.args[0];
-                expect(callArgs[0]).to.have.property('method', 'setData');
+                expect(callArgs[0]).to.have.property('method', 'load');
+                var loadArgs = callArgs[0].arguments[0];
+                expect(loadArgs).to.have.property('reset', true);
 
                 done();
             });
@@ -198,56 +194,6 @@ describe("The sparseData module", function() {
             collection.haul({
                 success: function() {
                     expect(collection).to.have.length(3);
-                    done();
-                }
-            });
-        });
-
-        it('calls "fill" if we do not specify the "reset" option', function(done) {
-            collection.haul({
-                success: function() {
-                    expect(fillSpy.callCount).to.equal(1);
-                    expect(refillSpy.callCount).to.equal(0);
-                    done();
-                }
-            });
-        });
-
-        it('calls "refill" if we specify the "reset" option', function(done) {
-            collection.haul({
-                reset: true,
-                success: function() {
-                    expect(refillSpy.callCount).to.equal(1);
-                    expect(fillSpy.callCount).to.equal(0);
-                    done();
-                }
-            });
-        });
-
-        it('has the correct length after "sync" fires', function(done) {
-            collection.once('sync', function() {
-                expect(collection).to.have.length(3);
-                done();
-            });
-            collection.haul();
-        });
-
-        it('provides a custom converter for "text json"', function(done) {
-            // NOTE:  Not a great test, as we have to hook into a private function.
-            // The behavior we really want test, that the string is provided to the
-            // worker for parsing there, cannot be easily tested with the current
-            // implementation of MockServer.
-            var privateHaulSpy = this.sinon.spy(collection, '_conduitHaul');
-            var testJsonStr = JSON.stringify(this.getSampleData());
-            collection.haul({
-                success: function() {
-                    var haulOptions = privateHaulSpy.getCall(0).args[0];
-                    expect(haulOptions).to.have.property('converters');
-                    expect(haulOptions.converters).to.have.property('text json');
-                    var jsonConverter = haulOptions.converters['text json'];
-                    expect(jsonConverter).to.be.a('function');
-                    expect(jsonConverter(testJsonStr)).to.equal(testJsonStr);
-
                     done();
                 }
             });
@@ -304,7 +250,7 @@ describe("The sparseData module", function() {
 
         it('sorts its data in the worker', function(done) {
             collection.sortAsync({
-                comparator: 'name'
+                property: 'name'
             }).then(function() {
                 return collection.prepare({
                     indexes: { min: 0, max: 2 }
@@ -315,6 +261,21 @@ describe("The sparseData module", function() {
                 expect(models[1].get('name')).to.equal('three');
                 expect(models[2].get('name')).to.equal('two');
 
+                done();
+            });
+        });
+
+        it('filters its data in the worker', function(done) {
+            collection.filterAsync({
+                where: {
+                    name: 'one'
+                }
+            }).then(function() {
+                return collection.prepare({
+                    indexes: { min: 0, max: 2 }
+                });
+            }).then(function(models) {
+                expect(models).to.have.length(1);
                 done();
             });
         });

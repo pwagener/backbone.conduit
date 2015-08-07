@@ -19,7 +19,6 @@ window.workerLocation = '/base/dist';
 require('./config.browserSpec.js');
 require('./QuickCollection.browserSpec.js');
 require('./haul.browserSpec.js');
-require('./sparseData.browserSpec.js');
 
 window.expect = chai.expect;
 chai.use(sinonChai);

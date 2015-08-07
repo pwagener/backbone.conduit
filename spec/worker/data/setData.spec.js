@@ -9,8 +9,7 @@ describe('The data/setData module', function() {
     var context;
     beforeEach(function() {
         mockConduitWorker.reset();
-        context = mockConduitWorker.get();
-        context.setData = _.bind(workerSetData.method, context)
+        context = mockConduitWorker.bindModule(workerSetData);
     });
 
     it('provides the name as "setData"', function() {

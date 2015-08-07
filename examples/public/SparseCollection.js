@@ -1,4 +1,7 @@
-
+/**
+ * This file provides the Collection used in the third example.  It manages all its data on a worker thread,
+ * meaning the parsing, sorting, and filtering are all asynchronous.
+ */
 
 var SparseCollection = window.SparseCollection = window.BasicCollection.extend({
 
@@ -6,12 +9,27 @@ var SparseCollection = window.SparseCollection = window.BasicCollection.extend({
     // describe each event; not necessary for any non-demo application
     asyncDataEvents: [ 'fetch', 'parse', 'create', 'filter', 'sort' ],
 
+    /**
+     * This specifies the name of the method that will be used in sorting.
+     * Where is that implemented?  See 'exampleComponent.js'.
+     */
+    comparator: {
+        method: 'evaluateByDateAndName'
+    },
+
+    /**
+     * This specifies the name of the method that will be used in filtering.
+     * Where is that implemented?  See 'exampleComponent.js'.
+     */
+    filterEvaluator: {
+        method: 'filterToMostRecent'
+    },
+
     initialize: function() {
-        // Create the worker immediately by asking it to prepare zero rows.
+        // Create the worker immediately.
         // Doing this means we don't have to create/configure the worker when they press
         // the 'Run...' button the first time.
-        // TODO:  provide a less-hacky way for collections to do this.
-        this.prepare({ indexes: { min: 0, max: 0 }});
+        this.createWorkerNow();
     },
 
     fetchDataFile: function(fileName) {
@@ -22,24 +40,6 @@ var SparseCollection = window.SparseCollection = window.BasicCollection.extend({
         // data is parsed & stored on the worker thread.
         this.haul({
             reset: true
-        });
-    },
-
-    getFilterToMostRecentPromise: function() {
-        return this.filterAsync('filterToMostRecent');
-    },
-
-    /**
-     * Override to do the sorting in the worker thread.
-     * @return {Promise} A promise that resolves when the data has been sorted.
-     */
-    getSortByNamePromise: function() {
-        return this.sortAsync({
-            // TODO:  to mimic Backbone, set the comparator on the collection itself.
-            // then this doesn't have to be a wrapped call in the promise chain
-            comparator: {
-                method: 'evaluateByDateAndName'
-            }
         });
     },
 
@@ -58,7 +58,7 @@ var SparseCollection = window.SparseCollection = window.BasicCollection.extend({
     }
 }, {
     /**
-     * This method on the SparseCollection provides a controlled way to enable the Backbone.Conduit worker.
+     * This method provides a controlled way to enable the Backbone.Conduit worker.
      * Once it has been enabled, we mix in the "sparseData" behavior into the collection.
      */
     enableWorker: function() {
