@@ -2477,7 +2477,6 @@
 	 * when is part of the cujoJS family of libraries (http://cujojs.com/)
 	 * @author Brian Cavalier
 	 * @author John Hann
-	 * @version 3.7.2
 	 */
 	(function(define) { 'use strict';
 	!(__WEBPACK_AMD_DEFINE_RESULT__ = function (require) {
@@ -4837,8 +4836,8 @@
 		};
 
 		function isNode () {
-			return typeof process !== 'undefined' && process !== null &&
-				typeof process.nextTick === 'function';
+			return typeof process !== 'undefined' &&
+				Object.prototype.toString.call(process) === '[object process]';
 		}
 
 		function hasMutationObserver () {

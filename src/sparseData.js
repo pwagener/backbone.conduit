@@ -311,7 +311,8 @@ function sortAsync(sortSpec) {
  *   - An object with "method" specifying the name of the method to evaluate each
  *     item in the collection, similar to underscore's '_.find(...)' functionality
  *
- * @param filterEvaluator
+ * @param filterEvaluator (Optional) the filter evaluator to use in lieu of the
+ * one specified as 'this.filterEvaluator'.
  * @return {*}
  */
 function filterAsync(filterEvaluator) {
@@ -331,6 +332,35 @@ function filterAsync(filterEvaluator) {
         self.length = length;
         self.models = [];
         self.trigger('filter');
+    });
+}
+
+/**
+ * Map the data in the worker into a different set of data.
+ *
+ * To make this easy to chain, you may specify the mapping function either as
+ * 'this.mapSpec' OR as an argument to this method.  The argument will override any
+ * value provided on the instance.  It must include:
+ *   - mapper: The name of the function to use when mapping data
+ *
+ * When this method completes, any models stored locally on the main thread will be
+ * removed and must be re-fetched from the worker via the 'prepare(...)' method.
+ *
+ * @param mapSpec Optionally specify the mapping you want to use in lieu of what is
+ * provided in 'this.mapSpec'.
+ */
+function mapAsync(mapSpec) {
+    _ensureBoss.call(this);
+
+    var self = this;
+    mapSpec = mapSpec || this.mapSpec;
+
+    return this._boss.makePromise({
+        method: 'map',
+        arguments: [ mapSpec.mapper ]
+    }).then(function() {
+        self.models = [];
+        self.trigger('map');
     });
 }
 
@@ -390,9 +420,9 @@ var mixinObj = {
 
     sortAsync: sortAsync,
 
-    filterAsync: filterAsync
+    filterAsync: filterAsync,
 
-
+    mapAsync: mapAsync
 };
 
 
@@ -401,7 +431,7 @@ var mixinObj = {
 // Methods to fail with a general message
 var notSupportMethods = [
     // Underscore methods
-    'forEach', 'each', 'map', 'collect', 'reduce', 'foldl',
+    'forEach', 'each', 'collect', 'reduce', 'foldl',
     'inject', 'reduceRight', 'foldr', 'detect', 'select',
     'reject', 'every', 'all', 'some', 'any', 'include', 'contains', 'invoke',
     'max', 'min', 'toArray', 'size', 'first', 'head', 'take', 'initial', 'rest',
@@ -443,7 +473,9 @@ var notSupportedConduitMethods = [
     { called: 'filter', use: 'filterAsync' },
     { called: 'find', use: 'filterAsync' },
     { called: 'where', use: 'filterAsync' },
-    { called: 'findWhere', use: 'filterAsync' }
+    { called: 'findWhere', use: 'filterAsync' },
+
+    { called: 'map', use: 'mapAsync' }
 ];
 _.each(notSupportedConduitMethods, function(methodObj) {
     mixinObj[methodObj.called] = function() {
@@ -458,10 +490,6 @@ module.exports = {
         // Mix in our friends
         Collection = refillModule.mixin(Collection);
         Collection = fillModule.mixin(Collection);
-        Collection = haulModule.mixin(Collection);
-
-        // Keep a reference to original Conduit.haul
-        Collection.prototype._conduitHaul = Collection.prototype.haul;
 
         // Mix in sparseData behavior
         _.extend(Collection.prototype, mixinObj);

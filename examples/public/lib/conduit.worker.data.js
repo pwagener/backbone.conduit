@@ -246,9 +246,9 @@
 	    method: function(filterSpec) {
 
 	        var filterFunc;
-	        if (_.isString(filterSpec.method)) {
+	        if (_.isString(filterSpec.evaluator)) {
 	            // Find the evaluator from the registered components
-	            var evaluator = ConduitWorker.handlers[filterSpec.method];
+	            var evaluator = ConduitWorker.handlers[filterSpec.evaluator];
 
 	            if (!_.isFunction(evaluator)) {
 	                throw new Error('No registered handler found for "' + filterSpec + '"');
@@ -263,7 +263,7 @@
 	                return _.where(toFilterLike, filterSpec.where);
 	            };
 	        } else {
-	            throw new Error('Filter requires either "method" or "where" property');
+	            throw new Error('Filter requires either "evaluator" or "where" property');
 	        }
 
 	        dataUtils.applyProjection(filterFunc);
@@ -2436,7 +2436,6 @@
 	 * when is part of the cujoJS family of libraries (http://cujojs.com/)
 	 * @author Brian Cavalier
 	 * @author John Hann
-	 * @version 3.7.2
 	 */
 	(function(define) { 'use strict';
 	!(__WEBPACK_AMD_DEFINE_RESULT__ = function (require) {
@@ -5324,8 +5323,8 @@
 		};
 
 		function isNode () {
-			return typeof process !== 'undefined' && process !== null &&
-				typeof process.nextTick === 'function';
+			return typeof process !== 'undefined' &&
+				Object.prototype.toString.call(process) === '[object process]';
 		}
 
 		function hasMutationObserver () {

@@ -15,14 +15,21 @@ var sparseData = require('./../src/sparseData');
 function makeInThreadBoss() {
     mockConduitWorker.reset();
 
-    return new InThreadBoss([
+    var inThreadBoss = new InThreadBoss([
+        // Method handlers that can be called directly
         require('./../src/worker/data/setData'),
         require('./../src/worker/data/prepare'),
         require('./../src/worker/data/mergeData'),
         require('./../src/worker/data/sortBy'),
         require('./../src/worker/data/filter'),
-        require('./worker/data/mockLoad')
+        require('./worker/data/mockLoad'),
+        require('./../src/worker/data/map')
     ]);
+
+    // Extra methods that may be referred to by handlers.
+    inThreadBoss.registerOther(require('./worker/data/addFirstAndSecond'));
+
+    return inThreadBoss;
 }
 
 describe("The sparseData module", function() {
@@ -276,6 +283,28 @@ describe("The sparseData module", function() {
                 });
             }).then(function(models) {
                 expect(models).to.have.length(1);
+                done();
+            });
+        });
+
+        it('maps its data in the worker', function(done) {
+            collection.mapAsync({
+                mapper: 'addFirstAndSecond'
+            }).then(function() {
+                return collection.prepare({
+                    indexes: { min: 0, max: 2 }
+                });
+            }).then(function(models) {
+                expect(models).to.have.length(3);
+                expect(models[0]).to.have.property('id', 2);
+                expect(models[0].get('third')).to.equal(2);
+
+                expect(models[1]).to.have.property('id', 1);
+                expect(models[1].get('third')).to.equal(1);
+
+                expect(models[2]).to.have.property('id', 3);
+                expect(models[2].get('third')).to.equal(3);
+
                 done();
             });
         });

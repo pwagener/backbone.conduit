@@ -4,7 +4,6 @@
  * Exercise the data map method
  */
 
-
 var _ = require('underscore');
 var mockConduitWorker = require('../mockConduitWorker');
 var dataUtils = require('../../../src/worker/data/dataUtils');

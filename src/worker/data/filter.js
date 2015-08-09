@@ -17,9 +17,9 @@ module.exports = {
     method: function(filterSpec) {
 
         var filterFunc;
-        if (_.isString(filterSpec.method)) {
+        if (_.isString(filterSpec.evaluator)) {
             // Find the evaluator from the registered components
-            var evaluator = ConduitWorker.handlers[filterSpec.method];
+            var evaluator = ConduitWorker.handlers[filterSpec.evaluator];
 
             if (!_.isFunction(evaluator)) {
                 throw new Error('No registered handler found for "' + filterSpec + '"');
@@ -34,7 +34,7 @@ module.exports = {
                 return _.where(toFilterLike, filterSpec.where);
             };
         } else {
-            throw new Error('Filter requires either "method" or "where" property');
+            throw new Error('Filter requires either "evaluator" or "where" property');
         }
 
         dataUtils.applyProjection(filterFunc);

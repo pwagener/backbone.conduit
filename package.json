@@ -1,7 +1,7 @@
 {
   "name": "backbone.conduit",
   "description": "Moving data through backbone",
-  "version": "0.6.5",
+  "version": "0.6.6",
   "scripts": {
     "test": "gulp test",
     "perf": "gulp perf",
@@ -30,7 +30,6 @@
     "chai": "^1.9.1",
     "chai-as-promised": "^4.1.1",
     "del": "^0.1.3",
-    "exec-sync": "^0.1.6",
     "gulp": "^3.8.8",
     "gulp-copy": "0.0.2",
     "gulp-help": "^1.2.0",
