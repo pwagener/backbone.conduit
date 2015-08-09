@@ -10,7 +10,7 @@ var SparseCollection = window.SparseCollection = window.BasicCollection.extend({
     asyncDataEvents: [ 'fetch', 'parse', 'create', 'filter', 'sort' ],
 
     /**
-     * This specifies the name of the method that will be used in sorting.
+     * This specifies the name of the method used in sorting.
      * Where is that implemented?  See 'exampleComponent.js'.
      */
     comparator: {
@@ -18,17 +18,17 @@ var SparseCollection = window.SparseCollection = window.BasicCollection.extend({
     },
 
     /**
-     * This specifies the name of the method that will be used in filtering.
+     * This specifies the name of the method used in filtering.
      * Where is that implemented?  See 'exampleComponent.js'.
      */
     filterEvaluator: {
-        method: 'filterToMostRecent'
+        evaluator: 'filterToMostRecent'
     },
 
     initialize: function() {
         // Create the worker immediately.
-        // Doing this means we don't have to create/configure the worker when they press
-        // the 'Run...' button the first time.
+        // Doing this means we don't need to create/configure the worker when the user
+        // initially presses the "Run..." button
         this.createWorkerNow();
     },
 

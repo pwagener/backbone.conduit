@@ -7,6 +7,7 @@
 
 var when = require('when');
 var _ = require('underscore');
+var mockConduitWorker = require('./worker/mockConduitWorker');
 
 function InThreadBoss(workerHandlers) {
     var self = this;
@@ -16,6 +17,15 @@ function InThreadBoss(workerHandlers) {
         }
     });
 }
+
+InThreadBoss.prototype.registerOther = function(otherHandler) {
+    var context = mockConduitWorker.get();
+    if (!context.handlers) {
+        context.handlers = [];
+    }
+
+    context.handlers[otherHandler.name] = otherHandler.method;
+};
 
 InThreadBoss.prototype.makePromise = function(details) {
     var method = this[details.method];

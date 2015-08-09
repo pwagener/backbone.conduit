@@ -47,12 +47,17 @@
         <div class="collapse navbar-collapse pull-right" id="bs-example-navbar-collapse-1">
             <ul class="nav navbar-nav">
                 <li>
-                    <a href="/about.html">
-                        About
-                        <span class="glyphicon glyphicon-question-sign"></span>
+                    <a href="http://pwagener.github.io/backbone.conduit/">
+                        See The Docs
+                        <span class="glyphicon glyphicon-book"></span>
                     </a>
                 </li>
-            </ul>
+                <li>
+                    <a href="/about.html">
+                        About The Demo
+                        <span class="glyphicon glyphicon-question-sign"></span>
+                    </a>
+                </li>            </ul>
         </div>
         <!-- /.navbar-collapse -->
     </div>
@@ -200,7 +205,8 @@
             The <code>Conduit.SparseCollection</code> is still somewhat experimental, but is very
             promising.  The data access pattern is fundamentally different, but all functionality is exposed via Promises
             using methods that are functional equivalents to a regular <code>Backbone.Collection</code>.  It is not a
-            drop-in replacement, but should definitely be considered when
+            drop-in replacement, but if you are considering data larger than several thousand items, it is
+            worth a look.
         </p>
         <p>
             If you're interested in following along with the experimental development of <code>Conduit.SparseCollection</code>, check out the

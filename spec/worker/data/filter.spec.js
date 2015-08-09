@@ -47,7 +47,7 @@ describe('the data/filter module', function() {
 
         it('returns the length when filtering by an evaluation function; AKA "_.filter(...)"', function() {
             var length = context.filter({
-                method: 'nameStartsWithT'
+                evaluator: 'nameStartsWithT'
             });
             expect(length).to.equal(2);
         });
