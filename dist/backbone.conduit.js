@@ -459,8 +459,6 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var refillModule = __webpack_require__(4);
 	var fillModule = __webpack_require__(3);
-	var haulModule = __webpack_require__(5);
-
 
 	function get(obj, options) {
 	    options = options || {};
@@ -793,6 +791,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	 *
 	 * @param mapSpec Optionally specify the mapping you want to use in lieu of what is
 	 * provided in 'this.mapSpec'.
+	 * @return {Promise} A Promise that resolves when the map has completed.
 	 */
 	function mapAsync(mapSpec) {
 	    _ensureBoss.call(this);
@@ -806,6 +805,21 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }).then(function() {
 	        self.models = [];
 	        self.trigger('map');
+	    });
+	}
+
+	/**
+	 * Run a reduction on the data in the worker.
+	 *
+	 * @param reduceSpec
+	 * @return {Promise} A Promise that resolves to the result of the reduction.
+	 */
+	function reduceAsync(reduceSpec) {
+	    _ensureBoss.call(this);
+
+	    return this._boss.makePromise({
+	        method: 'reduce',
+	        arguments: [ reduceSpec ]
 	    });
 	}
 
@@ -867,7 +881,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    filterAsync: filterAsync,
 
-	    mapAsync: mapAsync
+	    mapAsync: mapAsync,
+
+	    reduceAsync: reduceAsync
 	};
 
 

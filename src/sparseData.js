@@ -14,8 +14,6 @@ var Boss = require('./Boss');
 
 var refillModule = require('./refill');
 var fillModule = require('./fill');
-var haulModule = require('./haul');
-
 
 function get(obj, options) {
     options = options || {};
@@ -348,6 +346,7 @@ function filterAsync(filterEvaluator) {
  *
  * @param mapSpec Optionally specify the mapping you want to use in lieu of what is
  * provided in 'this.mapSpec'.
+ * @return {Promise} A Promise that resolves when the map has completed.
  */
 function mapAsync(mapSpec) {
     _ensureBoss.call(this);
@@ -361,6 +360,23 @@ function mapAsync(mapSpec) {
     }).then(function() {
         self.models = [];
         self.trigger('map');
+    });
+}
+
+/**
+ * Run a reduction on the data in the worker.
+ *
+ * @param reduceSpec Must specify the reduction function as 'reduceSpec.reducer'.  It also may specify the object to
+ * use as the 'memo' in as 'reduceSpec.memo'.  Note, however, that after the reduce has completed the passed-in object
+ * _will not_ be modified.  Instead, the result will be provided by the returned promise.
+ * @return {Promise} A Promise that resolves to the result of the reduction.
+ */
+function reduceAsync(reduceSpec) {
+    _ensureBoss.call(this);
+
+    return this._boss.makePromise({
+        method: 'reduce',
+        arguments: [ reduceSpec ]
     });
 }
 
@@ -422,7 +438,9 @@ var mixinObj = {
 
     filterAsync: filterAsync,
 
-    mapAsync: mapAsync
+    mapAsync: mapAsync,
+
+    reduceAsync: reduceAsync
 };
 
 

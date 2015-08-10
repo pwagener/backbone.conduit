@@ -7,12 +7,11 @@ Conduit is a Backbone plugin that improves the ability of Backbone to handle lar
 [![Join the chat at https://gitter.im/pwagener/backbone.conduit](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/pwagener/backbone.conduit?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 ## TL;DR
-`Conduit` provides some special functions for dealing
-with large data sets.  Install it with `npm` or `bower`:
+`Conduit` provides some special functions for dealing with large data sets.  Install it with `npm` or `bower`:
 ```
-$ bower install --save backbone.conduit
+$ bower install backbone.conduit
 ... or ...
-$ npm install --save backbone.conduit
+$ npm install backbone.conduit
 ```
 
 `Conduit.QuickCollection` (an extension of `Backbone.Collection`) is a great way to get started:
@@ -20,7 +19,7 @@ $ npm install --save backbone.conduit
 ```
 var collection = new Backbone.Conduit.QuickCollection();
 
-// If you have a large amount of data injected onto the page ...
+// If you have a large amount of data injected onto the page, instead of 'reset(...)' do ...
 var aBigArray = [ ... ];
 collection.refill(aBigArray);
 
@@ -31,8 +30,9 @@ collection.haul();
 Performance varies, but typically loading data into a `Conduit.QuickCollection` is ~ 50% faster than a `Backbone.Collection`.
 
 ### What's New?
-Release 0.6.X introduces the `Conduit.sparseData` and `Conduit.SparseCollection`, an experiment in managing Backbone
-data in a worker thread.  Now with asynchronous (and fast) sorting, filtering, and mapping of your data!
+The 0.6.X release introduces the `Conduit.sparseData` module and the `Conduit.SparseCollection`.  These are an experiment in 
+managing Backbone data in a worker thread.  Now with asynchronous sorting, filtering, mapping, and reducing of your data!
+Check out the [The Demo](http://conduit.wagener.org) to see it working live.
 
 ### Interesting.  Can you tell me more?
 - Sure!  [Here's the Documentation](http://pwagener.github.io/backbone.conduit/).

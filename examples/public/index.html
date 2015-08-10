@@ -71,10 +71,19 @@
         <!-- Page Heading -->
         <div class="row">
             <div class="col-lg-12">
-                <h1 class="page-header">Backbone.Conduit Demo
-                    <small>Comparing 3 Techniques For Collection Loading</small>
-                </h1>
+                <h1 class="page-header">Backbone.Conduit Demo</h1>
+                <p>
+                    The examples below demonstrate the same thing -- loading data into a Backbone Collection and then
+                    using it -- done three different ways.  Choose the size of the data (from 5,000 items to 221,000
+                    items) to load.  Each example will load that data, then filter it, then sort it, and finally show a
+                    summary of the top 3 items.
+                </p>
+                <p>
+                    For more details, see <a href="about.html">About The Demo</a>.  Have fun!
+                </p>
             </div>
+
+            <hr/>
         </div>
         <!-- /.row -->
 
@@ -92,8 +101,10 @@
             </div>
             <div class="col-md-6 description">
                 <h3>Basic Backbone.Collection</h3>
-                <h4>Simple, But Slow & Laggy</h4>
-                <p>This shows loading the items into a straight Backbone collection.</p>
+                <h4>Simple But Slow</h4>
+                <p>
+                    This shows loading the items into a standard Backbone.Collection instance.
+                </p>
 
                 <div class="row">
                     <div class="dropdown col-md-4 menuContainer">
@@ -128,9 +139,10 @@
                 </div>
             </div>
             <div class="col-md-6 description">
-                <h3>Backbone.Conduit Collection</h3>
+                <h3>Conduit.QuickCollection</h3>
                 <h4>Drop-In Replacement, and Faster</h4>
-                <p>This shows loading the items into a Backbone.Conduit Collection.  This collection class is optimized to create Backbone.Models more efficiently.</p>
+                <p>This shows loading the items into a Conduit.QuickCollection.  This collection class is optimized to create Backbone.Models more efficiently.</p>
+                <p>This results in faster model creation, but everything else is comparable to a regular Backbone.Collection.</p>
                 <div class="row">
                     <div class="dropdown col-md-4 menuContainer">
                         <!-- rendered by JS -->
@@ -166,7 +178,8 @@
             <div class="col-md-6 description">
                 <h3>Backbone.Conduit SparseCollection</h3>
                 <h4>More Complex, But Scalable</h4>
-                <p>This shows loading the items into a Backbone.Conduit SparseCollection.  This collection manages the raw data in a web worker, allowing the main thread to only prepare the models it explicitly needs.  This fundamentally changes the data access pattern, however, making the code more complex.  But it scales extremely well, allowing your application to handle as much data as you can feed it.</p>
+                <p>This shows loading the items into a Conduit.SparseCollection.  This collection manages the raw data in a web worker, allowing the main thread to only prepare Backbone.Models as needed.</p>
+                <p>This fundamentally changes the data access pattern, however, making the code more complex.  But it scales extremely well, allowing your application to handle as much data as you can feed it.</p>
                 <div class="row">
                     <div class="dropdown col-md-4 menuContainer">
                         <!-- rendered by JS -->
