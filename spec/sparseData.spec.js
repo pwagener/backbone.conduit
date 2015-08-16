@@ -23,11 +23,13 @@ function makeInThreadBoss() {
         require('./../src/worker/data/sortBy'),
         require('./../src/worker/data/filter'),
         require('./worker/data/mockLoad'),
-        require('./../src/worker/data/map')
+        require('./../src/worker/data/map'),
+        require('./../src/worker/data/reduce')
     ]);
 
     // Extra methods that may be referred to by handlers.
     inThreadBoss.registerOther(require('./worker/data/addFirstAndSecond'));
+    inThreadBoss.registerOther(require('./worker/data/sumOfFirstAndSecondProperties'));
 
     return inThreadBoss;
 }
@@ -305,6 +307,16 @@ describe("The sparseData module", function() {
                 expect(models[2]).to.have.property('id', 3);
                 expect(models[2].get('third')).to.equal(3);
 
+                done();
+            });
+        });
+
+        it('reduces data in the worker', function(done) {
+            collection.reduceAsync({
+                reducer: 'sumOfFirstAndSecondProperties',
+                memo: 0
+            }).then(function(result) {
+                expect(result).to.equal(6);
                 done();
             });
         });
