@@ -811,7 +811,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	/**
 	 * Run a reduction on the data in the worker.
 	 *
-	 * @param reduceSpec
+	 * @param reduceSpec Must specify the reduction function as 'reduceSpec.reducer'.  It also may specify the object to
+	 * use as the 'memo' in as 'reduceSpec.memo'.  Note, however, that after the reduce has completed the passed-in object
+	 * _will not_ be modified.  Instead, the result will be provided by the returned promise.
 	 * @return {Promise} A Promise that resolves to the result of the reduction.
 	 */
 	function reduceAsync(reduceSpec) {

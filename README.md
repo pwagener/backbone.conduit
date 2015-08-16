@@ -41,7 +41,7 @@ Check out the [The Demo](http://conduit.wagener.org) to see it working live.
 - Yes!  [Check out the Demo](http://conduit.wagener.org).
 
 ### I Think It's Broken.
-- Oh No!  [Please File an Issue](https://github.com/pwagener/backbone.conduit/issues)!
+- Oh No!  [Please File an Issue](https://github.com/pwagener/backbone.conduit/issues).
 
 ### I Have A Question
 Great!  Either ...
