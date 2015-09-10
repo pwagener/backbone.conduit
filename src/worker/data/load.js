@@ -108,6 +108,18 @@ module.exports = {
                 dataUtils.initStore({ reset: true });
             }
 
+            // TODO:  this will need to be merged into v0.7.0's 'get.js'
+            var transform = options.postFetchTransform;
+            if (transform) {
+                // Apply the requested transformation
+                if (transform.method) {
+                    var transformer = ConduitWorker.handlers[transform.method];
+                    data = transformer(data);
+                } else if (transform.useAsData) {
+                    data = data[transform.useAsData];
+                }
+            }
+
             dataUtils.addTo(data);
         }).then(function() {
             return dataUtils.length();

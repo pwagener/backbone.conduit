@@ -147,8 +147,8 @@
 
 	        // If a promise is returned from a handler we want to wait for it to resolve, so ...
 	        if (when.isPromiseLike(result)) {
-	            result.then(function() {
-	                _onCallComplete(event.data, result);
+	            result.then(function(promiseResult) {
+	                _onCallComplete(event.data, promiseResult);
 	            });
 	        } else {
 	            _onCallComplete(event.data, result);
@@ -269,6 +269,7 @@
 
 	    /**
 	     * Set the configuration for the context
+	     *
 	     */
 	    configure: configure,
 

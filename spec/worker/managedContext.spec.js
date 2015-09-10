@@ -1,11 +1,18 @@
 'use strict';
 
 var _ = require('underscore');
+var when = require('when');
 
 var context = require('../../src/worker/managedContext');
 
 describe('The managedContext module', function() {
     var global;
+
+    var callContextMethod = function(methodName, args) {
+        global.onmessage({
+            data: { method: methodName, arguments: args }
+        });
+    };
 
     beforeEach(function() {
         // Object we use to represent the global context in tests
@@ -118,7 +125,7 @@ describe('The managedContext module', function() {
     });
 
     describe('when calling a configured component', function() {
-        var postMessageSpy, fooHandler, ConduitWorker;
+        var postMessageSpy, fooHandler, bazHandler;
 
         beforeEach(function() {
             // Nasty set of configuration to make it look like we've configured
@@ -129,20 +136,31 @@ describe('The managedContext module', function() {
             fooHandler = {
                 name: 'foo',
                 method: function() {
+                    return { foo: "bar" };
+                }
+            };
+
+            bazHandler = {
+                name: 'baz',
+                method: function() {
                     return {
-                        foo: "bar"
+                        then: function(callback) {
+                            callback({
+                                baz: 'resolved'
+                            })
+                        }
                     };
                 }
             };
 
             context.enableCoreHandlers();
-            ConduitWorker = global.ConduitWorker;
 
             global.importScripts = function() {
-                ConduitWorker.registerComponent({
-                    name: 'foo',
+                global.ConduitWorker.registerComponent({
+                    name: 'testComponents',
                     methods: [
-                        fooHandler
+                        fooHandler,
+                        bazHandler
                     ]
                 });
             };
@@ -150,33 +168,35 @@ describe('The managedContext module', function() {
             context.configure({
                 components: [ 'ignored' ]
             });
-
-            global.onmessage({
-                data: { method: fooHandler.name }
-            });
-
         });
 
         it('response via "postMessage"', function() {
+            callContextMethod(fooHandler.name);
             expect(postMessageSpy.callCount).to.equal(1);
         });
 
         it('provides the return value via "postMessage"', function() {
+            callContextMethod(fooHandler.name);
             var callArgs = postMessageSpy.getCall(0).args;
             var response = callArgs[0];
             expect(response).to.have.property('foo', 'bar');
         });
 
+        it('provides the resolved value if the handler returns a promise', function() {
+            callContextMethod(bazHandler.name);
+            expect(postMessageSpy.callCount).to.equal(1);
+            var callArgs = postMessageSpy.getCall(0).args;
+            var response = callArgs[0];
+            expect(response).to.have.property('baz', 'resolved');
+        });
+
         it('returns an Error when calling an unregistered handler', function() {
-            postMessageSpy.reset();
-            global.onmessage({ data: {
-                method: 'baz'
-            }});
+            callContextMethod('bleah');
 
             var callArgs = postMessageSpy.getCall(0).args;
             var response = callArgs[0];
             expect(response).to.be.an.instanceOf(Error);
-            expect(response.message).to.contain("'baz'");
+            expect(response.message).to.contain("'bleah'");
         });
     });
 });

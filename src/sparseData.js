@@ -65,6 +65,7 @@ function prepare(items) {
         arguments: [ items ]
     }).then(function(models) {
         var converted = self._sparseSet(models);
+        self.trigger('prepared', converted);
         return(converted);
     });
 }
@@ -219,8 +220,10 @@ function haul(options) {
     _ensureBoss.call(this);
 
     var url = _.result(this, 'url');
+    var postFetchTransform = _.result(this, 'postFetchTransform');
     var loadOptions = _.extend({
-        url: url
+        url: url,
+        postFetchTransform: postFetchTransform
     }, options);
 
     var self = this;
@@ -382,19 +385,22 @@ function reduceAsync(reduceSpec) {
 
 function _ensureBoss() {
     if (!this._boss) {
+        // TODO: This is untestable as written w/o growing the scope of the spec to fully configure a worker.
 
+        // Components that Backbone.Conduit needs
         var components = [
             './conduit.worker.data.js'
         ];
 
-        var extras = config.getComponents();
-        _.each(extras, function(component) {
-            components.push(component);
-        });
+        // Components specified in the base Conduit configuration, plus
+        // components specified for this Collection type
+        components = _.compact(_.union(components, config.getComponents(), _.result(this, 'conduitComponents')));
 
         this._boss = new Boss({
             Worker: config.getWorkerConstructor(),
             fileLocation: config.getWorkerPath(),
+
+            // We never want the worker for this collection to terminate, as it holds all our data!
             autoTerminate: false,
 
             // Use the Backbone.Conduit config for the debug configuration
@@ -421,6 +427,7 @@ var mixinObj = {
     // Override 'haul' so the data request & processing happens on the worker
     haul: haul,
 
+    // The sparse-friendly implementation of Collection.set(), which we call from 'prepare'
     _sparseSet: _sparseSet,
 
     /*
@@ -443,14 +450,31 @@ var mixinObj = {
     reduceAsync: reduceAsync
 };
 
+// This object is mixed in if the Backbone version is less than 1.1.1
+var bb111MixinObj = {
+    _addReference: function(model) {
+        this._byId[model.cid] = model;
+        var id = this.modelId(model.attributes);
+        if (id != null) this._byId[id] = model;
+        model.on('all', this._onModelEvent, this);
+    }
+};
+
+// This object is mixed in if the Backbone version is less than 1.2.0
+var bb120MixinObj = {
+    // Define how to uniquely identify models in the collection.
+    modelId: function (attrs) {
+        return attrs[this.model.prototype.idAttribute || 'id'];
+    }
+};
+
 
 // ====== Machinery to ensure we reliably throw errors on many/most Collection methods ======
 
 // Methods to fail with a general message
 var notSupportMethods = [
     // Underscore methods
-    'forEach', 'each', 'collect', 'reduce', 'foldl',
-    'inject', 'reduceRight', 'foldr', 'detect', 'select',
+    'forEach', 'each', 'collect', 'reduceRight', 'foldr', 'detect', 'select',
     'reject', 'every', 'all', 'some', 'any', 'include', 'contains', 'invoke',
     'max', 'min', 'toArray', 'size', 'first', 'head', 'take', 'initial', 'rest',
     'tail', 'drop', 'last', 'without', 'difference', 'indexOf', 'shuffle',
@@ -460,7 +484,7 @@ var notSupportMethods = [
     'groupBy', 'countBy', 'indexBy',
 
     // Other various methods
-    "slice", "pluck", "parse", "clone", "create"
+    'slice', 'pluck', 'clone', 'create'
 
 ];
 _.each(notSupportMethods, function(method) {
@@ -493,7 +517,13 @@ var notSupportedConduitMethods = [
     { called: 'where', use: 'filterAsync' },
     { called: 'findWhere', use: 'filterAsync' },
 
-    { called: 'map', use: 'mapAsync' }
+    { called: 'map', use: 'mapAsync' },
+
+    { called: 'reduce', use: 'reduceAsync' },
+    { called: 'foldl', use: 'reduceAsync' },
+    { called: 'inject', use: 'reduceAsync' },
+
+    { called: 'parse', use: 'Collection.postFetchTransform' }
 ];
 _.each(notSupportedConduitMethods, function(methodObj) {
     mixinObj[methodObj.called] = function() {
@@ -511,6 +541,14 @@ module.exports = {
 
         // Mix in sparseData behavior
         _.extend(Collection.prototype, mixinObj);
+
+        if (_.contains(['1.0.0', '1.1.0'], Backbone.VERSION)) {
+            _.extend(Collection.prototype, bb111MixinObj);
+        }
+
+        if (_.contains(['1.0.0', '1.1.0', '1.1.1', '1.1.2'], Backbone.VERSION)) {
+            _.extend(Collection.prototype, bb120MixinObj);
+        }
 
         return Collection;
     }
