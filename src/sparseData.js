@@ -63,8 +63,14 @@ function prepare(items) {
     return this._boss.makePromise({
         method: 'prepare',
         arguments: [ items ]
-    }).then(function(models) {
-        var converted = self._sparseSet(models);
+    }).then(function(rawData) {
+        var converted = self._sparseSet(rawData);
+
+        // Listen to any changes on the models to do auto synchronization
+        _.each(converted, function(model) {
+            self.listenTo(model, 'change', self._updateDataInWorker);
+        });
+
         self.trigger('prepared', converted);
         return(converted);
     });
@@ -146,8 +152,14 @@ function _sparseSet(models, options) {
         if (_.isUndefined(itemIndex)) {
             throw new Error('Worker data did not provide _dataIndex');
         }
-
         delete attrs._dataIndex;
+
+        var conduitId = attrs._conduitId;
+        if (_.isUndefined(conduitId)) {
+            throw new Error('Worker data did not provide _conduitId');
+        }
+        delete attrs._conduitId;
+
         id = attrs[targetModel.prototype.idAttribute || 'id'];
 
         // If a duplicate is found, prevent it from being added and
@@ -183,6 +195,32 @@ function _sparseSet(models, options) {
     return singular ? models[0] : models;
 }
 
+/**
+ * Method that overrides Collection.add for sparse data
+ * @param models A model or array of models
+ * @param options Other options.
+ * TODO:  handle the add-at-index option, others.
+ * @private
+ */
+function addAsync(models, options) {
+    _ensureDirtyTracking.call(this);
+
+    if (!_.isArray(models)) {
+        models = [ models ];
+    }
+
+    // Put the data into the worker
+    var self = this;
+    var promise = this.fill(models)
+        .then(function() {
+            // Remove our promise from the list of outstanding ones
+            self._noLongerDirty(dirtyId);
+        });
+
+    // Keep track of this as an outstanding promise
+    var dirtyId = this._trackAsDirty(promise, models);
+    return promise;
+}
 
 function _fillOrRefillOnWorker(data, options) {
     var method = options.method;
@@ -293,9 +331,14 @@ function sortAsync(sortSpec) {
         // Sort was successful; remove any local models.
         // NOTE:  we could work around doing this by just re-preparing the
         // models we have locally ...
-        self.models = [];
+        _resetPreparedModels.call(self);
         self.trigger('sort');
     });
+}
+
+function _resetPreparedModels() {
+    this.models = [];
+    this._byId = {};
 }
 
 /**
@@ -331,7 +374,7 @@ function filterAsync(filterEvaluator) {
         arguments: [ filterEvaluator ]
     }).then(function(length) {
         self.length = length;
-        self.models = [];
+        _resetPreparedModels.call(self);
         self.trigger('filter');
     });
 }
@@ -361,7 +404,7 @@ function mapAsync(mapSpec) {
         method: 'map',
         arguments: [ mapSpec.mapper ]
     }).then(function() {
-        self.models = [];
+        _resetPreparedModels.call(self);
         self.trigger('map');
     });
 }
@@ -383,9 +426,84 @@ function reduceAsync(reduceSpec) {
     });
 }
 
+
+/**
+ * Ensure this instance has the ability to track dirty models & sync processes
+ * @private
+ */
+function _ensureDirtyTracking() {
+    if (!this._dirty) {
+        this._dirty = {
+            inProgress: {}
+        };
+    }
+}
+
+function hasDirtyData() {
+    _ensureDirtyTracking.call(this);
+    var dirtyIds = _.keys(this._dirty.inProgress);
+    return dirtyIds.length > 0;
+}
+
+function _updateDataInWorker(model, options) {
+    // TODO:  if we unset values in the model, do those changes propagate to the
+    // worker successfully?
+
+    _ensureBoss.call(this);
+    var dataToMerge = model.toJSON();
+
+    // Rather than a regular merge, we should fully replace the attributes
+    // in the worker.
+    var mergeOptions = {
+        replace: true
+    };
+
+    var self = this;
+    var promise = this._boss.makePromise({
+        method: 'mergeData',
+        arguments: [
+            { data: [ dataToMerge ], options: mergeOptions }
+        ]
+    }).then(function() {
+        self._noLongerDirty(dirtyHandle);
+    });
+
+    var dirtyHandle = this._trackAsDirty(promise, model);
+    return promise;
+}
+
+function _trackAsDirty(promise, dirtyObj) {
+    _ensureDirtyTracking.call(this);
+
+    var dirtyId = _.uniqueId('dirty');
+    this._dirty.inProgress[dirtyId] = {
+        promise: promise,
+        target: dirtyObj
+    };
+
+    return dirtyId;
+}
+
+function _noLongerDirty(dirtyId) {
+    var inProgress = this._dirty.inProgress;
+    var dirty = inProgress[dirtyId];
+    if (dirty) {
+        // TODO:  should we inspect the promise to see if it's resolved?
+        delete inProgress[dirtyId];
+        this.trigger('sweepComplete', dirty.target);
+    }
+}
+
+function cleanDirtyData() {
+    _ensureDirtyTracking.call(this);
+    var syncsInProgress = _.values(this._dirty.inProgress);
+    var promises = _.pluck(syncsInProgress, 'promise');
+    return when.all(promises);
+}
+
 function _ensureBoss() {
     if (!this._boss) {
-        // TODO: This is untestable as written w/o growing the scope of the spec to fully configure a worker.
+        // TODO: This is untestable as written w/o growing the scope of the spec to fully configured a worker.
 
         // Components that Backbone.Conduit needs
         var components = [
@@ -420,15 +538,19 @@ var mixinObj = {
     get: get,
     at: at,
 
-    // Override 'refill' and 'fill' to put the data on the worker instead of in the main thread
+    // Override fill/refill to put the data on the worker instead of in the main thread
     refill: refill,
     fill: fill,
 
-    // Override 'haul' so the data request & processing happens on the worker
+    // Override haul so data request & processing happens on the worker
     haul: haul,
 
     // The sparse-friendly implementation of Collection.set(), which we call from 'prepare'
     _sparseSet: _sparseSet,
+
+    _updateDataInWorker: _updateDataInWorker,
+    _trackAsDirty: _trackAsDirty,
+    _noLongerDirty: _noLongerDirty,
 
     /*
         The public sparseData interface:
@@ -447,7 +569,16 @@ var mixinObj = {
 
     mapAsync: mapAsync,
 
-    reduceAsync: reduceAsync
+    reduceAsync: reduceAsync,
+
+    /**
+     * Work In Progress here:  helping with data changes in models
+     */
+    hasDirtyData: hasDirtyData,
+
+    cleanDirtyData: cleanDirtyData,
+
+    addAsync: addAsync
 };
 
 // This object is mixed in if the Backbone version is less than 1.1.1
@@ -499,7 +630,7 @@ var notSupportedWriteMethods = [
 ];
 _.each(notSupportedWriteMethods, function(method) {
     mixinObj[method] = function() {
-        throw new Error('Cannot call "' + method + '".  Collections with sparse data are read only.');
+        throw new Error('Cannot call "' + method + '".  Sparse collections should use addAsync/removeAsync.');
     }
 });
 
@@ -523,7 +654,11 @@ var notSupportedConduitMethods = [
     { called: 'foldl', use: 'reduceAsync' },
     { called: 'inject', use: 'reduceAsync' },
 
-    { called: 'parse', use: 'Collection.postFetchTransform' }
+    { called: 'parse', use: 'Collection.postFetchTransform' },
+
+    { called: 'add', use: 'addAsync' },
+    { called: 'remove', use: 'removeAsync' }
+
 ];
 _.each(notSupportedConduitMethods, function(methodObj) {
     mixinObj[methodObj.called] = function() {

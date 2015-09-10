@@ -17,11 +17,13 @@ module.exports = {
         var data = argument.data || [];
         data = dataUtils.parseData(data);
 
+        var options = argument.options;
+
         dataUtils.initStore({
             idKey: argument.idKey
         });
 
-        dataUtils.addTo(data);
+        dataUtils.addTo(data, options);
         return dataUtils.length();
     }
 

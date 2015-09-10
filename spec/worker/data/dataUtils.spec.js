@@ -94,6 +94,19 @@ describe('The worker/dataUtils module', function() {
             expect(data[2]).to.have.property('name', 'THREE');
         });
 
+        it('can merge data by replacing', function() {
+            dataUtils.addTo([
+                { id: 3, name: 'three', first: 3 }
+            ], {
+                replace: true
+            });
+            data = dataUtils.getData();
+            expect(data).to.have.length(3);
+            var modified = data[2];
+            expect(modified).to.have.property('name', 'three');
+            expect(modified).to.not.have.property('second');
+        });
+
         it('sets "_dataIndex" property to initial data correctly', function() {
             for (var i = 0; i < data.length; i++) {
                 var current = data[i];

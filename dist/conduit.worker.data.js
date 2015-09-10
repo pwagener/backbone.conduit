@@ -125,11 +125,13 @@
 	        var data = argument.data || [];
 	        data = dataUtils.parseData(data);
 
+	        var options = argument.options;
+
 	        dataUtils.initStore({
 	            idKey: argument.idKey
 	        });
 
-	        dataUtils.addTo(data);
+	        dataUtils.addTo(data, options);
 	        return dataUtils.length();
 	    }
 
@@ -549,7 +551,7 @@
 	    return context._projectedData;
 	}
 
-	function _rebuildByIdAndDataIndexes() {
+	function _rebuildIdsAndIndexes() {
 	    var data = getData();
 	    var context = _getContext();
 
@@ -563,6 +565,11 @@
 	                byId[id] = item;
 	            }
 	            item._dataIndex = index;
+
+	            if (typeof item._conduitId === 'undefined') {
+	                // An item created in a 'map' projection needs a ConduitID
+	                item._conduitId = _.uniqueId('conduit');
+	            }
 	        }
 	        index++;
 	    });
@@ -572,7 +579,7 @@
 	    var context = _getContext();
 
 	    context._projectedData = toApply(getData());
-	    _rebuildByIdAndDataIndexes();
+	    _rebuildIdsAndIndexes();
 
 	    context._projections.push(toApply);
 	}
@@ -583,7 +590,8 @@
 	    context._projections = [];
 	}
 
-	function addTo(data) {
+	function addTo(data, options) {
+	    options = options || {};
 	    var context = _getContext();
 
 	    data = data || [];
@@ -600,20 +608,29 @@
 	            if (id !== void 0) {
 	                existing = byId[id];
 	            }
-	            if (existing) {
+
+	            if (existing && !options.replace) {
 	                // Must merge item properties
 	                var keys = _.keys(item);
 	                _.each(keys, function(key) {
 	                    existing[key] = item[key];
 	                });
 	            } else {
+	                if (existing && options.replace) {
+	                    // Must remove the existing one
+	                    var index = context._data.indexOf(existing);
+	                    context._data.splice(index, 1);
+	                }
+
 	                // Brand new element or overwriting
 	                if (id) {
 	                    byId[id] = item;
 	                }
 
-	                // Add the index where the data exists
+	                // Add the index attribute for the data
 	                item._dataIndex = context._data.push(item) - 1;
+	                // Add a conduit ID for tracking this item on both sides of the wall
+	                item._conduitId = _.uniqueId('conduit');
 	            }
 	        } else {
 	            // Add the null/undefined value regardless
@@ -625,7 +642,7 @@
 	    _.each(context._projections, function(projection) {
 	        context._projectedData = projection(context._data);
 	    });
-	    _rebuildByIdAndDataIndexes();
+	    _rebuildIdsAndIndexes();
 
 	    managedContext.debug('Added ' + data.length + ' items.  Total length: ' + context._data.length);
 	}
