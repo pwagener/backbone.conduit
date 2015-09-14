@@ -79,7 +79,51 @@ describe('The data/fetch module', function() {
         it('clears out data when "options.reset" is true');
 
         it('does not clear out data when "options.reset" is false');
+    });
 
+    describe('when requesting data with a transform', function() {
+        var promise, requests, responseData;
 
+        beforeEach(function() {
+            var requestOpts = {
+                url: '/foo',
+                XMLHttpRequest: this.FakeXMLHttpRequest,
+                postFetchTransform: {
+                    method: 'addAllProperties'
+                }
+            };
+            requests = [];
+            load.onRequestCreate(function(request) {
+                requests.push(request);
+            });
+            responseData = this.getSampleData();
+
+            mockConduitWorker.reset();
+            var context = mockConduitWorker.bindModule(load);
+            dataUtils.initStore({ reset: true });
+
+            // TODO:  this should be mocked out in a better way
+            context.handlers['addAllProperties'] = function(rawData) {
+                return _.map(rawData, function(item) {
+                    item.sum = item.first + item.second;
+                    return item;
+                });
+            };
+
+            promise = context.load(requestOpts);
+        });
+
+        it('applies the transform', function() {
+            requests[0].respond(200, responseHeaders, JSON.stringify(responseData));
+
+            promise.then(function() {
+                var data = dataUtils.getData();
+                expect(data).to.have.length(responseData.length);
+
+                expect(data[0]).to.have.property('sum', 2);
+                expect(data[1]).to.have.property('sum', 1);
+                expect(data[2]).to.have.property('sum', 3);
+            });
+        });
     });
 });

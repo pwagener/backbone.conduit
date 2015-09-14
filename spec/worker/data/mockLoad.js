@@ -1,7 +1,9 @@
 'use strict';
 
 // This module provides a mock implementation of the 'load' module
-// that can be used in testing.
+// that can be used in testing w/o using a XHR.
+// TODO:  this needs to die  Not a good testing technique;
+
 var when = require('when');
 
 module.exports = {

@@ -70,23 +70,23 @@ var TimingEventCollection = Backbone.Collection.extend({
     },
 
     startEvent: function(eventName, eventData) {
+        var eventId = _.uniqueId('e');
         var event = _.extend({
             name: eventName,
-            start: now()
+            start: now(),
+            eventId: eventId
         }, eventData);
 
-        event = this.add(event);
-        event.set('cid', event.cid);
-
-        return event.cid;
+        this.add(event);
+        return eventId;
     },
 
-    endEvent: function(eventCid) {
+    endEvent: function(eventId) {
         var end = now();
 
-        var event = this.findWhere({ cid: eventCid });
+        var event = this.findWhere({ eventId: eventId });
         if (!event) {
-            throw new Error('Could not find event: ' + eventCid);
+            throw new Error('Could not find event: ' + eventId);
         }
 
         var start = event.get('start');

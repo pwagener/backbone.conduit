@@ -9,6 +9,13 @@ var SparseCollection = window.SparseCollection = window.BasicCollection.extend({
     // describe each event; not necessary for any non-demo application
     asyncDataEvents: [ 'fetch', 'parse', 'create', 'filter', 'sort' ],
 
+    // Provide specific functions to the Conduit Worker for our filtering
+    // and sorting capabilities.  This includes the implementations of "evaluateByDateAndName"
+    // and "filterToMostRecent".
+    conduitComponents: [
+        '/exampleComponent.js'
+    ],
+
     /**
      * This specifies the name of the method used in sorting.
      * Where is that implemented?  See 'exampleComponent.js'.
@@ -66,12 +73,6 @@ var SparseCollection = window.SparseCollection = window.BasicCollection.extend({
         return Backbone.Conduit.config.enableWorker({
             // ... The absolute path to look for the worker file
             paths: '/lib',
-
-            // ... Extended Conduit Worker functionality for our special filtering
-            // and sorting capabilities
-            components: [
-                '/exampleComponent.js'
-            ],
 
             // Show debugging messages for both the main & worker threads
             debug: true,

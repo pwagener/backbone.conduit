@@ -4,7 +4,6 @@ var _ = require('underscore');
 var Backbone = require('backbone');
 var when = require('when');
 
-var mockServer = require('./mockServer');
 var InThreadBoss = require('./InThreadBoss');
 
 var mockConduitWorker = require('./worker/mockConduitWorker');
@@ -39,7 +38,11 @@ describe("The sparseData module", function() {
 
     beforeEach(function() {
         Collection = Backbone.Collection.extend({
-            url: '/foo'
+            url: '/foo',
+
+            postFetchTransform: {
+                method: 'calculateDifference'
+            }
         });
 
         Collection = sparseData.mixin(Collection);
@@ -74,6 +77,10 @@ describe("The sparseData module", function() {
 
         it('provides the "fill" method', function () {
             expect(collection.fill).to.be.a('function');
+        });
+
+        it('provided no extra Components to the Boss', function() {
+
         });
 
         it('throws an Error on prohibited methods', function () {
@@ -184,16 +191,12 @@ describe("The sparseData module", function() {
     // The sparseData module modifies the 'haul' process at a specific point to direct
     // all the hard work to the worker.
     describe('when hauling data', function() {
-        var collection, fillSpy, refillSpy, testBoss;
+        var collection, fillSpy, refillSpy, testBoss, makePromiseSpy;
 
         beforeEach(function() {
-            var data = this.getSampleData();
             collection = new Collection();
             collection._boss = testBoss = makeInThreadBoss();
-            mockServer.add({
-                url: '/foo',
-                data: data
-            });
+            makePromiseSpy = this.sinon.spy(testBoss, 'makePromise');
 
             fillSpy = this.sinon.spy(collection, 'fill');
             refillSpy = this.sinon.spy(collection, 'refill');
@@ -205,6 +208,17 @@ describe("The sparseData module", function() {
                     expect(collection).to.have.length(3);
                     done();
                 }
+            });
+        });
+
+        it('provides the postFetchTransform option', function(done) {
+            collection.haul().then(function() {
+                expect(makePromiseSpy.callCount).to.equal(1);
+                var args = makePromiseSpy.getCall(0).args;
+                var loadArgs = args[0].arguments[0];
+                expect(loadArgs).to.have.property('postFetchTransform');
+                expect(loadArgs.postFetchTransform).to.eql({ method: 'calculateDifference' });
+                done();
             });
         });
     });
@@ -323,13 +337,16 @@ describe("The sparseData module", function() {
     });
 
     describe('after preparing its collection', function() {
-        var collection;
+        var collection, preparedSpy;
 
         beforeEach(function(done) {
             // We mock out an in-thread-like boss
             collection = new Collection();
             collection._boss = makeInThreadBoss();
             collection.refill(this.getSampleData());
+
+            preparedSpy = this.sinon.spy();
+            collection.on('prepared', preparedSpy);
 
             // Then prepare some subset of that data
             collection.prepare({
@@ -343,6 +360,10 @@ describe("The sparseData module", function() {
 
         it('has the correct length', function() {
             expect(collection).to.have.length(3);
+        });
+
+        it('fired the "prepared" event', function() {
+            expect(preparedSpy.callCount).to.equal(1);
         });
 
         it('can use "get" on prepared models', function() {
