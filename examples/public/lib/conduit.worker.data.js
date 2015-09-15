@@ -62,7 +62,9 @@
 	            __webpack_require__(4),
 	            __webpack_require__(5),
 	            __webpack_require__(6),
-	            __webpack_require__(7)
+	            __webpack_require__(7),
+	            __webpack_require__(8),
+	            __webpack_require__(9)
 	        ]
 	    });
 	}
@@ -77,9 +79,9 @@
 	/**
 	 * This worker method handler stores data on the worker.
 	 */
-	var _ = __webpack_require__(10);
+	var _ = __webpack_require__(12);
 
-	var dataUtils = __webpack_require__(8);
+	var dataUtils = __webpack_require__(10);
 
 	module.exports = {
 	    name: 'setData',
@@ -110,9 +112,9 @@
 	 * Module used to merge existing data sets on the worker
 	 */
 
-	var _ = __webpack_require__(10);
+	var _ = __webpack_require__(12);
 
-	var dataUtils = __webpack_require__(8);
+	var dataUtils = __webpack_require__(10);
 
 	module.exports = {
 
@@ -143,9 +145,9 @@
 	 * This worker method handler returns data from the worker.
 	 */
 
-	var _ = __webpack_require__(10);
+	var _ = __webpack_require__(12);
 
-	var dataUtils = __webpack_require__(8);
+	var dataUtils = __webpack_require__(10);
 
 	module.exports = {
 
@@ -189,8 +191,8 @@
 	/**
 	 * This module provides sorting for the worker
 	 */
-	var _ = __webpack_require__(10);
-	var dataUtils = __webpack_require__(8);
+	var _ = __webpack_require__(12);
+	var dataUtils = __webpack_require__(10);
 
 	module.exports = {
 	    name: 'sortBy',
@@ -232,8 +234,8 @@
 	/**
 	 * This module provides filtering for the worker.
 	 */
-	var _ = __webpack_require__(10);
-	var dataUtils = __webpack_require__(8);
+	var _ = __webpack_require__(12);
+	var dataUtils = __webpack_require__(10);
 
 	module.exports = {
 	    name: 'filter',
@@ -278,11 +280,79 @@
 
 	'use strict';
 
+
+	var _ = __webpack_require__(12);
+	var dataUtils = __webpack_require__(10);
+
+	module.exports = {
+	    name: 'map',
+	    bindToWorker: true,
+
+	    method: function(mapFunc) {
+	        if (_.isString(mapFunc)) {
+	            var mapper = ConduitWorker.handlers[mapFunc];
+
+	            if (!_.isFunction(mapper)) {
+	                throw new Error('No registered handler found to map with "' + mapFunc + '"');
+	            }
+
+	            var mapContext = {};
+	            var mapFunction = function(toMap) {
+	                return _.map(toMap, mapper, mapContext);
+	            };
+
+	            dataUtils.applyProjection(mapFunction);
+	        } else {
+	            throw new Error('Map requires the name of the function to use');
+	        }
+	    }
+	};
+
+/***/ },
+/* 7 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	/**
+	 * This worker module provides a 'reduce(...)' method.
+	 */
+	var _ = __webpack_require__(12);
+	var dataUtils = __webpack_require__(10);
+
+	module.exports = {
+
+	    name: 'reduce',
+
+	    method: function(reduceSpec) {
+	        if (reduceSpec && _.isString(reduceSpec.reducer)) {
+	            var reducer = ConduitWorker.handlers[reduceSpec.reducer];
+	            if (!_.isFunction(reducer)) {
+	                throw new Error('No registered handler found called "' + reduceSpec.reducer + '" to use in "reduce(...)');
+	            }
+
+	            var initialValue = reduceSpec.memo;
+	            var reduceContext = {};
+	            var data = dataUtils.getData();
+
+	            return _.reduce(data, reducer, initialValue, reduceContext);
+	        } else {
+	            throw new Error('Reduce requires an argument with a "reducer" property naming the iterating function');
+	        }
+	    }
+	};
+
+/***/ },
+/* 8 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
 	/**
 	 * This method simply resets the worker's projection back to the original data.
 	 */
 
-	var dataUtils = __webpack_require__(8);
+	var dataUtils = __webpack_require__(10);
 
 	module.exports = {
 	    name: 'resetProjection',
@@ -294,14 +364,14 @@
 	};
 
 /***/ },
-/* 7 */
+/* 9 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {'use strict';
 
-	var _ = __webpack_require__(10);
-	var when = __webpack_require__(11);
-	var dataUtils = __webpack_require__(8);
+	var _ = __webpack_require__(12);
+	var when = __webpack_require__(13);
+	var dataUtils = __webpack_require__(10);
 
 	// NOTE:  the XHR code here could/should live in a utility to be shared with other
 	// methods for sending POST/PUT/DELETE requests.
@@ -433,7 +503,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
-/* 8 */
+/* 10 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -446,8 +516,8 @@
 	 * that allow us to not constantly iterate over the whole set.
 	 */
 
-	var _ = __webpack_require__(10);
-	var managedContext = __webpack_require__(9);
+	var _ = __webpack_require__(12);
+	var managedContext = __webpack_require__(11);
 
 	function _getContext(skipInit) {
 	    if (!ConduitWorker._data && !skipInit) {
@@ -663,7 +733,7 @@
 	};
 
 /***/ },
-/* 9 */
+/* 11 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {'use strict';
@@ -675,9 +745,9 @@
 	 * to communicate with the main thread.
 	 */
 
-	var _ = __webpack_require__(10);
-	var util = __webpack_require__(26);
-	var when = __webpack_require__(11);
+	var _ = __webpack_require__(12);
+	var util = __webpack_require__(28);
+	var when = __webpack_require__(13);
 
 	var managedContext;
 
@@ -852,8 +922,8 @@
 	    conduitWorker.registerComponent({
 	        name: 'core',
 	        methods: [
-	            __webpack_require__(12),
-	            __webpack_require__(13)
+	            __webpack_require__(14),
+	            __webpack_require__(15)
 	        ]
 	    });
 	}
@@ -885,7 +955,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
-/* 10 */
+/* 12 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;//     Underscore.js 1.8.3
@@ -2439,7 +2509,7 @@
 
 
 /***/ },
-/* 11 */
+/* 13 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -2453,24 +2523,24 @@
 	(function(define) { 'use strict';
 	!(__WEBPACK_AMD_DEFINE_RESULT__ = function (require) {
 
-		var timed = __webpack_require__(17);
-		var array = __webpack_require__(18);
-		var flow = __webpack_require__(19);
-		var fold = __webpack_require__(20);
-		var inspect = __webpack_require__(21);
-		var generate = __webpack_require__(22);
-		var progress = __webpack_require__(23);
-		var withThis = __webpack_require__(24);
-		var unhandledRejection = __webpack_require__(25);
-		var TimeoutError = __webpack_require__(14);
+		var timed = __webpack_require__(19);
+		var array = __webpack_require__(20);
+		var flow = __webpack_require__(21);
+		var fold = __webpack_require__(22);
+		var inspect = __webpack_require__(23);
+		var generate = __webpack_require__(24);
+		var progress = __webpack_require__(25);
+		var withThis = __webpack_require__(26);
+		var unhandledRejection = __webpack_require__(27);
+		var TimeoutError = __webpack_require__(16);
 
 		var Promise = [array, flow, fold, generate, progress,
 			inspect, withThis, timed, unhandledRejection]
 			.reduce(function(Promise, feature) {
 				return feature(Promise);
-			}, __webpack_require__(15));
+			}, __webpack_require__(17));
 
-		var apply = __webpack_require__(16)(Promise);
+		var apply = __webpack_require__(18)(Promise);
 
 		// Public API
 
@@ -2669,11 +2739,11 @@
 
 		return when;
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	})(__webpack_require__(27));
+	})(__webpack_require__(29));
 
 
 /***/ },
-/* 12 */
+/* 14 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -2692,7 +2762,7 @@
 	};
 
 /***/ },
-/* 13 */
+/* 15 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -2700,8 +2770,8 @@
 	/**
 	 * This module allows you to pass a configuration into the worker's context
 	 */
-	var managedContext = __webpack_require__(9);
-	var util = __webpack_require__(26);
+	var managedContext = __webpack_require__(11);
+	var util = __webpack_require__(28);
 
 	module.exports = {
 	    name: 'configure',
@@ -2712,7 +2782,7 @@
 	};
 
 /***/ },
-/* 14 */
+/* 16 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -2741,10 +2811,10 @@
 
 		return TimeoutError;
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(27)));
+	}(__webpack_require__(29)));
 
 /***/ },
-/* 15 */
+/* 17 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -2754,20 +2824,20 @@
 	(function(define) { 'use strict';
 	!(__WEBPACK_AMD_DEFINE_RESULT__ = function (require) {
 
-		var makePromise = __webpack_require__(28);
-		var Scheduler = __webpack_require__(29);
-		var async = __webpack_require__(30).asap;
+		var makePromise = __webpack_require__(30);
+		var Scheduler = __webpack_require__(31);
+		var async = __webpack_require__(32).asap;
 
 		return makePromise({
 			scheduler: new Scheduler(async)
 		});
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	})(__webpack_require__(27));
+	})(__webpack_require__(29));
 
 
 /***/ },
-/* 16 */
+/* 18 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -2822,13 +2892,13 @@
 		}
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(27)));
+	}(__webpack_require__(29)));
 
 
 
 
 /***/ },
-/* 17 */
+/* 19 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -2838,8 +2908,8 @@
 	(function(define) { 'use strict';
 	!(__WEBPACK_AMD_DEFINE_RESULT__ = function(require) {
 
-		var env = __webpack_require__(30);
-		var TimeoutError = __webpack_require__(14);
+		var env = __webpack_require__(32);
+		var TimeoutError = __webpack_require__(16);
 
 		function setTimeout(f, ms, x, y) {
 			return env.setTimer(function() {
@@ -2908,11 +2978,11 @@
 		};
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(27)));
+	}(__webpack_require__(29)));
 
 
 /***/ },
-/* 18 */
+/* 20 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -2922,8 +2992,8 @@
 	(function(define) { 'use strict';
 	!(__WEBPACK_AMD_DEFINE_RESULT__ = function(require) {
 
-		var state = __webpack_require__(31);
-		var applier = __webpack_require__(16);
+		var state = __webpack_require__(33);
+		var applier = __webpack_require__(18);
 
 		return function array(Promise) {
 
@@ -3203,11 +3273,11 @@
 		};
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(27)));
+	}(__webpack_require__(29)));
 
 
 /***/ },
-/* 19 */
+/* 21 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -3369,11 +3439,11 @@
 		}
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(27)));
+	}(__webpack_require__(29)));
 
 
 /***/ },
-/* 20 */
+/* 22 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -3402,11 +3472,11 @@
 		};
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(27)));
+	}(__webpack_require__(29)));
 
 
 /***/ },
-/* 21 */
+/* 23 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -3416,7 +3486,7 @@
 	(function(define) { 'use strict';
 	!(__WEBPACK_AMD_DEFINE_RESULT__ = function(require) {
 
-		var inspect = __webpack_require__(31).inspect;
+		var inspect = __webpack_require__(33).inspect;
 
 		return function inspection(Promise) {
 
@@ -3428,11 +3498,11 @@
 		};
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(27)));
+	}(__webpack_require__(29)));
 
 
 /***/ },
-/* 22 */
+/* 24 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -3499,11 +3569,11 @@
 		};
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(27)));
+	}(__webpack_require__(29)));
 
 
 /***/ },
-/* 23 */
+/* 25 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -3529,11 +3599,11 @@
 		};
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(27)));
+	}(__webpack_require__(29)));
 
 
 /***/ },
-/* 24 */
+/* 26 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -3572,12 +3642,12 @@
 		};
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(27)));
+	}(__webpack_require__(29)));
 
 
 
 /***/ },
-/* 25 */
+/* 27 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -3587,8 +3657,8 @@
 	(function(define) { 'use strict';
 	!(__WEBPACK_AMD_DEFINE_RESULT__ = function(require) {
 
-		var setTimer = __webpack_require__(30).setTimer;
-		var format = __webpack_require__(32);
+		var setTimer = __webpack_require__(32).setTimer;
+		var format = __webpack_require__(34);
 
 		return function unhandledRejection(Promise) {
 
@@ -3665,11 +3735,11 @@
 		function noop() {}
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(27)));
+	}(__webpack_require__(29)));
 
 
 /***/ },
-/* 26 */
+/* 28 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global, process) {// Copyright Joyent, Inc. and other Node contributors.
@@ -4197,7 +4267,7 @@
 	}
 	exports.isPrimitive = isPrimitive;
 
-	exports.isBuffer = __webpack_require__(34);
+	exports.isBuffer = __webpack_require__(36);
 
 	function objectToString(o) {
 	  return Object.prototype.toString.call(o);
@@ -4241,7 +4311,7 @@
 	 *     prototype.
 	 * @param {function} superCtor Constructor function to inherit prototype from.
 	 */
-	exports.inherits = __webpack_require__(36);
+	exports.inherits = __webpack_require__(38);
 
 	exports._extend = function(origin, add) {
 	  // Don't do anything if add isn't an object
@@ -4259,17 +4329,17 @@
 	  return Object.prototype.hasOwnProperty.call(obj, prop);
 	}
 	
-	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(35)))
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(37)))
 
 /***/ },
-/* 27 */
+/* 29 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = function() { throw new Error("define cannot be used indirect"); };
 
 
 /***/ },
-/* 28 */
+/* 30 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/* WEBPACK VAR INJECTION */(function(process) {/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -5198,12 +5268,12 @@
 			return Promise;
 		};
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(27)));
+	}(__webpack_require__(29)));
 	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(35)))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(37)))
 
 /***/ },
-/* 29 */
+/* 31 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -5285,11 +5355,11 @@
 		return Scheduler;
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(27)));
+	}(__webpack_require__(29)));
 
 
 /***/ },
-/* 30 */
+/* 32 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;var require;/* WEBPACK VAR INJECTION */(function(process) {/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -5323,7 +5393,7 @@
 
 		} else if (!capturedSetTimeout) { // vert.x
 			var vertxRequire = require;
-			var vertx = __webpack_require__(33);
+			var vertx = __webpack_require__(35);
 			setTimer = function (f, ms) { return vertx.setTimer(ms, f); };
 			clearTimer = vertx.cancelTimer;
 			asap = vertx.runOnLoop || vertx.runOnContext;
@@ -5364,12 +5434,12 @@
 			};
 		}
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(27)));
+	}(__webpack_require__(29)));
 	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(35)))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(37)))
 
 /***/ },
-/* 31 */
+/* 33 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -5406,11 +5476,11 @@
 		}
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(27)));
+	}(__webpack_require__(29)));
 
 
 /***/ },
-/* 32 */
+/* 34 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -5468,17 +5538,17 @@
 		}
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(27)));
+	}(__webpack_require__(29)));
 
 
 /***/ },
-/* 33 */
+/* 35 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* (ignored) */
 
 /***/ },
-/* 34 */
+/* 36 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = function isBuffer(arg) {
@@ -5489,7 +5559,7 @@
 	}
 
 /***/ },
-/* 35 */
+/* 37 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// shim for using process in browser
@@ -5553,7 +5623,7 @@
 
 
 /***/ },
-/* 36 */
+/* 38 */
 /***/ function(module, exports, __webpack_require__) {
 
 	if (typeof Object.create === 'function') {

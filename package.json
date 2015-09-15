@@ -1,7 +1,7 @@
 {
   "name": "backbone.conduit",
   "description": "Moving data through backbone",
-  "version": "0.6.8",
+  "version": "0.6.9",
   "scripts": {
     "test": "gulp test",
     "perf": "gulp perf",
