@@ -557,11 +557,13 @@
 	    var idKey = context._idKey;
 	    var index = 0;
 	    _.each(data, function(item) {
-	        var id = item[idKey];
-	        if (id !== void 0) {
-	            byId[id] = item;
+	        if (item !== null && item !== undefined) {
+	            var id = item[idKey];
+	            if (id !== void 0) {
+	                byId[id] = item;
+	            }
+	            item._dataIndex = index;
 	        }
-	        item._dataIndex = index;
 	        index++;
 	    });
 	}
@@ -592,25 +594,30 @@
 	    var byId = context._byId;
 	    var idKey = context._idKey;
 	    _.each(data, function(item) {
-	        var id = item[idKey];
-	        var existing;
-	        if (id !== void 0) {
-	            existing = byId[id];
-	        }
-	        if (existing) {
-	            // Must merge item properties
-	            var keys = _.keys(item);
-	            _.each(keys, function(key) {
-	                existing[key] = item[key];
-	            });
-	        } else {
-	            // Brand new element or overwriting
-	            if (id) {
-	                byId[id] = item;
+	        if (item !== null && item !== undefined) {
+	            var id = item[idKey];
+	            var existing;
+	            if (id !== void 0) {
+	                existing = byId[id];
 	            }
+	            if (existing) {
+	                // Must merge item properties
+	                var keys = _.keys(item);
+	                _.each(keys, function(key) {
+	                    existing[key] = item[key];
+	                });
+	            } else {
+	                // Brand new element or overwriting
+	                if (id) {
+	                    byId[id] = item;
+	                }
 
-	            // Add the index where the data exists
-	            item._dataIndex = context._data.push(item) - 1;
+	                // Add the index where the data exists
+	                item._dataIndex = context._data.push(item) - 1;
+	            }
+	        } else {
+	            // Add the null/undefined value regardless
+	            context._data.push(item);
 	        }
 	    });
 

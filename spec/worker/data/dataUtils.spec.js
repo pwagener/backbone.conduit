@@ -75,6 +75,15 @@ describe('The worker/dataUtils module', function() {
             expect(data[3]).have.property('name', 'ten');
         });
 
+        it('can add null to existing', function() {
+            dataUtils.addTo([
+                null
+            ]);
+
+            expect(data).to.have.length(4);
+            expect(data[3]).to.equal(null);
+        });
+
         it('can merge data with existing', function() {
             dataUtils.addTo([
                 { id: 3, name: "THREE" }
