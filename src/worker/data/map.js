@@ -12,7 +12,7 @@ module.exports = {
         if (_.isString(mapFunc)) {
             var mapper = ConduitWorker.handlers[mapFunc];
 
-            if (!_.isFunction(mapper)) {
+            if (_.isUndefined(mapper)) {
                 throw new Error('No registered handler found to map with "' + mapFunc + '"');
             }
 

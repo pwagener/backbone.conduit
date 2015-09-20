@@ -21,7 +21,7 @@ module.exports = {
             // Find the evaluator from the registered components
             var evaluator = ConduitWorker.handlers[filterSpec.evaluator];
 
-            if (!_.isFunction(evaluator)) {
+            if (_.isUndefined(evaluator)) {
                 throw new Error('No registered handler found for "' + filterSpec + '"');
             }
 

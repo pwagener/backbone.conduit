@@ -13,7 +13,7 @@ module.exports = {
     method: function(reduceSpec) {
         if (reduceSpec && _.isString(reduceSpec.reducer)) {
             var reducer = ConduitWorker.handlers[reduceSpec.reducer];
-            if (!_.isFunction(reducer)) {
+            if (_.isUndefined(reducer)) {
                 throw new Error('No registered handler found called "' + reduceSpec.reducer + '" to use in "reduce(...)');
             }
 

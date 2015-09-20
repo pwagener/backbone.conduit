@@ -122,8 +122,8 @@
 	            method = handler.method;
 	        }
 
-	        if (!_.isFunction(method)) {
-	            throw new Error('Handler "' + name + '" did not provide a "method" function');
+	        if (_.isUndefined(method)) {
+	            throw new Error('Handler "' + name + '" did not provide a "method"');
 	        }
 
 	        handlers[handler.name] = method;

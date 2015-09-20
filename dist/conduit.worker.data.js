@@ -256,7 +256,7 @@
 	            // Find the evaluator from the registered components
 	            var evaluator = ConduitWorker.handlers[filterSpec.evaluator];
 
-	            if (!_.isFunction(evaluator)) {
+	            if (_.isUndefined(evaluator)) {
 	                throw new Error('No registered handler found for "' + filterSpec + '"');
 	            }
 
@@ -296,7 +296,7 @@
 	        if (_.isString(mapFunc)) {
 	            var mapper = ConduitWorker.handlers[mapFunc];
 
-	            if (!_.isFunction(mapper)) {
+	            if (_.isUndefined(mapper)) {
 	                throw new Error('No registered handler found to map with "' + mapFunc + '"');
 	            }
 
@@ -331,7 +331,7 @@
 	    method: function(reduceSpec) {
 	        if (reduceSpec && _.isString(reduceSpec.reducer)) {
 	            var reducer = ConduitWorker.handlers[reduceSpec.reducer];
-	            if (!_.isFunction(reducer)) {
+	            if (_.isUndefined(reducer)) {
 	                throw new Error('No registered handler found called "' + reduceSpec.reducer + '" to use in "reduce(...)');
 	            }
 
@@ -970,8 +970,8 @@
 	            method = handler.method;
 	        }
 
-	        if (!_.isFunction(method)) {
-	            throw new Error('Handler "' + name + '" did not provide a "method" function');
+	        if (_.isUndefined(method)) {
+	            throw new Error('Handler "' + name + '" did not provide a "method"');
 	        }
 
 	        handlers[handler.name] = method;
