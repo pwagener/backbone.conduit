@@ -41,9 +41,19 @@ function getData() {
     return context._projectedData;
 }
 
-function _rebuildIdsAndIndexes() {
-    var data = getData();
+function getIdKey() {
     var context = _getContext();
+    return context._idKey;
+}
+
+function _reapplyAllProjections(context) {
+    _.each(context._projections, function(projection) {
+        context._projectedData = projection(context._data);
+    });
+}
+
+function _rebuildIdsAndIndexes(context) {
+    var data = getData();
 
     var byId = context._byId = {};
     var idKey = context._idKey;
@@ -69,7 +79,7 @@ function applyProjection(toApply) {
     var context = _getContext();
 
     context._projectedData = toApply(getData());
-    _rebuildIdsAndIndexes();
+    _rebuildIdsAndIndexes(context);
 
     context._projections.push(toApply);
 }
@@ -129,12 +139,23 @@ function addTo(data, options) {
     });
 
     // If we had any projections applied, we must re-apply them in-order, then re-index all the data.
-    _.each(context._projections, function(projection) {
-        context._projectedData = projection(context._data);
-    });
-    _rebuildIdsAndIndexes();
+    _reapplyAllProjections(context);
+    _rebuildIdsAndIndexes(context);
 
     managedContext.debug('Added ' + data.length + ' items.  Total length: ' + context._data.length);
+}
+
+function removeById(id) {
+    var context = _getContext();
+
+    var item = context._byId[id];
+    if (item) {
+        var index = context._data.indexOf(item);
+        context._data.splice(index, 1);
+
+        _reapplyAllProjections(context);
+        _rebuildIdsAndIndexes(context);
+    }
 }
 
 function findById(id) {
@@ -215,6 +236,11 @@ module.exports = {
     getData: getData,
 
     /**
+     * Retrieve the in-use ID key for this data set
+     */
+    getIdKey: getIdKey,
+
+    /**
      * Apply a given function to the data.
      * @param toApply The function that will receive the full data set, and should return the projected data
      * set.
@@ -232,6 +258,11 @@ module.exports = {
      * in-order after the addition.
      */
     addTo: addTo,
+
+    /**
+     * Remove data from the existing data set that matches the given ID.
+     */
+    removeById: removeById,
 
     findById: findById,
 

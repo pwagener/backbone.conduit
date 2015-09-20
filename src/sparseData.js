@@ -259,15 +259,15 @@ function haul(options) {
 
     var url = _.result(this, 'url');
     var postFetchTransform = _.result(this, 'postFetchTransform');
-    var loadOptions = _.extend({
+    var getOptions = _.extend({
         url: url,
         postFetchTransform: postFetchTransform
     }, options);
 
     var self = this;
     return this._boss.makePromise({
-        method: 'load',
-        arguments: [ loadOptions ]
+        method: 'restGet',
+        arguments: [ getOptions ]
     }).then(function(length) {
         self.length = length;
         if (options.success) {

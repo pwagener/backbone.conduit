@@ -21,7 +21,7 @@ function makeInThreadBoss() {
         require('./../src/worker/data/mergeData'),
         require('./../src/worker/data/sortBy'),
         require('./../src/worker/data/filter'),
-        require('./worker/data/mockLoad'),
+        require('./worker/data/mockRestGet'),
         require('./../src/worker/data/map'),
         require('./../src/worker/data/reduce')
     ]);
@@ -169,25 +169,25 @@ describe("The sparseData module", function() {
             expect(callArgs[0]).to.have.property('method', 'mergeData');
         });
 
-        it('calls "load" when running "haul"', function(done) {
+        it('calls "restGet" when running "haul"', function(done) {
             collection.haul().then(function() {
                 expect(bossPromiseSpy.called).to.be.true;
                 var callArgs = bossPromiseSpy.args[0];
-                expect(callArgs[0]).to.have.property('method', 'load');
-                var loadArgs = callArgs[0].arguments[0];
-                expect(loadArgs).to.not.have.property('reset');
+                expect(callArgs[0]).to.have.property('method', 'restGet');
+                var getArgs = callArgs[0].arguments[0];
+                expect(getArgs).to.not.have.property('reset');
 
                 done();
             });
         });
 
-        it('calls "load" when running "haul" with reset', function(done) {
+        it('calls "restGet" when running "haul" with reset', function(done) {
             collection.haul({ reset: true }).then(function() {
                 expect(bossPromiseSpy.called).to.be.true;
                 var callArgs = bossPromiseSpy.args[0];
-                expect(callArgs[0]).to.have.property('method', 'load');
-                var loadArgs = callArgs[0].arguments[0];
-                expect(loadArgs).to.have.property('reset', true);
+                expect(callArgs[0]).to.have.property('method', 'restGet');
+                var getArgs = callArgs[0].arguments[0];
+                expect(getArgs).to.have.property('reset', true);
 
                 done();
             });
@@ -388,13 +388,13 @@ describe("The sparseData module", function() {
             expect(preparedSpy.callCount).to.equal(1);
         });
 
-        it('can use "get" on prepared models', function() {
+        it('can use "restGet" on prepared models', function() {
             var oneModel = collection.get(1);
             expect(oneModel).to.be.instanceOf(Backbone.Model);
             expect(oneModel.toJSON()).to.have.property('name', 'one');
         });
 
-        it('cannot use "get" on  unprepared models', function() {
+        it('cannot use "restGet" on  unprepared models', function() {
             var boundMethod = _.bind(collection.get, collection, 2);
             expect(boundMethod).to.throw(Error);
         });

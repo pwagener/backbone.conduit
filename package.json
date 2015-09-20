@@ -48,6 +48,7 @@
     "karma-mocha": "^0.1.9",
     "karma-mocha-reporter": "^0.3.1",
     "mocha": "^1.21.4",
+    "nanoajax": "^0.3.1",
     "sinon": "^1.15.4",
     "sinon-chai": "^2.5.0",
     "text-encoding": "^0.5.2",
