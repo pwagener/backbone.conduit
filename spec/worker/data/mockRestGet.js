@@ -9,10 +9,14 @@ module.exports = {
 
     method: function(options) {
         // TODO:  move this fixture data to its own file
-        return when.resolve([
+        var responseData = [
             {id: 2, name: "two", first: 0, second: 2},
             {id: 1, name: "one", first: 1, second: 0},
             {id: 3, name: "three", first: 1, second: 2}
-        ].length);
+        ];
+        return when.resolve({
+            length: responseData.length,
+            context: undefined
+        });
     }
 };

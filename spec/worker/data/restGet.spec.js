@@ -140,23 +140,61 @@ describe('The rest/get module', function() {
                     return item;
                 });
             };
+        });
 
-            promise = testUtil.context.restGet({
+        it('applies the transform method', function(done) {
+            testUtil.context.restGet({
                 url: '/foo',
                 postFetchTransform: {
                     method: 'calculateSums'
                 }
-            });
-        });
-
-        it('applies the transform', function() {
-            promise.then(function() {
+            }).then(function() {
                 var data = dataUtils.getData();
                 expect(data).to.have.length(3);
 
                 expect(data[0]).to.have.property('sum', 2);
                 expect(data[1]).to.have.property('sum', 1);
                 expect(data[2]).to.have.property('sum', 3);
+                done();
+            });
+
+            testUtil.respond();
+        });
+
+        it('resolves the transform with the resulting context', function(done) {
+            testUtil.context.restGet({
+                url: '/foo',
+                postFetchTransform: {
+                    method: 'calculateSums',
+                    context: { foo: 'bar' }
+                }
+            }).then(function(result) {
+                expect(result).to.have.property('context');
+                expect(result.context).to.have.property('foo', 'bar');
+                done();
+            });
+
+            testUtil.respond();
+        });
+
+        it('extracts data via "useAsData"', function(done) {
+            testUtil = restTestUtil.setup({
+                moduleToBind: getModule,
+                dataToRespond: {
+                    theData: this.getSampleData()
+                }
+            });
+
+            testUtil.context.restGet({
+                url: '/foo',
+                postFetchTransform: { useAsData: 'theData' }
+            }).then(function(result) {
+                expect(result).to.not.have.property('context');
+
+                var data = dataUtils.getData();
+                expect(data).to.have.length(3);
+
+                done();
             });
 
             testUtil.respond();

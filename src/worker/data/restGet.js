@@ -29,12 +29,14 @@ module.exports = {
                     reject(error);
                 } else {
                     // Apply any post-fetch transformations
+                    var context;
                     var transform = options.postFetchTransform;
                     if (transform) {
                         // Apply the requested transformation
                         if (transform.method) {
+                            context = transform.context || {};
                             var transformer = ConduitWorker.handlers[transform.method];
-                            data = transformer(data);
+                            data = transformer.call(context, data);
                         } else if (transform.useAsData) {
                             data = data[transform.useAsData];
                         }
@@ -45,7 +47,10 @@ module.exports = {
                     }
                     dataUtils.addTo(data);
 
-                    resolve(dataUtils.length());
+                    resolve({
+                        length: dataUtils.length(),
+                        context: context
+                    });
                 }
             });
         });

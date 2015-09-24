@@ -52,12 +52,37 @@ describe("The data/sortBy module", function() {
             });
 
             context.sortBy({
-                method: 'byId'
+                evaluator: 'byId'
             });
             var data = dataUtils.getData();
             var ids = _.pluck(data, 'id');
 
             expect(ids).to.eql([1, 2, 3]);
+        });
+
+        it('can accept & return a context', function() {
+            context.registerComponent({
+                name: 'testComponent',
+                methods:[{
+                    name: 'byIdWithCount',
+                    method: function(item) {
+                        if (_.isUndefined(this.sortCount)) {
+                            this.sortCount = 0;
+                        }
+                        this.sortCount++;
+
+                        return item.id;
+                    }
+                }]
+            });
+
+            var sortContext = {};
+            var result = context.sortBy({
+                evaluator: 'byIdWithCount',
+                context: sortContext
+            });
+
+            expect(result.context).to.have.property('sortCount', 3);
         });
 
     });

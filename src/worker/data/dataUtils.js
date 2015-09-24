@@ -47,26 +47,26 @@ function getIdKey() {
 }
 
 function _reapplyAllProjections(context) {
+    context._projectedData = context._data;
     _.each(context._projections, function(projection) {
-        context._projectedData = projection(context._data);
+        context._projectedData = projection(context._projectedData);
     });
 }
 
 function _rebuildIdsAndIndexes(context) {
     var data = getData();
 
-    var byId = context._byId = {};
-    var idKey = context._idKey;
+    context._byId = {};
     var index = 0;
     _.each(data, function(item) {
-        if (item !== null && item !== undefined) {
-            var id = item[idKey];
+        if (item !== void 0 && item !== null) {
+            var id = item[context._idKey];
             if (id !== void 0) {
-                byId[id] = item;
+                context._byId[id] = item;
             }
             item._dataIndex = index;
 
-            if (typeof item._conduitId === 'undefined') {
+            if (item._conduitId === void 0) {
                 // An item created in a 'map' projection needs a ConduitID
                 item._conduitId = _.uniqueId('conduit');
             }
@@ -77,17 +77,17 @@ function _rebuildIdsAndIndexes(context) {
 
 function applyProjection(toApply) {
     var context = _getContext();
+    context._projections.push(toApply);
 
     context._projectedData = toApply(getData());
     _rebuildIdsAndIndexes(context);
-
-    context._projections.push(toApply);
 }
 
 function resetProjection() {
     var context = _getContext();
     context._projectedData = context._data;
     context._projections = [];
+    _rebuildIdsAndIndexes(context);
 }
 
 function addTo(data, options) {
@@ -102,7 +102,7 @@ function addTo(data, options) {
     var byId = context._byId;
     var idKey = context._idKey;
     _.each(data, function(item) {
-        if (item !== null && item !== undefined) {
+        if (item !== null && item !== void 0) {
             var id = item[idKey];
             var existing;
             if (id !== void 0) {
@@ -111,25 +111,24 @@ function addTo(data, options) {
             if (existing) {
                 if (options.replace) {
                     // Replace item properties
-                    byId[id] = item;
                     var existingIndex = context._data.indexOf(existing);
+                    if (existingIndex !== void 0) {
+                        context._data[existingIndex] = item;
+                    }
+
+                    existingIndex = context._projectedData.indexOf(existing);
+                    if (existingIndex !== void 0) {
+                        context._projectedData[existingIndex] = item;
+                    }
+
                     item._conduitId = existing._conduitId;
-                    context._data[existingIndex] = item;
                 } else {
                     // Merge item properties
                     _.extend(existing, item);
                 }
             } else {
-                // Brand new element or overwriting
-                if (id) {
-                    byId[id] = item;
-                }
-
-                // Add a conduit ID for tracking this item on both sides of the wall
-                item._conduitId = _.uniqueId('conduit');
-
-                // Add the brand new element.  Note that '_dataIndex' will be
-                // calculated after the projections are applied
+                // Add the brand new element.  Note that '_dataIndex' and '_conduitId' will be
+                // calculated after projections are applied
                 context._data.push(item);
             }
         } else {
@@ -138,8 +137,10 @@ function addTo(data, options) {
         }
     });
 
-    // If we had any projections applied, we must re-apply them in-order, then re-index all the data.
+    // If we had any projections applied, we must re-apply them in order
     _reapplyAllProjections(context);
+
+    // We also rebuild the _byId map and recalculate the _dataIndex properties
     _rebuildIdsAndIndexes(context);
 
     managedContext.debug('Added ' + data.length + ' items.  Total length: ' + context._data.length);
@@ -149,12 +150,13 @@ function removeById(id) {
     var context = _getContext();
 
     var item = context._byId[id];
-    if (item) {
+    if (item !== void 0  && item !== null) {
         var index = context._data.indexOf(item);
-        context._data.splice(index, 1);
-
-        _reapplyAllProjections(context);
-        _rebuildIdsAndIndexes(context);
+        if (index >= 0) {
+            context._data.splice(index, 1);
+            _reapplyAllProjections(context);
+            _rebuildIdsAndIndexes(context);
+        }
     }
 }
 
@@ -232,6 +234,9 @@ module.exports = {
      * Get the current view of the data we are exposing.  If the data has not been
      * sorted/filtered/mapped, then this is the full, original data set.  Otherwise,
      * this is the version of the data that has gone through those projections.
+     *
+     * Note for performance reasons, this is a reference to the internally-stored array.
+     * You should not modify it directly.
      */
     getData: getData,
 

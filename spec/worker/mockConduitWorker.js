@@ -7,6 +7,7 @@ var managedContext = require('../../src/worker/managedContext');
 var _ = require('underscore');
 
 function _reset(global) {
+    delete global.ConduitWorker;
     managedContext.setAsGlobal(global);
 }
 

@@ -20,8 +20,8 @@
     "data"
   ],
   "dependencies": {
-    "backbone": "*",
-    "underscore": "*"
+    "backbone": "^1.2.3",
+    "underscore": "^1.8.3"
   },
   "devDependencies": {
     "backbone-lodash": "^1.1.0",

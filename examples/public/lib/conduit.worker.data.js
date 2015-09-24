@@ -202,23 +202,30 @@
 	    name: 'sortBy',
 	    bindToWorker: true,
 
-	    method: function(comparator) {
-	        var property = comparator.property;
-	        var direction = comparator.direction || 'asc';
+	    method: function(sortSpec) {
+	        var property = sortSpec.property;
+	        var direction = sortSpec.direction || 'asc';
 
 	        var evaluator;
 	        if (_.isString(property)) {
 	            evaluator = function (item) {
 	                return item[property];
 	            }
-	        } else if (_.isString(comparator.method)) {
-	            evaluator = ConduitWorker.handlers[comparator.method];
+	        } else if (_.isString(sortSpec.method) || _.isString(sortSpec.evaluator)) {
+	            // ToDeprecate in 0.7.X
+	            if (_.isString(sortSpec.method)) {
+	                console.log('Warning:  sortAsync sorting method specified as "method" will be removed in the next release.  Use "evaluator" instead.');
+	                sortSpec.evaluator = sortSpec.method;
+	            }
+
+	            evaluator = ConduitWorker.handlers[sortSpec.evaluator];
 	        } else {
 	            throw new Error('Provide a property name as "comparator" or a registered method as { method }');
 	        }
 
+	        var context = sortSpec.context || {};
 	        var projectionFunction = function(toSort) {
-	            var data = _.sortBy(toSort, evaluator);
+	            var data = _.sortBy(toSort, evaluator, context);
 	            if (direction === 'desc') {
 	                data = data.reverse();
 	            }
@@ -226,6 +233,9 @@
 	        };
 
 	        dataUtils.applyProjection(projectionFunction);
+	        return {
+	            context: context
+	        };
 	    }
 	};
 
@@ -260,7 +270,7 @@
 	                throw new Error('No registered handler found for "' + filterSpec + '"');
 	            }
 
-	            var filterContext = {};
+	            var filterContext = filterSpec.context || {};
 	            filterFunc = function(toFilter) {
 	                return _.filter(toFilter, evaluator, filterContext);
 	            }
@@ -274,7 +284,10 @@
 
 	        dataUtils.applyProjection(filterFunc);
 
-	        return dataUtils.length();
+	        return {
+	            context: filterContext,
+	            length: dataUtils.length()
+	        };
 	    }
 	};
 
@@ -292,22 +305,32 @@
 	    name: 'map',
 	    bindToWorker: true,
 
-	    method: function(mapFunc) {
-	        if (_.isString(mapFunc)) {
-	            var mapper = ConduitWorker.handlers[mapFunc];
+	    method: function(mapSpec) {
+	        // ToDeprecate in 0.7.X
+	        if (_.isString(mapSpec)) {
+	            console.log('Warning: providing the "mapAsync" method name as a string will be removed in the next version; use { mapper: "someMethod" }');
+	            mapSpec = { mapper: mapSpec };
+	        }
+
+	        var mapFuncName = mapSpec.mapper;
+	        if (_.isString(mapFuncName)) {
+	            var mapper = ConduitWorker.handlers[mapFuncName];
 
 	            if (_.isUndefined(mapper)) {
-	                throw new Error('No registered handler found to map with "' + mapFunc + '"');
+	                throw new Error('No registered handler found to map with "' + mapFuncName + '"');
 	            }
 
-	            var mapContext = {};
+	            var mapContext = mapSpec.context || {};
 	            var mapFunction = function(toMap) {
 	                return _.map(toMap, mapper, mapContext);
 	            };
 
 	            dataUtils.applyProjection(mapFunction);
+	            return {
+	                context: mapContext
+	            };
 	        } else {
-	            throw new Error('Map requires the name of the function to use');
+	            throw new Error('Map requires "mapper" as the name of the function to use');
 	        }
 	    }
 	};
@@ -402,12 +425,14 @@
 	                    reject(error);
 	                } else {
 	                    // Apply any post-fetch transformations
+	                    var context;
 	                    var transform = options.postFetchTransform;
 	                    if (transform) {
 	                        // Apply the requested transformation
 	                        if (transform.method) {
+	                            context = options.context || {};
 	                            var transformer = ConduitWorker.handlers[transform.method];
-	                            data = transformer(data);
+	                            data = transformer.call(context, data);
 	                        } else if (transform.useAsData) {
 	                            data = data[transform.useAsData];
 	                        }
@@ -418,7 +443,11 @@
 	                    }
 	                    dataUtils.addTo(data);
 
-	                    resolve(dataUtils.length());
+
+	                    resolve({
+	                        length: dataUtils.length(),
+	                        context: context
+	                    });
 	                }
 	            });
 	        });
@@ -627,26 +656,26 @@
 	}
 
 	function _reapplyAllProjections(context) {
+	    context._projectedData = context._data;
 	    _.each(context._projections, function(projection) {
-	        context._projectedData = projection(context._data);
+	        context._projectedData = projection(context._projectedData);
 	    });
 	}
 
 	function _rebuildIdsAndIndexes(context) {
 	    var data = getData();
 
-	    var byId = context._byId = {};
-	    var idKey = context._idKey;
+	    context._byId = {};
 	    var index = 0;
 	    _.each(data, function(item) {
-	        if (item !== null && item !== undefined) {
-	            var id = item[idKey];
+	        if (item !== void 0 && item !== null) {
+	            var id = item[context._idKey];
 	            if (id !== void 0) {
-	                byId[id] = item;
+	                context._byId[id] = item;
 	            }
 	            item._dataIndex = index;
 
-	            if (typeof item._conduitId === 'undefined') {
+	            if (item._conduitId === void 0) {
 	                // An item created in a 'map' projection needs a ConduitID
 	                item._conduitId = _.uniqueId('conduit');
 	            }
@@ -657,17 +686,17 @@
 
 	function applyProjection(toApply) {
 	    var context = _getContext();
+	    context._projections.push(toApply);
 
 	    context._projectedData = toApply(getData());
 	    _rebuildIdsAndIndexes(context);
-
-	    context._projections.push(toApply);
 	}
 
 	function resetProjection() {
 	    var context = _getContext();
 	    context._projectedData = context._data;
 	    context._projections = [];
+	    _rebuildIdsAndIndexes(context);
 	}
 
 	function addTo(data, options) {
@@ -682,7 +711,7 @@
 	    var byId = context._byId;
 	    var idKey = context._idKey;
 	    _.each(data, function(item) {
-	        if (item !== null && item !== undefined) {
+	        if (item !== null && item !== void 0) {
 	            var id = item[idKey];
 	            var existing;
 	            if (id !== void 0) {
@@ -691,25 +720,24 @@
 	            if (existing) {
 	                if (options.replace) {
 	                    // Replace item properties
-	                    byId[id] = item;
 	                    var existingIndex = context._data.indexOf(existing);
+	                    if (existingIndex !== void 0) {
+	                        context._data[existingIndex] = item;
+	                    }
+
+	                    existingIndex = context._projectedData.indexOf(existing);
+	                    if (existingIndex !== void 0) {
+	                        context._projectedData[existingIndex] = item;
+	                    }
+
 	                    item._conduitId = existing._conduitId;
-	                    context._data[existingIndex] = item;
 	                } else {
 	                    // Merge item properties
 	                    _.extend(existing, item);
 	                }
 	            } else {
-	                // Brand new element or overwriting
-	                if (id) {
-	                    byId[id] = item;
-	                }
-
-	                // Add a conduit ID for tracking this item on both sides of the wall
-	                item._conduitId = _.uniqueId('conduit');
-
-	                // Add the brand new element.  Note that '_dataIndex' will be
-	                // calculated after the projections are applied
+	                // Add the brand new element.  Note that '_dataIndex' and '_conduitId' will be
+	                // calculated after projections are applied
 	                context._data.push(item);
 	            }
 	        } else {
@@ -718,8 +746,10 @@
 	        }
 	    });
 
-	    // If we had any projections applied, we must re-apply them in-order, then re-index all the data.
+	    // If we had any projections applied, we must re-apply them in order
 	    _reapplyAllProjections(context);
+
+	    // We also rebuild the _byId map and recalculate the _dataIndex properties
 	    _rebuildIdsAndIndexes(context);
 
 	    managedContext.debug('Added ' + data.length + ' items.  Total length: ' + context._data.length);
@@ -729,12 +759,13 @@
 	    var context = _getContext();
 
 	    var item = context._byId[id];
-	    if (item) {
+	    if (item !== void 0  && item !== null) {
 	        var index = context._data.indexOf(item);
-	        context._data.splice(index, 1);
-
-	        _reapplyAllProjections(context);
-	        _rebuildIdsAndIndexes(context);
+	        if (index >= 0) {
+	            context._data.splice(index, 1);
+	            _reapplyAllProjections(context);
+	            _rebuildIdsAndIndexes(context);
+	        }
 	    }
 	}
 
@@ -812,6 +843,9 @@
 	     * Get the current view of the data we are exposing.  If the data has not been
 	     * sorted/filtered/mapped, then this is the full, original data set.  Otherwise,
 	     * this is the version of the data that has gone through those projections.
+	     *
+	     * Note for performance reasons, this is a reference to the internally-stored array.
+	     * You should not modify it directly.
 	     */
 	    getData: getData,
 

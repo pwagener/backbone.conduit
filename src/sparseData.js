@@ -268,13 +268,19 @@ function haul(options) {
     return this._boss.makePromise({
         method: 'restGet',
         arguments: [ getOptions ]
-    }).then(function(length) {
-        self.length = length;
+    }).then(function(result) {
+        self.length = result.length;
         if (options.success) {
             options.success(this, null, options);
         }
 
-        self.trigger('sync', self)
+        self.trigger('sync', self);
+
+        // If there was a context returned, resolve to it.  Otherwise resolve to
+        // nothing
+        if (result.context) {
+            return result.context;
+        }
     }).catch(function(err) {
         // Call any error handler
         if (options.error) {
@@ -317,22 +323,27 @@ function sortAsync(sortSpec) {
     _ensureBoss.call(this);
     var self = this;
 
-    sortSpec = sortSpec || this.comparator;
+    // ToDeprecate at the release of 0.7.X
+    if (!sortSpec && this.comparator) {
+        console.log('Warning: defining the sort specification as "collection.comparator" will be removed in the next release.  Use "collection.sortSpec" instead.');
+    }
+    sortSpec = sortSpec || this.sortSpec || this.comparator;
 
     // Error if comparator isn't provided correctly.
-    if (!sortSpec || (!sortSpec.property && !sortSpec.method)) {
+    if (!sortSpec || (!sortSpec.property && !sortSpec.evaluator)) {
         return when.reject(new Error('Please provide a sort specification'));
     }
 
     return this._boss.makePromise({
         method: 'sortBy',
         arguments: [ sortSpec ]
-    }).then(function() {
+    }).then(function(result) {
         // Sort was successful; remove any local models.
         // NOTE:  we could work around doing this by just re-preparing the
         // models we have locally ...
         _resetPreparedModels.call(self);
         self.trigger('sort');
+        return result.context;
     });
 }
 
@@ -355,27 +366,29 @@ function _resetPreparedModels() {
  *   - An object with "method" specifying the name of the method to evaluate each
  *     item in the collection, similar to underscore's '_.find(...)' functionality
  *
- * @param filterEvaluator (Optional) the filter evaluator to use in lieu of the
+ * @param filterSpec (Optional) the filter evaluator to use in lieu of the
  * one specified as 'this.filterEvaluator'.
  * @return {*}
  */
-function filterAsync(filterEvaluator) {
+function filterAsync(filterSpec) {
     _ensureBoss.call(this);
     var self = this;
 
-    filterEvaluator = filterEvaluator || this.filterEvaluator;
+    filterSpec = filterSpec || this.filterSpec;
 
-    if (!filterEvaluator) {
+    if (!filterSpec) {
         return when.reject(new Error('Please provide a filter specification'));
     }
 
     return this._boss.makePromise({
         method: 'filter',
-        arguments: [ filterEvaluator ]
-    }).then(function(length) {
-        self.length = length;
+        arguments: [ filterSpec ]
+    }).then(function(result) {
+        self.length = result.length;
         _resetPreparedModels.call(self);
         self.trigger('filter');
+
+        return result.context;
     });
 }
 
@@ -402,10 +415,11 @@ function mapAsync(mapSpec) {
 
     return this._boss.makePromise({
         method: 'map',
-        arguments: [ mapSpec.mapper ]
-    }).then(function() {
+        arguments: [ mapSpec ]
+    }).then(function(result) {
         _resetPreparedModels.call(self);
         self.trigger('map');
+        return result.context;
     });
 }
 
