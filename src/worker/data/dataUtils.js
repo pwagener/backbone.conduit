@@ -41,20 +41,35 @@ function getData() {
     return context._projectedData;
 }
 
-function _rebuildByIdAndDataIndexes() {
-    var data = getData();
+function getIdKey() {
     var context = _getContext();
+    return context._idKey;
+}
 
-    var byId = context._byId = {};
-    var idKey = context._idKey;
+function _reapplyAllProjections(context) {
+    context._projectedData = context._data;
+    _.each(context._projections, function(projection) {
+        context._projectedData = projection(context._projectedData);
+    });
+}
+
+function _rebuildIdsAndIndexes(context) {
+    var data = getData();
+
+    context._byId = {};
     var index = 0;
     _.each(data, function(item) {
-        if (item !== null && item !== undefined) {
-            var id = item[idKey];
+        if (item !== void 0 && item !== null) {
+            var id = item[context._idKey];
             if (id !== void 0) {
-                byId[id] = item;
+                context._byId[id] = item;
             }
             item._dataIndex = index;
+
+            if (item._conduitId === void 0) {
+                // An item created in a 'map' projection needs a ConduitID
+                item._conduitId = _.uniqueId('conduit');
+            }
         }
         index++;
     });
@@ -62,20 +77,21 @@ function _rebuildByIdAndDataIndexes() {
 
 function applyProjection(toApply) {
     var context = _getContext();
+    context._projections.push(toApply);
 
     context._projectedData = toApply(getData());
-    _rebuildByIdAndDataIndexes();
-
-    context._projections.push(toApply);
+    _rebuildIdsAndIndexes(context);
 }
 
 function resetProjection() {
     var context = _getContext();
     context._projectedData = context._data;
     context._projections = [];
+    _rebuildIdsAndIndexes(context);
 }
 
-function addTo(data) {
+function addTo(data, options) {
+    options = options || {};
     var context = _getContext();
 
     data = data || [];
@@ -86,40 +102,62 @@ function addTo(data) {
     var byId = context._byId;
     var idKey = context._idKey;
     _.each(data, function(item) {
-        if (item !== null && item !== undefined) {
+        if (item !== null && item !== void 0) {
             var id = item[idKey];
             var existing;
             if (id !== void 0) {
                 existing = byId[id];
             }
             if (existing) {
-                // Must merge item properties
-                var keys = _.keys(item);
-                _.each(keys, function(key) {
-                    existing[key] = item[key];
-                });
-            } else {
-                // Brand new element or overwriting
-                if (id) {
-                    byId[id] = item;
-                }
+                if (options.replace) {
+                    // Replace item properties
+                    var existingIndex = context._data.indexOf(existing);
+                    if (existingIndex !== void 0) {
+                        context._data[existingIndex] = item;
+                    }
 
-                // Add the index where the data exists
-                item._dataIndex = context._data.push(item) - 1;
+                    existingIndex = context._projectedData.indexOf(existing);
+                    if (existingIndex !== void 0) {
+                        context._projectedData[existingIndex] = item;
+                    }
+
+                    item._conduitId = existing._conduitId;
+                } else {
+                    // Merge item properties
+                    _.extend(existing, item);
+                }
+            } else {
+                // Add the brand new element.  Note that '_dataIndex' and '_conduitId' will be
+                // calculated after projections are applied
+                context._data.push(item);
             }
         } else {
-            // Add the null/undefined value regardless
+            // Add the null or undefined item regardless
             context._data.push(item);
         }
     });
 
-    // If we had any projections applied, we must re-apply them in-order, then re-index all the data.
-    _.each(context._projections, function(projection) {
-        context._projectedData = projection(context._data);
-    });
-    _rebuildByIdAndDataIndexes();
+    // If we had any projections applied, we must re-apply them in order
+    _reapplyAllProjections(context);
+
+    // We also rebuild the _byId map and recalculate the _dataIndex properties
+    _rebuildIdsAndIndexes(context);
 
     managedContext.debug('Added ' + data.length + ' items.  Total length: ' + context._data.length);
+}
+
+function removeById(id) {
+    var context = _getContext();
+
+    var item = context._byId[id];
+    if (item !== void 0  && item !== null) {
+        var index = context._data.indexOf(item);
+        if (index >= 0) {
+            context._data.splice(index, 1);
+            _reapplyAllProjections(context);
+            _rebuildIdsAndIndexes(context);
+        }
+    }
 }
 
 function findById(id) {
@@ -196,8 +234,16 @@ module.exports = {
      * Get the current view of the data we are exposing.  If the data has not been
      * sorted/filtered/mapped, then this is the full, original data set.  Otherwise,
      * this is the version of the data that has gone through those projections.
+     *
+     * Note for performance reasons, this is a reference to the internally-stored array.
+     * You should not modify it directly.
      */
     getData: getData,
+
+    /**
+     * Retrieve the in-use ID key for this data set
+     */
+    getIdKey: getIdKey,
 
     /**
      * Apply a given function to the data.
@@ -217,6 +263,11 @@ module.exports = {
      * in-order after the addition.
      */
     addTo: addTo,
+
+    /**
+     * Remove data from the existing data set that matches the given ID.
+     */
+    removeById: removeById,
 
     findById: findById,
 

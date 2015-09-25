@@ -21,7 +21,7 @@ function makeInThreadBoss() {
         require('./../src/worker/data/mergeData'),
         require('./../src/worker/data/sortBy'),
         require('./../src/worker/data/filter'),
-        require('./worker/data/mockLoad'),
+        require('./worker/data/mockRestGet'),
         require('./../src/worker/data/map'),
         require('./../src/worker/data/reduce')
     ]);
@@ -79,9 +79,15 @@ describe("The sparseData module", function() {
             expect(collection.fill).to.be.a('function');
         });
 
-        it('provided no extra Components to the Boss', function() {
-
+        it('provides the "prepare" method', function() {
+            expect(collection.prepare).to.be.a('function');
         });
+
+        it('provides the "isPrepared" method', function() {
+            expect(collection.isPrepared).to.be.a('function');
+        });
+
+        // TODO:  verify other methods are provided
 
         it('throws an Error on prohibited methods', function () {
             var prohibited = [
@@ -163,25 +169,25 @@ describe("The sparseData module", function() {
             expect(callArgs[0]).to.have.property('method', 'mergeData');
         });
 
-        it('calls "load" when running "haul"', function(done) {
+        it('calls "restGet" when running "haul"', function(done) {
             collection.haul().then(function() {
                 expect(bossPromiseSpy.called).to.be.true;
                 var callArgs = bossPromiseSpy.args[0];
-                expect(callArgs[0]).to.have.property('method', 'load');
-                var loadArgs = callArgs[0].arguments[0];
-                expect(loadArgs).to.not.have.property('reset');
+                expect(callArgs[0]).to.have.property('method', 'restGet');
+                var getArgs = callArgs[0].arguments[0];
+                expect(getArgs).to.not.have.property('reset');
 
                 done();
             });
         });
 
-        it('calls "load" when running "haul" with reset', function(done) {
+        it('calls "restGet" when running "haul" with reset', function(done) {
             collection.haul({ reset: true }).then(function() {
                 expect(bossPromiseSpy.called).to.be.true;
                 var callArgs = bossPromiseSpy.args[0];
-                expect(callArgs[0]).to.have.property('method', 'load');
-                var loadArgs = callArgs[0].arguments[0];
-                expect(loadArgs).to.have.property('reset', true);
+                expect(callArgs[0]).to.have.property('method', 'restGet');
+                var getArgs = callArgs[0].arguments[0];
+                expect(getArgs).to.have.property('reset', true);
 
                 done();
             });
@@ -288,6 +294,18 @@ describe("The sparseData module", function() {
             });
         });
 
+        it('un-prepares models after sorting', function(done) {
+            collection.prepare({ id: 3 })
+                .then(function() {
+                    return collection.sortAsync({
+                        property: 'name'
+                    })
+                }).then(function() {
+                    expect(collection.isPrepared({ id: 3 })).to.be.false;
+                    done();
+                });
+        });
+
         it('filters its data in the worker', function(done) {
             collection.filterAsync({
                 where: {
@@ -339,7 +357,7 @@ describe("The sparseData module", function() {
     describe('after preparing its collection', function() {
         var collection, preparedSpy;
 
-        beforeEach(function(done) {
+        var setUpCollectionForTest = function(done) {
             // We mock out an in-thread-like boss
             collection = new Collection();
             collection._boss = makeInThreadBoss();
@@ -356,6 +374,10 @@ describe("The sparseData module", function() {
             }, function(err) {
                 console.log('Test Error: ' + err);
             });
+        };
+
+        beforeEach(function(done) {
+            setUpCollectionForTest.call(this, done);
         });
 
         it('has the correct length', function() {
@@ -366,13 +388,13 @@ describe("The sparseData module", function() {
             expect(preparedSpy.callCount).to.equal(1);
         });
 
-        it('can use "get" on prepared models', function() {
+        it('can use "restGet" on prepared models', function() {
             var oneModel = collection.get(1);
             expect(oneModel).to.be.instanceOf(Backbone.Model);
             expect(oneModel.toJSON()).to.have.property('name', 'one');
         });
 
-        it('cannot use "get" on  unprepared models', function() {
+        it('cannot use "restGet" on  unprepared models', function() {
             var boundMethod = _.bind(collection.get, collection, 2);
             expect(boundMethod).to.throw(Error);
         });
@@ -433,6 +455,167 @@ describe("The sparseData module", function() {
             expect(collection.isPrepared({
                 indexes: { min: 1, max: 2 }
             })).to.be.true;
+        });
+
+        it('begins with no dirty models', function() {
+            expect(collection.hasDirtyData()).to.be.false;
+        });
+
+        describe('when a model has changed', function() {
+            var modelThree;
+            beforeEach(function(done) {
+                setUpCollectionForTest.call(this, function() {
+                    expect(collection.hasDirtyData()).to.be.false;
+                    // Change a model within the collection
+                    modelThree = collection.get(3);
+                    modelThree.set({
+                        first: 3,
+                        second: 0
+                    });
+
+                    done();
+                });
+            });
+
+            it('detects a dirty model', function() {
+                expect(collection.hasDirtyData()).to.be.true;
+            });
+
+            it('actively sweeps dirty models when requested', function(done) {
+                collection.cleanDirtyData().then(function() {
+                    expect(collection.hasDirtyData()).to.be.false;
+                    done();
+                });
+            });
+
+            it('sweeps automatically after a short delay', function(done) {
+                collection.on('sweepComplete', function() {
+                    done();
+                });
+            });
+
+            it('fires multiple "sweepComplete" events when appropriate', function(done) {
+                // Collection has been changed once in 'beforeEach'; make another
+                // change so we have more than one thing that needs changing.
+                var modelOne = collection.get(1);
+                modelOne.set({ first: 0, second: 1 });
+
+                var spy = this.sinon.spy();
+                collection.on('sweepComplete', spy);
+
+                collection.cleanDirtyData().then(function() {
+                    expect(collection.hasDirtyData()).to.be.false;
+                    expect(spy.callCount).to.equal(2);
+
+                    // Make sure the event was triggered for both models
+                    var targets = [];
+                    targets.push(spy.getCall(0).args[0]);
+                    targets.push(spy.getCall(1).args[0]);
+                    expect(targets).to.contain(modelThree);
+                    expect(targets).to.contain(modelOne);
+
+                    done();
+                });
+            });
+
+            it('keeps the already-prepared, changed values', function() {
+                expect(modelThree.get('first')).to.equal(3);
+            });
+
+            xit('removes attributes in the worker when appropriate', function(done) {
+                modelThree.unset('second');
+                collection.cleanDirtyData().then(function() {
+                    // Re-prepare the data of the changed model to get the data from the
+                    // worker
+                    return collection.prepare({ id: 3 })
+                }).then(function(prepared) {
+                    expect(prepared.get('second')).to.be.undefined;
+                    done();
+                });
+            });
+
+            xit('recalculates the index when the change affects sorting', function(done) {
+                collection.sortAsync({ property: 'name' })
+                    .then(function() {
+                        return collection.prepare({
+                            indexes: { min: 0, max: 2 }
+                        });
+                    }).then(function() {
+                        // This change should affect sorting
+                        return modelThree.set('name', 'THREE');
+                    }).then(function() {
+                        // Wait for changes to propagate to the worker
+                        return collection.cleanDirtyData();
+                    }).then(function() {
+                        // All three models should still be prepared
+                        expect(collection.isPrepared({
+                            indexes: {min: 0, max: 2}
+                        })).to.be.true;
+
+                        // Should now be 'THREE' 'one' 'two'
+                        var firstModel = collection.at(0);
+                        expect(firstModel.id).to.equal(3);
+
+                        done();
+                    });
+            });
+        });
+
+        describe('when a new model is added as raw data', function() {
+            beforeEach(function(done) {
+                setUpCollectionForTest.call(this, function() {
+                    expect(collection.hasDirtyData()).to.be.false;
+                    collection.addAsync({
+                        id: 10, name: 'ten', first: 7, second: 3
+                    });
+
+                    done();
+                });
+            });
+
+            it('indicates dirty data', function() {
+                expect(collection.hasDirtyData()).to.be.true;
+            });
+
+            it('does not update the "length" prior to sweeping', function() {
+                expect(collection).to.have.length(3);
+            });
+
+            it('indicates no dirty models after sweeping');
+
+            it('updates the "length" after sweeping');
+
+            it('provides the correct length after sweeping');
+
+            it('can prepare the new model after sweeping');
+        });
+
+        describe('when a new model is added as a Model instance', function() {
+
+            it('indicates dirty data');
+        });
+
+        describe('when a model is removed (Collection.remove)', function() {
+
+            it('indicates there id dirty data, but no dirty models');
+
+        });
+
+        describe('when a model is created via the Collection (Collection.create)', function() {
+
+            it('indicates a model is dirty');
+
+            // TODO: others....
+        });
+
+        describe('when a model is destroyed (Model.destroy)', function() {
+            it('indicates there is dirty data, but no dirty models');
+
+            it('sends the DELETE request to the worker');
+
+            it('removes the model from the collection');
+
+            it('provides the correct length after sweeping');
         });
     });
 });

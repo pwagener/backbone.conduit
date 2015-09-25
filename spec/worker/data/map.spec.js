@@ -28,7 +28,8 @@ describe('The data/map module', function() {
             // a new object with the same ID and a 'total' field.
             context.registerComponent({
                 name: 'testComponent',
-                methods: [{
+                methods: [
+                {
                     name: 'computeThirdField',
                     method: function(item) {
                         return {
@@ -36,13 +37,26 @@ describe('The data/map module', function() {
                             total: item.first + item.second
                         };
                     }
+                }, {
+                    name: 'countNumberEvenTotal',
+                    method: function(item) {
+                        if (_.isUndefined(this.evenTotal)) {
+                            this.evenTotal = 0;
+                        }
+
+                        if (item.total % 2 === 0) {
+                            this.evenTotal++;
+                        }
+                    }
                 }]
             });
 
             dataUtils.initStore({ reset: true });
             dataUtils.addTo(this.getSampleData());
 
-            context.map('computeThirdField');
+            context.map({
+                mapper: 'computeThirdField'
+            });
         });
 
         it('maps data to different data', function() {
@@ -62,6 +76,16 @@ describe('The data/map module', function() {
             expect(data[0]).to.have.property('name', 'two');
             expect(data[1]).to.have.property('name', 'one');
             expect(data[2]).to.have.property('name', 'three');
+        });
+
+        it('can accept a context', function() {
+            var mapContext = {};
+            var result = context.map({
+                mapper: 'countNumberEvenTotal',
+                context: mapContext
+            });
+
+            expect(result.context).to.have.property('evenTotal', 1);
         });
     });
 });

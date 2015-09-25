@@ -64,7 +64,9 @@
 	            __webpack_require__(6),
 	            __webpack_require__(7),
 	            __webpack_require__(8),
-	            __webpack_require__(9)
+	            __webpack_require__(9),
+	            __webpack_require__(10),
+	            __webpack_require__(11)
 	        ]
 	    });
 	}
@@ -79,9 +81,9 @@
 	/**
 	 * This worker method handler stores data on the worker.
 	 */
-	var _ = __webpack_require__(12);
+	var _ = __webpack_require__(15);
 
-	var dataUtils = __webpack_require__(10);
+	var dataUtils = __webpack_require__(12);
 
 	module.exports = {
 	    name: 'setData',
@@ -112,9 +114,9 @@
 	 * Module used to merge existing data sets on the worker
 	 */
 
-	var _ = __webpack_require__(12);
+	var _ = __webpack_require__(15);
 
-	var dataUtils = __webpack_require__(10);
+	var dataUtils = __webpack_require__(12);
 
 	module.exports = {
 
@@ -125,11 +127,13 @@
 	        var data = argument.data || [];
 	        data = dataUtils.parseData(data);
 
+	        var options = argument.options;
+
 	        dataUtils.initStore({
 	            idKey: argument.idKey
 	        });
 
-	        dataUtils.addTo(data);
+	        dataUtils.addTo(data, options);
 	        return dataUtils.length();
 	    }
 
@@ -145,9 +149,9 @@
 	 * This worker method handler returns data from the worker.
 	 */
 
-	var _ = __webpack_require__(12);
+	var _ = __webpack_require__(15);
 
-	var dataUtils = __webpack_require__(10);
+	var dataUtils = __webpack_require__(12);
 
 	module.exports = {
 
@@ -191,30 +195,37 @@
 	/**
 	 * This module provides sorting for the worker
 	 */
-	var _ = __webpack_require__(12);
-	var dataUtils = __webpack_require__(10);
+	var _ = __webpack_require__(15);
+	var dataUtils = __webpack_require__(12);
 
 	module.exports = {
 	    name: 'sortBy',
 	    bindToWorker: true,
 
-	    method: function(comparator) {
-	        var property = comparator.property;
-	        var direction = comparator.direction || 'asc';
+	    method: function(sortSpec) {
+	        var property = sortSpec.property;
+	        var direction = sortSpec.direction || 'asc';
 
 	        var evaluator;
 	        if (_.isString(property)) {
 	            evaluator = function (item) {
 	                return item[property];
 	            }
-	        } else if (_.isString(comparator.method)) {
-	            evaluator = ConduitWorker.handlers[comparator.method];
+	        } else if (_.isString(sortSpec.method) || _.isString(sortSpec.evaluator)) {
+	            // ToDeprecate in 0.7.X
+	            if (_.isString(sortSpec.method)) {
+	                console.log('Warning:  sortAsync sorting method specified as "method" will be removed in the next release.  Use "evaluator" instead.');
+	                sortSpec.evaluator = sortSpec.method;
+	            }
+
+	            evaluator = ConduitWorker.handlers[sortSpec.evaluator];
 	        } else {
 	            throw new Error('Provide a property name as "comparator" or a registered method as { method }');
 	        }
 
+	        var context = sortSpec.context || {};
 	        var projectionFunction = function(toSort) {
-	            var data = _.sortBy(toSort, evaluator);
+	            var data = _.sortBy(toSort, evaluator, context);
 	            if (direction === 'desc') {
 	                data = data.reverse();
 	            }
@@ -222,6 +233,9 @@
 	        };
 
 	        dataUtils.applyProjection(projectionFunction);
+	        return {
+	            context: context
+	        };
 	    }
 	};
 
@@ -234,8 +248,8 @@
 	/**
 	 * This module provides filtering for the worker.
 	 */
-	var _ = __webpack_require__(12);
-	var dataUtils = __webpack_require__(10);
+	var _ = __webpack_require__(15);
+	var dataUtils = __webpack_require__(12);
 
 	module.exports = {
 	    name: 'filter',
@@ -252,11 +266,11 @@
 	            // Find the evaluator from the registered components
 	            var evaluator = ConduitWorker.handlers[filterSpec.evaluator];
 
-	            if (!_.isFunction(evaluator)) {
+	            if (_.isUndefined(evaluator)) {
 	                throw new Error('No registered handler found for "' + filterSpec + '"');
 	            }
 
-	            var filterContext = {};
+	            var filterContext = filterSpec.context || {};
 	            filterFunc = function(toFilter) {
 	                return _.filter(toFilter, evaluator, filterContext);
 	            }
@@ -270,7 +284,10 @@
 
 	        dataUtils.applyProjection(filterFunc);
 
-	        return dataUtils.length();
+	        return {
+	            context: filterContext,
+	            length: dataUtils.length()
+	        };
 	    }
 	};
 
@@ -281,29 +298,39 @@
 	'use strict';
 
 
-	var _ = __webpack_require__(12);
-	var dataUtils = __webpack_require__(10);
+	var _ = __webpack_require__(15);
+	var dataUtils = __webpack_require__(12);
 
 	module.exports = {
 	    name: 'map',
 	    bindToWorker: true,
 
-	    method: function(mapFunc) {
-	        if (_.isString(mapFunc)) {
-	            var mapper = ConduitWorker.handlers[mapFunc];
+	    method: function(mapSpec) {
+	        // ToDeprecate in 0.7.X
+	        if (_.isString(mapSpec)) {
+	            console.log('Warning: providing the "mapAsync" method name as a string will be removed in the next version; use { mapper: "someMethod" }');
+	            mapSpec = { mapper: mapSpec };
+	        }
 
-	            if (!_.isFunction(mapper)) {
-	                throw new Error('No registered handler found to map with "' + mapFunc + '"');
+	        var mapFuncName = mapSpec.mapper;
+	        if (_.isString(mapFuncName)) {
+	            var mapper = ConduitWorker.handlers[mapFuncName];
+
+	            if (_.isUndefined(mapper)) {
+	                throw new Error('No registered handler found to map with "' + mapFuncName + '"');
 	            }
 
-	            var mapContext = {};
+	            var mapContext = mapSpec.context || {};
 	            var mapFunction = function(toMap) {
 	                return _.map(toMap, mapper, mapContext);
 	            };
 
 	            dataUtils.applyProjection(mapFunction);
+	            return {
+	                context: mapContext
+	            };
 	        } else {
-	            throw new Error('Map requires the name of the function to use');
+	            throw new Error('Map requires "mapper" as the name of the function to use');
 	        }
 	    }
 	};
@@ -317,8 +344,8 @@
 	/**
 	 * This worker module provides a 'reduce(...)' method.
 	 */
-	var _ = __webpack_require__(12);
-	var dataUtils = __webpack_require__(10);
+	var _ = __webpack_require__(15);
+	var dataUtils = __webpack_require__(12);
 
 	module.exports = {
 
@@ -327,7 +354,7 @@
 	    method: function(reduceSpec) {
 	        if (reduceSpec && _.isString(reduceSpec.reducer)) {
 	            var reducer = ConduitWorker.handlers[reduceSpec.reducer];
-	            if (!_.isFunction(reducer)) {
+	            if (_.isUndefined(reducer)) {
 	                throw new Error('No registered handler found called "' + reduceSpec.reducer + '" to use in "reduce(...)');
 	            }
 
@@ -352,7 +379,7 @@
 	 * This method simply resets the worker's projection back to the original data.
 	 */
 
-	var dataUtils = __webpack_require__(10);
+	var dataUtils = __webpack_require__(12);
 
 	module.exports = {
 	    name: 'resetProjection',
@@ -367,143 +394,217 @@
 /* 9 */
 /***/ function(module, exports, __webpack_require__) {
 
-	/* WEBPACK VAR INJECTION */(function(global) {'use strict';
+	'use strict';
 
-	var _ = __webpack_require__(12);
-	var when = __webpack_require__(13);
-	var dataUtils = __webpack_require__(10);
-
-	// NOTE:  the XHR code here could/should live in a utility to be shared with other
-	// methods for sending POST/PUT/DELETE requests.
-
-	var createListenerCallback;
-
-	function _parseResponse(responseObj) {
-	    var response = responseObj.responseText;
-
-	    // TODO:  look @ content type and/or mimic jQuery converters
-	    try {
-	        response = JSON.parse(responseObj.responseText);
-	    } catch (err) { }
-	    return response;
-	}
-
-	function _sendRequest(options) {
-	    // Hack for testability in Node
-	    var XMLHttpRequest = global.XMLHttpRequest || options.XMLHttpRequest;
-	    if (!XMLHttpRequest) {
-	        throw new Error('No XMLHttpRequest constructor found');
-	    }
-
-	    var request = new XMLHttpRequest();
-
-	    // This is only for test environments (and therefore, yuck)
-	    if (_.isFunction(createListenerCallback)) {
-	        createListenerCallback(request);
-	    }
-
-	    if (options.timeout > 0) {
-	        request.timeout = options.timeout;
-	        request.ontimeout = function () {
-	            options.error('timeout', 'Request Timed Out', request);
-	            throw new Error('Request timed out');
-	        }
-	    }
-
-	    request.open(options.type, options.url, options.async);
-
-	    _.each(_.keys(options.header), function (key) {
-	        var header = options.header[key];
-	        request.setRequestHeader(key, header);
-	    });
-
-	    request.send(options.data);
-	    return request;
-	}
-	/**
-	 * Method that makes the XHR request.
-	 * @param options Options for the request.  Similar to jQuery.ajax options
-	 * @return {Promise} That resolves to the parsed data
-	 */
-	function _makeCall(options) {
-	    options = options || {};
-	    _.defaults(options, {
-	        url: '',
-	        type: 'GET',
-	        header: {
-	            'Accept': 'application/json, text/javascript, */*; q=0.01'
-	        },
-	        timeout: 0,
-	        success: function() { },
-	        error: function() { },
-	        async: true
-	    });
-
-	    return when.promise(function(resolve, reject) {
-	        var request = _sendRequest(options);
-	        var success = options.success;
-	        var error = options.error;
-
-	        request.onreadystatechange = function() {
-	            var response;
-	            if (this.readyState == 4 && this.status == 200) {
-	                // Handle success
-	                response = _parseResponse(this);
-	                success(response, this.statusText, this);
-	                resolve(response);
-	            } else if (this.readyState == 4) {
-	                // Handle the error
-	                try {
-	                    response = JSON.parse(this.responseText);
-	                } catch (parseErr) {
-	                    response = this.statusText;
-	                }
-	                error(this.status, response, this);
-	                reject(response);
-	            }
-	        };
-	    });
-	}
-
+	var _ = __webpack_require__(15);
+	var when = __webpack_require__(16);
+	var dataUtils = __webpack_require__(12);
+	var nanoAjax = __webpack_require__(13);
 
 	module.exports = {
-	    name: 'load',
+	    name: 'restGet',
 
 	    bindToWorker: true,
 
 	    method: function(options) {
-	        return _makeCall(options).then(function(data) {
-	            if (options.reset) {
-	                dataUtils.initStore({ reset: true });
-	            }
+	        return when.promise(function(resolve, reject) {
+	            var headers = _.defaults({}, options.headers, {
+	                'Accept': 'application/json, text/javascript, */*; q=0.01'
+	            });
 
-	            // TODO:  this will need to be merged into v0.7.0's 'get.js'
-	            var transform = options.postFetchTransform;
-	            if (transform) {
-	                // Apply the requested transformation
-	                if (transform.method) {
-	                    var transformer = ConduitWorker.handlers[transform.method];
-	                    data = transformer(data);
-	                } else if (transform.useAsData) {
-	                    data = data[transform.useAsData];
+	            nanoAjax.ajax({
+	                url: options.url,
+	                method: 'GET',
+	                headers: headers
+	            }, function(code, responseText) {
+	                var data = JSON.parse(responseText);
+
+	                if (code >= 400) {
+	                    var error = new Error(data.message);
+	                    error.code = code;
+	                    reject(error);
+	                } else {
+	                    // Apply any post-fetch transformations
+	                    var context;
+	                    var transform = options.postFetchTransform;
+	                    if (transform) {
+	                        // Apply the requested transformation
+	                        if (transform.method) {
+	                            context = options.context || {};
+	                            var transformer = ConduitWorker.handlers[transform.method];
+	                            data = transformer.call(context, data);
+	                        } else if (transform.useAsData) {
+	                            data = data[transform.useAsData];
+	                        }
+	                    }
+
+	                    if (options.reset) {
+	                        dataUtils.initStore({ reset: true });
+	                    }
+	                    dataUtils.addTo(data);
+
+
+	                    resolve({
+	                        length: dataUtils.length(),
+	                        context: context
+	                    });
 	                }
-	            }
-
-	            dataUtils.addTo(data);
-	        }).then(function() {
-	            return dataUtils.length();
+	            });
 	        });
-	    },
-
-	    onRequestCreate: function(callback) {
-	        createListenerCallback = callback;
 	    }
-
 	};
-	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
 /* 10 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	/**
+	 * Implement POST and PUT REST-ful calls
+	 */
+
+	var _ = __webpack_require__(15);
+	var when = __webpack_require__(16);
+	var dataUtils = __webpack_require__(12);
+	var nanoAjax = __webpack_require__(13);
+
+	module.exports = {
+	    name: 'restSave',
+
+	    bindToWorker: true,
+
+	    method: function(data, options) {
+	        return when.promise(function(resolve, reject) {
+
+	            var idKey = dataUtils.getIdKey();
+
+	            var id = data[idKey];
+	            var method = _.isUndefined(id) ? 'POST' : 'PUT';
+	            var url = options.rootUrl;
+	            if (method === 'PUT') {
+	                url = url + '/' + id;
+	            }
+
+	            var body = JSON.stringify(data);
+	            var headers = _.defaults({}, options.headers, {
+	                'Accept': 'application/json, text/javascript, */*; q=0.01'
+	            });
+
+	            nanoAjax.ajax({
+	                url: url,
+	                method: method,
+	                body: body,
+	                headers: headers
+	            }, function(code, responseText) {
+	                var data = JSON.parse(responseText);
+
+	                if (code >= 400) {
+	                    var error = new Error(data.message);
+	                    error.code = code;
+	                    reject(error);
+	                } else {
+	                    if (options.reset) {
+	                        dataUtils.initStore({ reset: true });
+	                    }
+	                    // The returned data should be the full representation of the
+	                    // saved object.  Add it into the data set.
+	                    dataUtils.addTo([ data ]);
+
+	                    resolve(dataUtils.length());
+	                }
+	            });
+	        });
+	    }
+	};
+
+/***/ },
+/* 11 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	/**
+	 * Implement DELETE REST-ful calls
+	 */
+
+	var _ = __webpack_require__(15);
+	var when = __webpack_require__(16);
+	var dataUtils = __webpack_require__(12);
+	var nanoAjax = __webpack_require__(13);
+
+	module.exports = {
+	    name: 'restDestroy',
+
+	    bindToWorker: true,
+
+	    /**
+	     * Implementation of 'destroy'
+	     * @param data The data that indicates what to DELETE.  This must include a value for
+	     * the ID key of the data set (specified in data.initStore; defaults to "id").
+	     * @param options Other details about the deletions, including:
+	     *   - baseUrl (Required) The base URL to issue the DELETE command.  Will be appended
+	     *     with the ID.
+	     *   - headers Any headers to include with the request.
+	     */
+	    method: function(data, options) {
+	        return when.promise(function(resolve, reject) {
+	            if (!options.baseUrl) {
+	                reject(new Error('Destroy requires a "baseUrl"'));
+	                return;
+	            }
+
+	            var idKey = dataUtils.getIdKey();
+	            var id = data[idKey];
+	            var hasId = _.isUndefined(id) ? false : true;
+
+	            var headers = _.defaults({}, options.headers, {
+	                'Accept': 'application/json, text/javascript, */*; q=0.01'
+	            });
+
+	            if (hasId) {
+	                var url = options.baseUrl + '/' + id;
+	                nanoAjax.ajax({
+	                    url: url,
+	                    method: 'DELETE',
+	                    headers: headers
+	                }, function(code, responseText) {
+	                    var response;
+	                    if (_.isString(responseText)) {
+	                        try {
+	                            response = JSON.parse(responseText);
+	                        } catch (err) {
+	                            response = responseText;
+	                        }
+	                    }
+
+	                    if (code < 400) {
+	                        dataUtils.removeById(id);
+	                        resolve(response);
+	                    } else {
+	                        var errorMessage;
+	                        if (response && response.message) {
+	                            errorMessage = response.message;
+	                        } else if (_.isString(response)) {
+	                            errorMessage = response;
+	                        } else {
+	                            errorMessage = 'Error code: ' + code;
+	                        }
+
+	                        var error = new Error(errorMessage);
+	                        error.code = code;
+	                        reject(error);
+	                    }
+	                });
+	            } else {
+	                reject(new Error('Item to delete did not have an ID'));
+	            }
+	        });
+	    }
+	};
+
+/***/ },
+/* 12 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -516,8 +617,8 @@
 	 * that allow us to not constantly iterate over the whole set.
 	 */
 
-	var _ = __webpack_require__(12);
-	var managedContext = __webpack_require__(11);
+	var _ = __webpack_require__(15);
+	var managedContext = __webpack_require__(14);
 
 	function _getContext(skipInit) {
 	    if (!ConduitWorker._data && !skipInit) {
@@ -549,20 +650,35 @@
 	    return context._projectedData;
 	}
 
-	function _rebuildByIdAndDataIndexes() {
-	    var data = getData();
+	function getIdKey() {
 	    var context = _getContext();
+	    return context._idKey;
+	}
 
-	    var byId = context._byId = {};
-	    var idKey = context._idKey;
+	function _reapplyAllProjections(context) {
+	    context._projectedData = context._data;
+	    _.each(context._projections, function(projection) {
+	        context._projectedData = projection(context._projectedData);
+	    });
+	}
+
+	function _rebuildIdsAndIndexes(context) {
+	    var data = getData();
+
+	    context._byId = {};
 	    var index = 0;
 	    _.each(data, function(item) {
-	        if (item !== null && item !== undefined) {
-	            var id = item[idKey];
+	        if (item !== void 0 && item !== null) {
+	            var id = item[context._idKey];
 	            if (id !== void 0) {
-	                byId[id] = item;
+	                context._byId[id] = item;
 	            }
 	            item._dataIndex = index;
+
+	            if (item._conduitId === void 0) {
+	                // An item created in a 'map' projection needs a ConduitID
+	                item._conduitId = _.uniqueId('conduit');
+	            }
 	        }
 	        index++;
 	    });
@@ -570,20 +686,21 @@
 
 	function applyProjection(toApply) {
 	    var context = _getContext();
+	    context._projections.push(toApply);
 
 	    context._projectedData = toApply(getData());
-	    _rebuildByIdAndDataIndexes();
-
-	    context._projections.push(toApply);
+	    _rebuildIdsAndIndexes(context);
 	}
 
 	function resetProjection() {
 	    var context = _getContext();
 	    context._projectedData = context._data;
 	    context._projections = [];
+	    _rebuildIdsAndIndexes(context);
 	}
 
-	function addTo(data) {
+	function addTo(data, options) {
+	    options = options || {};
 	    var context = _getContext();
 
 	    data = data || [];
@@ -594,40 +711,62 @@
 	    var byId = context._byId;
 	    var idKey = context._idKey;
 	    _.each(data, function(item) {
-	        if (item !== null && item !== undefined) {
+	        if (item !== null && item !== void 0) {
 	            var id = item[idKey];
 	            var existing;
 	            if (id !== void 0) {
 	                existing = byId[id];
 	            }
 	            if (existing) {
-	                // Must merge item properties
-	                var keys = _.keys(item);
-	                _.each(keys, function(key) {
-	                    existing[key] = item[key];
-	                });
-	            } else {
-	                // Brand new element or overwriting
-	                if (id) {
-	                    byId[id] = item;
-	                }
+	                if (options.replace) {
+	                    // Replace item properties
+	                    var existingIndex = context._data.indexOf(existing);
+	                    if (existingIndex !== void 0) {
+	                        context._data[existingIndex] = item;
+	                    }
 
-	                // Add the index where the data exists
-	                item._dataIndex = context._data.push(item) - 1;
+	                    existingIndex = context._projectedData.indexOf(existing);
+	                    if (existingIndex !== void 0) {
+	                        context._projectedData[existingIndex] = item;
+	                    }
+
+	                    item._conduitId = existing._conduitId;
+	                } else {
+	                    // Merge item properties
+	                    _.extend(existing, item);
+	                }
+	            } else {
+	                // Add the brand new element.  Note that '_dataIndex' and '_conduitId' will be
+	                // calculated after projections are applied
+	                context._data.push(item);
 	            }
 	        } else {
-	            // Add the null/undefined value regardless
+	            // Add the null or undefined item regardless
 	            context._data.push(item);
 	        }
 	    });
 
-	    // If we had any projections applied, we must re-apply them in-order, then re-index all the data.
-	    _.each(context._projections, function(projection) {
-	        context._projectedData = projection(context._data);
-	    });
-	    _rebuildByIdAndDataIndexes();
+	    // If we had any projections applied, we must re-apply them in order
+	    _reapplyAllProjections(context);
+
+	    // We also rebuild the _byId map and recalculate the _dataIndex properties
+	    _rebuildIdsAndIndexes(context);
 
 	    managedContext.debug('Added ' + data.length + ' items.  Total length: ' + context._data.length);
+	}
+
+	function removeById(id) {
+	    var context = _getContext();
+
+	    var item = context._byId[id];
+	    if (item !== void 0  && item !== null) {
+	        var index = context._data.indexOf(item);
+	        if (index >= 0) {
+	            context._data.splice(index, 1);
+	            _reapplyAllProjections(context);
+	            _rebuildIdsAndIndexes(context);
+	        }
+	    }
 	}
 
 	function findById(id) {
@@ -704,8 +843,16 @@
 	     * Get the current view of the data we are exposing.  If the data has not been
 	     * sorted/filtered/mapped, then this is the full, original data set.  Otherwise,
 	     * this is the version of the data that has gone through those projections.
+	     *
+	     * Note for performance reasons, this is a reference to the internally-stored array.
+	     * You should not modify it directly.
 	     */
 	    getData: getData,
+
+	    /**
+	     * Retrieve the in-use ID key for this data set
+	     */
+	    getIdKey: getIdKey,
 
 	    /**
 	     * Apply a given function to the data.
@@ -726,6 +873,11 @@
 	     */
 	    addTo: addTo,
 
+	    /**
+	     * Remove data from the existing data set that matches the given ID.
+	     */
+	    removeById: removeById,
+
 	    findById: findById,
 
 	    findByIds: findByIds,
@@ -740,7 +892,57 @@
 	};
 
 /***/ },
-/* 11 */
+/* 13 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/* WEBPACK VAR INJECTION */(function(global) {exports.ajax = function (params, callback) {
+	  if (typeof params == 'string') params = {url: params}
+	  var headers = params.headers || {}
+	    , body = params.body
+	    , method = params.method || (body ? 'POST' : 'GET')
+	    , withCredentials = params.withCredentials || false
+
+	  var req = getRequest()
+
+	  req.onreadystatechange = function () {
+	    if (req.readyState == 4)
+	      callback(req.status, req.responseText, req)
+	  }
+
+	  if (body) {
+	    setDefault(headers, 'X-Requested-With', 'XMLHttpRequest')
+	    setDefault(headers, 'Content-Type', 'application/x-www-form-urlencoded')
+	  }
+
+	  req.open(method, params.url, true)
+
+	  // has no effect in IE
+	  // has no effect for same-origin requests
+	  // has no effect in CORS if user has disabled 3rd party cookies
+	  req.withCredentials = withCredentials
+
+	  for (var field in headers)
+	    req.setRequestHeader(field, headers[field])
+
+	  req.send(body)
+	}
+
+	function getRequest() {
+	  if (global.XMLHttpRequest)
+	    return new global.XMLHttpRequest;
+	  else
+	    try { return new global.ActiveXObject("MSXML2.XMLHTTP.3.0"); } catch(e) {}
+	  throw new Error('no xmlhttp request able to be created')
+	}
+
+	function setDefault(obj, key, value) {
+	  obj[key] = obj[key] || value
+	}
+	
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
+
+/***/ },
+/* 14 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {'use strict';
@@ -752,9 +954,9 @@
 	 * to communicate with the main thread.
 	 */
 
-	var _ = __webpack_require__(12);
-	var util = __webpack_require__(28);
-	var when = __webpack_require__(13);
+	var _ = __webpack_require__(15);
+	var util = __webpack_require__(31);
+	var when = __webpack_require__(16);
 
 	var managedContext;
 
@@ -802,8 +1004,8 @@
 	            method = handler.method;
 	        }
 
-	        if (!_.isFunction(method)) {
-	            throw new Error('Handler "' + name + '" did not provide a "method" function');
+	        if (_.isUndefined(method)) {
+	            throw new Error('Handler "' + name + '" did not provide a "method"');
 	        }
 
 	        handlers[handler.name] = method;
@@ -929,8 +1131,8 @@
 	    conduitWorker.registerComponent({
 	        name: 'core',
 	        methods: [
-	            __webpack_require__(14),
-	            __webpack_require__(15)
+	            __webpack_require__(17),
+	            __webpack_require__(18)
 	        ]
 	    });
 	}
@@ -962,7 +1164,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
-/* 12 */
+/* 15 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;//     Underscore.js 1.8.3
@@ -2516,7 +2718,7 @@
 
 
 /***/ },
-/* 13 */
+/* 16 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -2530,24 +2732,24 @@
 	(function(define) { 'use strict';
 	!(__WEBPACK_AMD_DEFINE_RESULT__ = function (require) {
 
-		var timed = __webpack_require__(19);
-		var array = __webpack_require__(20);
-		var flow = __webpack_require__(21);
-		var fold = __webpack_require__(22);
-		var inspect = __webpack_require__(23);
-		var generate = __webpack_require__(24);
-		var progress = __webpack_require__(25);
-		var withThis = __webpack_require__(26);
-		var unhandledRejection = __webpack_require__(27);
-		var TimeoutError = __webpack_require__(16);
+		var timed = __webpack_require__(22);
+		var array = __webpack_require__(23);
+		var flow = __webpack_require__(24);
+		var fold = __webpack_require__(25);
+		var inspect = __webpack_require__(26);
+		var generate = __webpack_require__(27);
+		var progress = __webpack_require__(28);
+		var withThis = __webpack_require__(29);
+		var unhandledRejection = __webpack_require__(30);
+		var TimeoutError = __webpack_require__(19);
 
 		var Promise = [array, flow, fold, generate, progress,
 			inspect, withThis, timed, unhandledRejection]
 			.reduce(function(Promise, feature) {
 				return feature(Promise);
-			}, __webpack_require__(17));
+			}, __webpack_require__(20));
 
-		var apply = __webpack_require__(18)(Promise);
+		var apply = __webpack_require__(21)(Promise);
 
 		// Public API
 
@@ -2746,11 +2948,11 @@
 
 		return when;
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	})(__webpack_require__(29));
+	})(__webpack_require__(32));
 
 
 /***/ },
-/* 14 */
+/* 17 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -2769,7 +2971,7 @@
 	};
 
 /***/ },
-/* 15 */
+/* 18 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -2777,8 +2979,8 @@
 	/**
 	 * This module allows you to pass a configuration into the worker's context
 	 */
-	var managedContext = __webpack_require__(11);
-	var util = __webpack_require__(28);
+	var managedContext = __webpack_require__(14);
+	var util = __webpack_require__(31);
 
 	module.exports = {
 	    name: 'configure',
@@ -2789,7 +2991,7 @@
 	};
 
 /***/ },
-/* 16 */
+/* 19 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -2818,10 +3020,10 @@
 
 		return TimeoutError;
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(29)));
+	}(__webpack_require__(32)));
 
 /***/ },
-/* 17 */
+/* 20 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -2831,20 +3033,20 @@
 	(function(define) { 'use strict';
 	!(__WEBPACK_AMD_DEFINE_RESULT__ = function (require) {
 
-		var makePromise = __webpack_require__(30);
-		var Scheduler = __webpack_require__(31);
-		var async = __webpack_require__(32).asap;
+		var makePromise = __webpack_require__(33);
+		var Scheduler = __webpack_require__(34);
+		var async = __webpack_require__(35).asap;
 
 		return makePromise({
 			scheduler: new Scheduler(async)
 		});
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	})(__webpack_require__(29));
+	})(__webpack_require__(32));
 
 
 /***/ },
-/* 18 */
+/* 21 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -2899,13 +3101,13 @@
 		}
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(29)));
+	}(__webpack_require__(32)));
 
 
 
 
 /***/ },
-/* 19 */
+/* 22 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -2915,8 +3117,8 @@
 	(function(define) { 'use strict';
 	!(__WEBPACK_AMD_DEFINE_RESULT__ = function(require) {
 
-		var env = __webpack_require__(32);
-		var TimeoutError = __webpack_require__(16);
+		var env = __webpack_require__(35);
+		var TimeoutError = __webpack_require__(19);
 
 		function setTimeout(f, ms, x, y) {
 			return env.setTimer(function() {
@@ -2985,11 +3187,11 @@
 		};
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(29)));
+	}(__webpack_require__(32)));
 
 
 /***/ },
-/* 20 */
+/* 23 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -2999,8 +3201,8 @@
 	(function(define) { 'use strict';
 	!(__WEBPACK_AMD_DEFINE_RESULT__ = function(require) {
 
-		var state = __webpack_require__(33);
-		var applier = __webpack_require__(18);
+		var state = __webpack_require__(36);
+		var applier = __webpack_require__(21);
 
 		return function array(Promise) {
 
@@ -3280,11 +3482,11 @@
 		};
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(29)));
+	}(__webpack_require__(32)));
 
 
 /***/ },
-/* 21 */
+/* 24 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -3446,11 +3648,11 @@
 		}
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(29)));
+	}(__webpack_require__(32)));
 
 
 /***/ },
-/* 22 */
+/* 25 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -3479,11 +3681,11 @@
 		};
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(29)));
+	}(__webpack_require__(32)));
 
 
 /***/ },
-/* 23 */
+/* 26 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -3493,7 +3695,7 @@
 	(function(define) { 'use strict';
 	!(__WEBPACK_AMD_DEFINE_RESULT__ = function(require) {
 
-		var inspect = __webpack_require__(33).inspect;
+		var inspect = __webpack_require__(36).inspect;
 
 		return function inspection(Promise) {
 
@@ -3505,11 +3707,11 @@
 		};
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(29)));
+	}(__webpack_require__(32)));
 
 
 /***/ },
-/* 24 */
+/* 27 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -3576,11 +3778,11 @@
 		};
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(29)));
+	}(__webpack_require__(32)));
 
 
 /***/ },
-/* 25 */
+/* 28 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -3606,11 +3808,11 @@
 		};
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(29)));
+	}(__webpack_require__(32)));
 
 
 /***/ },
-/* 26 */
+/* 29 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -3649,12 +3851,12 @@
 		};
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(29)));
+	}(__webpack_require__(32)));
 
 
 
 /***/ },
-/* 27 */
+/* 30 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -3664,8 +3866,8 @@
 	(function(define) { 'use strict';
 	!(__WEBPACK_AMD_DEFINE_RESULT__ = function(require) {
 
-		var setTimer = __webpack_require__(32).setTimer;
-		var format = __webpack_require__(34);
+		var setTimer = __webpack_require__(35).setTimer;
+		var format = __webpack_require__(37);
 
 		return function unhandledRejection(Promise) {
 
@@ -3742,11 +3944,11 @@
 		function noop() {}
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(29)));
+	}(__webpack_require__(32)));
 
 
 /***/ },
-/* 28 */
+/* 31 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global, process) {// Copyright Joyent, Inc. and other Node contributors.
@@ -4274,7 +4476,7 @@
 	}
 	exports.isPrimitive = isPrimitive;
 
-	exports.isBuffer = __webpack_require__(36);
+	exports.isBuffer = __webpack_require__(39);
 
 	function objectToString(o) {
 	  return Object.prototype.toString.call(o);
@@ -4318,7 +4520,7 @@
 	 *     prototype.
 	 * @param {function} superCtor Constructor function to inherit prototype from.
 	 */
-	exports.inherits = __webpack_require__(38);
+	exports.inherits = __webpack_require__(41);
 
 	exports._extend = function(origin, add) {
 	  // Don't do anything if add isn't an object
@@ -4336,17 +4538,17 @@
 	  return Object.prototype.hasOwnProperty.call(obj, prop);
 	}
 	
-	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(37)))
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(40)))
 
 /***/ },
-/* 29 */
+/* 32 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = function() { throw new Error("define cannot be used indirect"); };
 
 
 /***/ },
-/* 30 */
+/* 33 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/* WEBPACK VAR INJECTION */(function(process) {/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -5275,12 +5477,12 @@
 			return Promise;
 		};
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(29)));
+	}(__webpack_require__(32)));
 	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(37)))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(40)))
 
 /***/ },
-/* 31 */
+/* 34 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -5362,11 +5564,11 @@
 		return Scheduler;
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(29)));
+	}(__webpack_require__(32)));
 
 
 /***/ },
-/* 32 */
+/* 35 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;var require;/* WEBPACK VAR INJECTION */(function(process) {/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -5400,7 +5602,7 @@
 
 		} else if (!capturedSetTimeout) { // vert.x
 			var vertxRequire = require;
-			var vertx = __webpack_require__(35);
+			var vertx = __webpack_require__(38);
 			setTimer = function (f, ms) { return vertx.setTimer(ms, f); };
 			clearTimer = vertx.cancelTimer;
 			asap = vertx.runOnLoop || vertx.runOnContext;
@@ -5441,12 +5643,12 @@
 			};
 		}
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(29)));
+	}(__webpack_require__(32)));
 	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(37)))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(40)))
 
 /***/ },
-/* 33 */
+/* 36 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -5483,11 +5685,11 @@
 		}
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(29)));
+	}(__webpack_require__(32)));
 
 
 /***/ },
-/* 34 */
+/* 37 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -5545,17 +5747,17 @@
 		}
 
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(29)));
+	}(__webpack_require__(32)));
 
 
 /***/ },
-/* 35 */
+/* 38 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* (ignored) */
 
 /***/ },
-/* 36 */
+/* 39 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = function isBuffer(arg) {
@@ -5566,7 +5768,7 @@
 	}
 
 /***/ },
-/* 37 */
+/* 40 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// shim for using process in browser
@@ -5630,7 +5832,7 @@
 
 
 /***/ },
-/* 38 */
+/* 41 */
 /***/ function(module, exports, __webpack_require__) {
 
 	if (typeof Object.create === 'function') {

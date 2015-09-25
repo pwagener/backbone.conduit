@@ -21,14 +21,14 @@ var SparseCollection = window.SparseCollection = window.BasicCollection.extend({
      * Where is that implemented?  See 'exampleComponent.js'.
      */
     comparator: {
-        method: 'evaluateByDateAndName'
+        evaluator: 'evaluateByDateAndName'
     },
 
     /**
      * This specifies the name of the method used in filtering.
      * Where is that implemented?  See 'exampleComponent.js'.
      */
-    filterEvaluator: {
+    filterSpec: {
         evaluator: 'filterToMostRecent'
     },
 

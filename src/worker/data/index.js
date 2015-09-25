@@ -18,7 +18,9 @@ if (typeof ConduitWorker !== 'undefined') {
             require('./map'),
             require('./reduce'),
             require('./resetProjection'),
-            require('./load')
+            require('./restGet'),
+            require('./restSave'),
+            require('./restDestroy')
         ]
     });
 }

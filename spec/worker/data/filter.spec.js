@@ -27,7 +27,16 @@ describe('the data/filter module', function() {
                 methods: [{
                     name: 'nameStartsWithT',
                     method: function(item) {
-                        return item.name[0] === 't';
+                        if (_.isUndefined(this.filteredCount)) {
+                            this.filteredCount = 0;
+                        }
+
+                        var matches = item.name[0] === 't';
+                        if (!matches) {
+                            this.filteredCount++;
+                        }
+
+                        return matches;
                     }
                 }]
             });
@@ -36,34 +45,44 @@ describe('the data/filter module', function() {
             dataUtils.addTo(this.getSampleData());
         });
 
-        it('returns the length when filtering by a set of properties; AKA "_.where(...)"', function() {
+        it('returns an object with length when filtering by a set of properties; AKA "_.where(...)"', function() {
             var length = context.filter({
                 where: {
                     name: 'one'
                 }
-            });
+            }).length;
             expect(length).to.equal(1);
         });
 
-        it('returns the length when filtering by an evaluation function; AKA "_.filter(...)"', function() {
+        it('returns an object with length when filtering by an evaluation function; AKA "_.filter(...)"', function() {
             var length = context.filter({
                 evaluator: 'nameStartsWithT'
-            });
+            }).length;
             expect(length).to.equal(2);
         });
 
-        it('returns zero when nothing matches', function() {
+        it('returns an object with length of zero when nothing matches', function() {
             var length = context.filter({
                 where: {
                     name: 'four'
                 }
-            });
+            }).length;
             expect(length).to.equal(0);
         });
 
         it('errors when an unregistered evaluator is named', function() {
             var toError = _.bind(context.filter, context, { method: 'nothingByThisName' });
             expect(toError).to.throw(Error);
+        });
+
+        it('can accept and return a context for the filtering', function() {
+            var filterContext = {};
+            var result = context.filter({
+                evaluator: 'nameStartsWithT',
+                context: filterContext
+            });
+
+            expect(result.context).to.have.property('filteredCount', 1);
         });
     });
 });

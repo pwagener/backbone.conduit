@@ -11,40 +11,42 @@ var mockConduitWorker = require('../mockConduitWorker');
 var dataUtils = require('./../../../src/worker/data/dataUtils');
 
 describe('The worker/dataUtils module', function() {
-    var context, data;
+    var context;
 
     beforeEach(function() {
         mockConduitWorker.reset();
         context = mockConduitWorker.get();
-        data = this.getSampleData();
     });
 
-    it('initializes the context to have a "data" property', function() {
+    it('initializes the context to have an empty data', function() {
         dataUtils.initStore();
-        expect(context._data).to.be.an('array');
+        var initial = dataUtils.getData();
+        expect(initial).to.be.an('array');
     });
 
     it('will not recreate the data store by default', function() {
-        context._data = [ { foo: "bar" }];
+        var initial = dataUtils.getData();
         dataUtils.initStore();
-        expect(context._data).to.have.length(1);
+        expect(initial).to.equal(dataUtils.getData());
     });
 
     it('will recreate the data store if explicitly requested', function() {
-        context._data = [ { foo: "bar" } ];
+        var initial = dataUtils.getData();
         dataUtils.initStore({ reset: true });
-        expect(context._data).to.have.length(0);
+        expect(initial).to.not.equal(dataUtils.getData());
     });
 
     it('does not modify an array of data when parsing', function() {
-        var result = dataUtils.parseData(data);
-        expect(result).to.equal(data);
+        var sampleData = this.getSampleData();
+        var result = dataUtils.parseData(sampleData);
+        expect(result).to.equal(sampleData);
     });
 
     it('parses a JSON string of an array into an array', function() {
-        var dataStr = JSON.stringify(data);
+        var sampleData = this.getSampleData();
+        var dataStr = JSON.stringify(sampleData);
         var result = dataUtils.parseData(dataStr);
-        expect(result).to.deep.equal(data);
+        expect(result).to.deep.equal(sampleData);
     });
 
     it('errors when parsing JSON that is not an array', function() {
@@ -54,16 +56,24 @@ describe('The worker/dataUtils module', function() {
     });
 
     describe('after initializing and adding data', function() {
-        var data;
+        var storedData;
         beforeEach(function() {
             dataUtils.initStore({ reset: true });
             dataUtils.addTo(this.getSampleData());
-            data = dataUtils.getData();
+            storedData = dataUtils.getData();
         });
 
         it('contains the fresh data', function() {
-            expect(data).to.have.length(3);
-            expect(data[2]).to.have.property('name', 'three');
+            expect(storedData).to.have.length(3);
+            expect(storedData[0]).to.have.property('name', 'two');
+            expect(storedData[1]).to.have.property('name', 'one');
+            expect(storedData[2]).to.have.property('name', 'three');
+        });
+
+        it('fetches data by ID', function() {
+            expect(dataUtils.findById(1)).to.have.property('name', 'one');
+            expect(dataUtils.findById(2)).to.have.property('name', 'two');
+            expect(dataUtils.findById(3)).to.have.property('name', 'three');
         });
 
         it('can add data to existing', function() {
@@ -71,8 +81,9 @@ describe('The worker/dataUtils module', function() {
                 { id: 10, name: "ten", first: 6, second: 4 }
             ]);
 
-            expect(data).to.have.length(4);
-            expect(data[3]).have.property('name', 'ten');
+            var result = dataUtils.getData();
+            expect(result).to.have.length(4);
+            expect(result[3]).have.property('name', 'ten');
         });
 
         it('can add null to existing', function() {
@@ -80,23 +91,39 @@ describe('The worker/dataUtils module', function() {
                 null
             ]);
 
-            expect(data).to.have.length(4);
-            expect(data[3]).to.equal(null);
+            var result = dataUtils.getData();
+            expect(result).to.have.length(4);
+            expect(result[3]).to.equal(null);
         });
 
         it('can merge data with existing', function() {
             dataUtils.addTo([
                 { id: 3, name: "THREE" }
             ]);
-            data = dataUtils.getData();
 
-            expect(data).to.have.length(3);
-            expect(data[2]).to.have.property('name', 'THREE');
+            var result = dataUtils.getData();
+            expect(result).to.have.length(3);
+            expect(result[2]).to.have.property('name', 'THREE');
+        });
+
+        it('can merge data by replacing', function() {
+            dataUtils.addTo([
+                { id: 3, name: 'three', first: 3 }
+            ], {
+                replace: true
+            });
+
+            storedData = dataUtils.getData();
+            expect(storedData).to.have.length(3);
+
+            var modified = storedData[2];
+            expect(modified).to.have.property('name', 'three');
+            expect(modified).to.not.have.property('second');
         });
 
         it('sets "_dataIndex" property to initial data correctly', function() {
-            for (var i = 0; i < data.length; i++) {
-                var current = data[i];
+            for (var i = 0; i < storedData.length; i++) {
+                var current = storedData[i];
                 expect(current._dataIndex).to.equal(i);
             }
         });
@@ -105,10 +132,10 @@ describe('The worker/dataUtils module', function() {
             dataUtils.addTo([
                 { id: 10, name: "ten", first: 6, second: 4 }
             ]);
-            data = dataUtils.getData();
 
-            for (var i = 0; i < data.length; i++) {
-                var current = data[i];
+            var result = dataUtils.getData();
+            for (var i = 0; i < result.length; i++) {
+                var current = result[i];
                 expect(current._dataIndex).to.equal(i);
             }
         });
@@ -117,82 +144,107 @@ describe('The worker/dataUtils module', function() {
             dataUtils.addTo([
                 { id: 3, name: "THREE" }
             ]);
-            data = dataUtils.getData();
 
-            for (var i = 0; i < data.length; i++) {
-                var current = data[i];
+            var result = dataUtils.getData();
+            for (var i = 0; i < result.length; i++) {
+                var current = result[i];
                 expect(current._dataIndex).to.equal(i);
             }
         });
 
-        it('begins its life with its projected data equaling "_data"', function() {
+        it('begins its life with its projected data equaling initial data', function() {
             var projected = dataUtils.getData();
-            expect(projected).to.equal(data);
+            expect(projected).to.equal(storedData);
+        });
+    });
+
+    describe('when one projection has been applied', function() {
+        var projectionSpy, storedData;
+        beforeEach(function() {
+            var nameMustStartWithT = function(data) {
+                return _.filter(data, function(item) {
+                    return item.name[0] == 't';
+                });
+            };
+            projectionSpy = this.sinon.spy(nameMustStartWithT);
+
+            dataUtils.initStore({ reset: true });
+            dataUtils.addTo(this.getSampleData());
+            dataUtils.applyProjection(projectionSpy);
+            storedData = dataUtils.getData();
         });
 
-        describe('when one projection has been applied', function() {
-            var projectionSpy, data;
-            beforeEach(function() {
-                var nameMustStartWithT = function(data) {
-                    return _.filter(data, function(item) {
-                        return item.name[0] == 't';
-                    });
-                };
-                projectionSpy = this.sinon.spy(nameMustStartWithT);
+        it('returns projected data', function() {
+            expect(storedData).to.have.length(2);
+            expect(storedData[0]).to.have.property('name', 'two');
+            expect(storedData[1]).to.have.property('name', 'three');
+        });
 
-                dataUtils.applyProjection(projectionSpy);
-                data = dataUtils.getData();
-            });
+        it('fetches projected items by ID', function() {
+            expect(dataUtils.findById(2)).to.have.property('name', 'two');
+            expect(dataUtils.findById(3)).to.have.property('name', 'three');
+        });
 
-            it('returns projected data', function() {
-                expect(data).to.have.length(2);
-                expect(data[0]).to.have.property('name', 'two');
-                expect(data[1]).to.have.property('name', 'three');
-            });
+        it('does not fetch non-projected items by ID', function() {
+            expect(dataUtils.findById(1)).to.be.undefined;
+        });
 
-            it('still has the original data', function() {
-                expect(context._data).to.have.length(3);
-            });
+        it('reapplies the projection when data is added', function() {
+            expect(projectionSpy.callCount).to.equal(1);
+            dataUtils.addTo([
+                { id: 4, name: 'four', first: 2, second: 2 },
+                { id: 12, name: 'twelve', first: 10, second: 2 }
+            ]);
 
-            it('reapplies the projection when data is added', function() {
-                expect(projectionSpy.callCount).to.equal(1);
-                dataUtils.addTo([
-                    { id: 4, name: 'four', first: 2, second: 2 },
-                    { id: 12, name: 'twelve', first: 10, second: 2 }
-                ]);
+            expect(projectionSpy.callCount).to.equal(2);
+            var result = dataUtils.getData();
+            expect(result).to.have.length(3);
+            expect(result[2]).to.have.property('name', 'twelve');
+        });
 
-                expect(projectionSpy.callCount).to.equal(2);
-                data = dataUtils.getData();
-                expect(data).to.have.length(3);
-                expect(data[2]).to.have.property('name', 'twelve');
-            });
+        it('resets the data back to the original', function() {
+            dataUtils.resetProjection();
+            storedData = dataUtils.getData();
+            expect(storedData).to.have.length(3);
+        });
 
-            it('resets the data back to the original', function() {
-                dataUtils.resetProjection();
-                data = dataUtils.getData();
-                expect(data).to.have.length(3);
-            });
+        it('does not apply projections after resetting them', function() {
+            dataUtils.resetProjection();
+            dataUtils.addTo([
+                { id: 4, name: 'four', first: 2, second: 2 }
+            ]);
 
-            it('does not apply projections after a reset', function() {
-                dataUtils.resetProjection();
-                dataUtils.addTo([
-                    { id: 4, name: 'four', first: 2, second: 2 }
-                ]);
+            expect(projectionSpy.callCount).to.equal(1);
+        });
 
-                expect(projectionSpy.callCount).to.equal(1);
-            });
+        it('contains all added data after a reset', function() {
+            dataUtils.addTo([
+                { id: 4, name: 'four', first: 2, second: 2 },
+                { id: 12, name: 'twelve', first: 10, second: 2 }
+            ]);
+            dataUtils.resetProjection();
 
-            it('contains all added data after a reset', function() {
-                dataUtils.addTo([
-                    { id: 4, name: 'four', first: 2, second: 2 },
-                    { id: 12, name: 'twelve', first: 10, second: 2 }
-                ]);
+            var result = dataUtils.getData();
+            expect(result).to.have.length(5);
+        });
 
-                dataUtils.resetProjection();
-                data = dataUtils.getData();
+        it('applies projections in sequence', function() {
+            expect(projectionSpy.callCount).to.equal(1);
 
-                expect(data).to.have.length(5);
-            });
+            var mustEndWithE = function(data) {
+                return _.filter(data, function(item) {
+                    return item.name[item.name.length - 1] == 'e';
+                });
+            };
+            var secondProjectionSpy = this.sinon.spy(mustEndWithE);
+            dataUtils.applyProjection(secondProjectionSpy);
+
+            var result = dataUtils.getData();
+            expect(result).to.have.length(1);
+            expect(result[0]).to.have.property('name', 'three');
+
+            expect(projectionSpy.callCount).to.equal(1);
+            expect(secondProjectionSpy.callCount).to.equal(1);
         });
     });
 });

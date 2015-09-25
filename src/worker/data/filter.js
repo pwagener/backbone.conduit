@@ -21,11 +21,11 @@ module.exports = {
             // Find the evaluator from the registered components
             var evaluator = ConduitWorker.handlers[filterSpec.evaluator];
 
-            if (!_.isFunction(evaluator)) {
+            if (_.isUndefined(evaluator)) {
                 throw new Error('No registered handler found for "' + filterSpec + '"');
             }
 
-            var filterContext = {};
+            var filterContext = filterSpec.context || {};
             filterFunc = function(toFilter) {
                 return _.filter(toFilter, evaluator, filterContext);
             }
@@ -39,6 +39,9 @@ module.exports = {
 
         dataUtils.applyProjection(filterFunc);
 
-        return dataUtils.length();
+        return {
+            context: filterContext,
+            length: dataUtils.length()
+        };
     }
 };

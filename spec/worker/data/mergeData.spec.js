@@ -43,7 +43,6 @@ describe('The data/mergeData module', function() {
             });
 
             expect(length).to.equal(3);
-
             data = dataUtils.getData();
         });
 
@@ -71,6 +70,18 @@ describe('The data/mergeData module', function() {
             expect(data[2]).to.have.property('name', 'three');
         });
 
+        it('can replace data', function() {
+            context.mergeData({
+                data: [
+                    { id: 1, name: 'one', first: 1 }
+                ],
+                options: { replace: true }
+            });
+            data = dataUtils.getData();
+            var changed = _.findWhere(data, { id: 1 });
+            expect(changed).to.have.property('name', 'one');
+            expect(changed).to.not.have.property('second');
+        });
     });
 
     describe('when the data is added with an idKey', function() {
