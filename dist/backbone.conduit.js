@@ -768,6 +768,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    _ensureBoss.call(this);
 	    var self = this;
 
+	    // ToDeprecate at the release of 0.7.X
 	    if (!sortSpec && this.comparator) {
 	        console.log('Warning: defining the sort specification as "collection.comparator" will be removed in the next release.  Use "collection.sortSpec" instead.');
 	    }
