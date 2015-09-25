@@ -9,13 +9,17 @@ var when = require('when');
 var _ = require('underscore');
 var mockConduitWorker = require('./worker/mockConduitWorker');
 
-function InThreadBoss(workerHandlers) {
+function InThreadBoss(sinon, workerHandlers) {
     var self = this;
     _.each(workerHandlers, function(methodDefinition) {
         self[methodDefinition.name] = function() {
             return methodDefinition.method.apply(self, arguments);
         }
     });
+
+    this.createWorkerNow = sinon.stub().returns(when.resolve());
+    this.terminate = sinon.stub();
+    this.makePromise = sinon.spy(this.makePromise);
 }
 
 InThreadBoss.prototype.registerOther = function(otherHandler) {
@@ -37,5 +41,7 @@ InThreadBoss.prototype.makePromise = function(details) {
     var result = method.apply(this, details.arguments);
     return when.resolve(result);
 };
+
+
 
 module.exports = InThreadBoss;
