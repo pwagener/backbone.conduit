@@ -12,16 +12,18 @@ var SparseCollection = window.SparseCollection = window.BasicCollection.extend({
     // Provide specific functions to the Conduit Worker for our filtering
     // and sorting capabilities.  This includes the implementations of "evaluateByDateAndName"
     // and "filterToMostRecent".
-    conduitComponents: [
-        '/exampleComponent.js'
-    ],
+    conduit:{
+        components: [
+            '/exampleComponent.js'
+        ]
+    },
 
     /**
      * This specifies the name of the method used in sorting.
      * Where is that implemented?  See 'exampleComponent.js'.
      */
-    comparator: {
-        evaluator: 'evaluateByDateAndName'
+    sortSpec: {
+        method: 'evaluateByDateAndName'
     },
 
     /**
@@ -29,7 +31,7 @@ var SparseCollection = window.SparseCollection = window.BasicCollection.extend({
      * Where is that implemented?  See 'exampleComponent.js'.
      */
     filterSpec: {
-        evaluator: 'filterToMostRecent'
+        method: 'filterToMostRecent'
     },
 
     initialize: function() {

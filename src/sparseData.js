@@ -555,7 +555,14 @@ function _ensureBoss() {
 
         // Components specified in the base Conduit configuration, plus
         // components specified for this Collection type
-        components = _.compact(_.union(components, config.getComponents(), _.result(this, 'conduitComponents')));
+
+        // ToDeprecate:  Remove after 0.7.X
+        if (this.conduitComponents) {
+            console.log('Warning:  specifying Conduit components as "conduitComponents" will be removed in the next release.  Use "conduit: { components: [...] }" instead."');
+            this.conduit = this.conduit || {};
+            this.conduit.components = this.conduitComponents;
+        }
+        components = _.compact(_.union(components, config.getComponents(), _.result(this.conduit, 'components')));
 
         this._boss = new Boss({
             Worker: config.getWorkerConstructor(),
