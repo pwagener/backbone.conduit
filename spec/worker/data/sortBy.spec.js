@@ -52,7 +52,7 @@ describe("The data/sortBy module", function() {
             });
 
             context.sortBy({
-                evaluator: 'byId'
+                method: 'byId'
             });
             var data = dataUtils.getData();
             var ids = _.pluck(data, 'id');
@@ -78,7 +78,7 @@ describe("The data/sortBy module", function() {
 
             var sortContext = {};
             var result = context.sortBy({
-                evaluator: 'byIdWithCount',
+                method: 'byIdWithCount',
                 context: sortContext
             });
 

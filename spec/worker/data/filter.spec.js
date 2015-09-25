@@ -56,7 +56,7 @@ describe('the data/filter module', function() {
 
         it('returns an object with length when filtering by an evaluation function; AKA "_.filter(...)"', function() {
             var length = context.filter({
-                evaluator: 'nameStartsWithT'
+                method: 'nameStartsWithT'
             }).length;
             expect(length).to.equal(2);
         });
@@ -78,7 +78,7 @@ describe('the data/filter module', function() {
         it('can accept and return a context for the filtering', function() {
             var filterContext = {};
             var result = context.filter({
-                evaluator: 'nameStartsWithT',
+                method: 'nameStartsWithT',
                 context: filterContext
             });
 

@@ -55,7 +55,7 @@ describe('The data/map module', function() {
             dataUtils.addTo(this.getSampleData());
 
             context.map({
-                mapper: 'computeThirdField'
+                method: 'computeThirdField'
             });
         });
 
@@ -81,7 +81,7 @@ describe('The data/map module', function() {
         it('can accept a context', function() {
             var mapContext = {};
             var result = context.map({
-                mapper: 'countNumberEvenTotal',
+                method: 'countNumberEvenTotal',
                 context: mapContext
             });
 

@@ -9,13 +9,7 @@ module.exports = {
     bindToWorker: true,
 
     method: function(mapSpec) {
-        // ToDeprecate in 0.7.X
-        if (_.isString(mapSpec)) {
-            console.log('Warning: providing the "mapAsync" method name as a string will be removed in the next version; use { mapper: "someMethod" }');
-            mapSpec = { mapper: mapSpec };
-        }
-
-        var mapFuncName = mapSpec.mapper;
+        var mapFuncName = mapSpec.method;
         if (_.isString(mapFuncName)) {
             var mapper = ConduitWorker.handlers[mapFuncName];
 
