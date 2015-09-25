@@ -17,9 +17,9 @@ module.exports = {
     method: function(filterSpec) {
 
         var filterFunc;
-        if (_.isString(filterSpec.evaluator)) {
+        if (_.isString(filterSpec.method)) {
             // Find the evaluator from the registered components
-            var evaluator = ConduitWorker.handlers[filterSpec.evaluator];
+            var evaluator = ConduitWorker.handlers[filterSpec.method];
 
             if (_.isUndefined(evaluator)) {
                 throw new Error('No registered handler found for "' + filterSpec + '"');

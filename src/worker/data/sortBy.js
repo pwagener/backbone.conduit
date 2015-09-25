@@ -19,14 +19,8 @@ module.exports = {
             evaluator = function (item) {
                 return item[property];
             }
-        } else if (_.isString(sortSpec.method) || _.isString(sortSpec.evaluator)) {
-            // ToDeprecate in 0.7.X
-            if (_.isString(sortSpec.method)) {
-                console.log('Warning:  sortAsync sorting method specified as "method" will be removed in the next release.  Use "evaluator" instead.');
-                sortSpec.evaluator = sortSpec.method;
-            }
-
-            evaluator = ConduitWorker.handlers[sortSpec.evaluator];
+        } else if (_.isString(sortSpec.method)) {
+            evaluator = ConduitWorker.handlers[sortSpec.method];
         } else {
             throw new Error('Provide a property name as "comparator" or a registered method as { method }');
         }

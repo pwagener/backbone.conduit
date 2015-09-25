@@ -326,11 +326,18 @@ function sortAsync(sortSpec) {
     // ToDeprecate at the release of 0.7.X
     if (!sortSpec && this.comparator) {
         console.log('Warning: defining the sort specification as "collection.comparator" will be removed in the next release.  Use "collection.sortSpec" instead.');
+        this.sortSpec = this.comparator;
     }
-    sortSpec = sortSpec || this.sortSpec || this.comparator;
+    sortSpec = sortSpec || this.sortSpec;
+
+    // ToDeprecate at the release of 0.7.X
+    if (sortSpec && sortSpec.evaluator) {
+        console.log('Warning: defining the sort method with "evaluator" will be removed in the next release.  Use { method: "someMethod" } instead.');
+        sortSpec.method = sortSpec.evaluator;
+    }
 
     // Error if comparator isn't provided correctly.
-    if (!sortSpec || (!sortSpec.property && !sortSpec.evaluator)) {
+    if (!sortSpec || (!sortSpec.property && !sortSpec.method)) {
         return when.reject(new Error('Please provide a sort specification'));
     }
 
@@ -380,6 +387,12 @@ function filterAsync(filterSpec) {
         return when.reject(new Error('Please provide a filter specification'));
     }
 
+    // ToDeprecate at the release of 0.7.X
+    if (filterSpec.evaluator) {
+        console.log('Warning: defining the filter method with "evaluator" will be removed in the next release.  Use { method: "someMethod" } instead.');
+        filterSpec.method = filterSpec.evaluator;
+    }
+
     return this._boss.makePromise({
         method: 'filter',
         arguments: [ filterSpec ]
@@ -413,6 +426,16 @@ function mapAsync(mapSpec) {
     var self = this;
     mapSpec = mapSpec || this.mapSpec;
 
+    // ToDeprecate in 0.7.X
+    if (_.isString(mapSpec)) {
+        console.log('Warning: providing the "mapSpec" method name as a string will be removed in the next version; use { method: "someMethod" } instead');
+        mapSpec = { method: mapSpec };
+    }
+    if (_.isString(mapSpec.mapper)) {
+        console.log('Warning: providing the mapping method as "mapper" will be removed in the next version; use { method: "someMethod" } instead');
+        mapSpec.method = mapSpec.mapper;
+    }
+
     return this._boss.makePromise({
         method: 'map',
         arguments: [ mapSpec ]
@@ -433,6 +456,12 @@ function mapAsync(mapSpec) {
  */
 function reduceAsync(reduceSpec) {
     _ensureBoss.call(this);
+
+    // ToDeprecate in 0.7.X
+    if (_.isString(reduceSpec.reducer)) {
+        console.log('Warning: providing the reduce method as "reducer" will be removed in the next version; use { method: "someMethod" } instead');
+        reduceSpec.method = reduceSpec.reducer;
+    }
 
     return this._boss.makePromise({
         method: 'reduce',
