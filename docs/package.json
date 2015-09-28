@@ -1,0 +1,15 @@
+{
+  "name": "backbone.conduit-examples",
+  "version": "0.0.1",
+  "description": "Examples for Backbone.Conduit",
+  "main": "run-examples.js",
+  "scripts": {
+    "setup": "gitbook install",
+    "start": "gitbook serve"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "gitbook-cli": "^0.3.6"
+  }
+}

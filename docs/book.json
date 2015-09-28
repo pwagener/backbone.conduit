@@ -1,0 +1,21 @@
+{
+  "structure": {
+    "readme": "FrontPage.md"
+  },
+
+  "plugins": [
+    "anchors",
+    "github-buttons",
+    "ga"
+  ],
+
+  "pluginsConfig": {
+    "github-buttons": {
+      "repo": "pwagener/backbone.conduit",
+      "types": [ "star" ]
+    },
+    "ga": {
+      "token": "UA-59780187-1"
+    }
+  }
+}

@@ -6,17 +6,18 @@ Conduit is a Backbone plugin that improves the ability of Backbone to handle lar
 [![Build Status](https://travis-ci.org/pwagener/backbone.conduit.svg?branch=master)](https://travis-ci.org/pwagener/backbone.conduit)
 [![Join the chat at https://gitter.im/pwagener/backbone.conduit](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/pwagener/backbone.conduit?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-## TL;DR
-`Conduit` provides some special functions for dealing with large data sets.  Install it with `npm` or `bower`:
-```
+Install it with `npm` or `bower`:
+
+```bash
 $ bower install backbone.conduit
 ... or ...
 $ npm install backbone.conduit
 ```
 
-`Conduit.QuickCollection` (an extension of `Backbone.Collection`) is a great way to get started:
+### Option #1: Faster Model Creation
+`Conduit.QuickCollection` is optimized to create Backbone.Model instances faster:
 
-```
+```javascript
 var collection = new Backbone.Conduit.QuickCollection();
 
 // If you have a large amount of data injected onto the page, instead of 'reset(...)' do ...
@@ -27,21 +28,55 @@ collection.refill(aBigArray);
 collection.haul();
 ```
 
-Performance varies, but typically loading data into a `Conduit.QuickCollection` is ~ 50% faster than a `Backbone.Collection`.
+Performance varies, but typically loading data into a `Conduit.QuickCollection` is ~ 40% faster than a `Backbone.Collection`.
 
-### What's New?
-The 0.6.X release introduces the `Conduit.sparseData` module and the `Conduit.SparseCollection`.  These are an experiment in 
-managing Backbone data in a worker thread.  Now with asynchronous sorting, filtering, mapping, and reducing of your data!
-Check out the [The Demo](http://conduit.wagener.org) to see it working live.
+### Option #2:  Async Data Management + Deferred Model Creation
+
+`Conduit.SparseCollection` drastically changes how data is managed in a Collection.  Raw data is managed in a web worker,
+and model creation only happens when data is *prepared* for use in a View.  Sort, Filter, Map and Reduce, and other 
+methods are asynchronous, using Promises to manage the flow:
+
+```javascript
+var MyCollection = Backbone.Conduit.SparseCollection.extend({
+
+    // Assume this endpoint returns 100K items:
+    url: '/some/enormous/data',
+    
+    // ...
+});
+
+Backbone.Conduit.enableWorker({
+    paths: '/your/path/to/backbone.conduit'
+}).then(function() {
+    var collection = new MyCollection();
+    collection.haul().then(function() {
+        console.log('Length: ' + collection.length); // <== "Length: 100000"
+
+    // Prepare the first 10 models for use
+    return collection.prepare({
+            indexes: { min: 0, max: 9}
+        });
+    }).then(function(models) {
+        console.log('Prepared: ' + models.length); // <== "Prepared: 10"
+        // Note the prepared models are also available via
+        // 'collection.get(...)' or 'collection.at(...)';
+    });
+});
+
+```
+
+Since model creation happens at the last possible moment, and the worker thread handles the data management, 
+a `SparseCollection` can handle hundreds of thousands of items easily.
+
 
 ### Interesting.  Can you tell me more?
-- Sure!  [Here's the Documentation](http://pwagener.github.io/backbone.conduit/).
+- Sure!  Here's [The Documentation](http://pwagener.github.io/backbone.conduit/).
 
 ### Reading bores me.  Can you show me instead?
-- Yes!  [Check out the Demo](http://conduit.wagener.org).
+- Yes!  Check out [the Demo](http://conduit.wagener.org).
 
 ### I Think It's Broken.
-- Oh No!  [Please File an Issue](https://github.com/pwagener/backbone.conduit/issues).
+- Oh No!  Please [File An Issue](https://github.com/pwagener/backbone.conduit/issues).
 
 ### I Have A Question
 Great!  Either ...
