@@ -387,7 +387,7 @@
 	var _ = __webpack_require__(15);
 	var when = __webpack_require__(16);
 	var dataUtils = __webpack_require__(12);
-	var nanoAjax = __webpack_require__(13);
+	var nanoAjax = __webpack_require__(14);
 
 	module.exports = {
 	    name: 'restGet',
@@ -454,7 +454,7 @@
 	var _ = __webpack_require__(15);
 	var when = __webpack_require__(16);
 	var dataUtils = __webpack_require__(12);
-	var nanoAjax = __webpack_require__(13);
+	var nanoAjax = __webpack_require__(14);
 
 	module.exports = {
 	    name: 'restSave',
@@ -518,7 +518,7 @@
 	var _ = __webpack_require__(15);
 	var when = __webpack_require__(16);
 	var dataUtils = __webpack_require__(12);
-	var nanoAjax = __webpack_require__(13);
+	var nanoAjax = __webpack_require__(14);
 
 	module.exports = {
 	    name: 'restDestroy',
@@ -605,7 +605,7 @@
 	 */
 
 	var _ = __webpack_require__(15);
-	var managedContext = __webpack_require__(14);
+	var managedContext = __webpack_require__(13);
 
 	function _getContext(skipInit) {
 	    if (!ConduitWorker._data && !skipInit) {
@@ -882,56 +882,6 @@
 /* 13 */
 /***/ function(module, exports, __webpack_require__) {
 
-	/* WEBPACK VAR INJECTION */(function(global) {exports.ajax = function (params, callback) {
-	  if (typeof params == 'string') params = {url: params}
-	  var headers = params.headers || {}
-	    , body = params.body
-	    , method = params.method || (body ? 'POST' : 'GET')
-	    , withCredentials = params.withCredentials || false
-
-	  var req = getRequest()
-
-	  req.onreadystatechange = function () {
-	    if (req.readyState == 4)
-	      callback(req.status, req.responseText, req)
-	  }
-
-	  if (body) {
-	    setDefault(headers, 'X-Requested-With', 'XMLHttpRequest')
-	    setDefault(headers, 'Content-Type', 'application/x-www-form-urlencoded')
-	  }
-
-	  req.open(method, params.url, true)
-
-	  // has no effect in IE
-	  // has no effect for same-origin requests
-	  // has no effect in CORS if user has disabled 3rd party cookies
-	  req.withCredentials = withCredentials
-
-	  for (var field in headers)
-	    req.setRequestHeader(field, headers[field])
-
-	  req.send(body)
-	}
-
-	function getRequest() {
-	  if (global.XMLHttpRequest)
-	    return new global.XMLHttpRequest;
-	  else
-	    try { return new global.ActiveXObject("MSXML2.XMLHTTP.3.0"); } catch(e) {}
-	  throw new Error('no xmlhttp request able to be created')
-	}
-
-	function setDefault(obj, key, value) {
-	  obj[key] = obj[key] || value
-	}
-	
-	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
-
-/***/ },
-/* 14 */
-/***/ function(module, exports, __webpack_require__) {
-
 	/* WEBPACK VAR INJECTION */(function(global) {'use strict';
 
 	/**
@@ -1148,6 +1098,56 @@
 	    debug: debug
 
 	};
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
+
+/***/ },
+/* 14 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/* WEBPACK VAR INJECTION */(function(global) {exports.ajax = function (params, callback) {
+	  if (typeof params == 'string') params = {url: params}
+	  var headers = params.headers || {}
+	    , body = params.body
+	    , method = params.method || (body ? 'POST' : 'GET')
+	    , withCredentials = params.withCredentials || false
+
+	  var req = getRequest()
+
+	  req.onreadystatechange = function () {
+	    if (req.readyState == 4)
+	      callback(req.status, req.responseText, req)
+	  }
+
+	  if (body) {
+	    setDefault(headers, 'X-Requested-With', 'XMLHttpRequest')
+	    setDefault(headers, 'Content-Type', 'application/x-www-form-urlencoded')
+	  }
+
+	  req.open(method, params.url, true)
+
+	  // has no effect in IE
+	  // has no effect for same-origin requests
+	  // has no effect in CORS if user has disabled 3rd party cookies
+	  req.withCredentials = withCredentials
+
+	  for (var field in headers)
+	    req.setRequestHeader(field, headers[field])
+
+	  req.send(body)
+	}
+
+	function getRequest() {
+	  if (global.XMLHttpRequest)
+	    return new global.XMLHttpRequest;
+	  else
+	    try { return new global.ActiveXObject("MSXML2.XMLHTTP.3.0"); } catch(e) {}
+	  throw new Error('no xmlhttp request able to be created')
+	}
+
+	function setDefault(obj, key, value) {
+	  obj[key] = obj[key] || value
+	}
+	
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
@@ -2966,7 +2966,7 @@
 	/**
 	 * This module allows you to pass a configuration into the worker's context
 	 */
-	var managedContext = __webpack_require__(14);
+	var managedContext = __webpack_require__(13);
 	var util = __webpack_require__(31);
 
 	module.exports = {
@@ -3020,9 +3020,9 @@
 	(function(define) { 'use strict';
 	!(__WEBPACK_AMD_DEFINE_RESULT__ = function (require) {
 
-		var makePromise = __webpack_require__(33);
-		var Scheduler = __webpack_require__(34);
-		var async = __webpack_require__(35).asap;
+		var makePromise = __webpack_require__(34);
+		var Scheduler = __webpack_require__(35);
+		var async = __webpack_require__(33).asap;
 
 		return makePromise({
 			scheduler: new Scheduler(async)
@@ -3104,7 +3104,7 @@
 	(function(define) { 'use strict';
 	!(__WEBPACK_AMD_DEFINE_RESULT__ = function(require) {
 
-		var env = __webpack_require__(35);
+		var env = __webpack_require__(33);
 		var TimeoutError = __webpack_require__(19);
 
 		function setTimeout(f, ms, x, y) {
@@ -3853,7 +3853,7 @@
 	(function(define) { 'use strict';
 	!(__WEBPACK_AMD_DEFINE_RESULT__ = function(require) {
 
-		var setTimer = __webpack_require__(35).setTimer;
+		var setTimer = __webpack_require__(33).setTimer;
 		var format = __webpack_require__(37);
 
 		return function unhandledRejection(Promise) {
@@ -4536,6 +4536,86 @@
 
 /***/ },
 /* 33 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var __WEBPACK_AMD_DEFINE_RESULT__;var require;/* WEBPACK VAR INJECTION */(function(process) {/** @license MIT License (c) copyright 2010-2014 original author or authors */
+	/** @author Brian Cavalier */
+	/** @author John Hann */
+
+	/*global process,document,setTimeout,clearTimeout,MutationObserver,WebKitMutationObserver*/
+	(function(define) { 'use strict';
+	!(__WEBPACK_AMD_DEFINE_RESULT__ = function(require) {
+		/*jshint maxcomplexity:6*/
+
+		// Sniff "best" async scheduling option
+		// Prefer process.nextTick or MutationObserver, then check for
+		// setTimeout, and finally vertx, since its the only env that doesn't
+		// have setTimeout
+
+		var MutationObs;
+		var capturedSetTimeout = typeof setTimeout !== 'undefined' && setTimeout;
+
+		// Default env
+		var setTimer = function(f, ms) { return setTimeout(f, ms); };
+		var clearTimer = function(t) { return clearTimeout(t); };
+		var asap = function (f) { return capturedSetTimeout(f, 0); };
+
+		// Detect specific env
+		if (isNode()) { // Node
+			asap = function (f) { return process.nextTick(f); };
+
+		} else if (MutationObs = hasMutationObserver()) { // Modern browser
+			asap = initMutationObserver(MutationObs);
+
+		} else if (!capturedSetTimeout) { // vert.x
+			var vertxRequire = require;
+			var vertx = __webpack_require__(38);
+			setTimer = function (f, ms) { return vertx.setTimer(ms, f); };
+			clearTimer = vertx.cancelTimer;
+			asap = vertx.runOnLoop || vertx.runOnContext;
+		}
+
+		return {
+			setTimer: setTimer,
+			clearTimer: clearTimer,
+			asap: asap
+		};
+
+		function isNode () {
+			return typeof process !== 'undefined' &&
+				Object.prototype.toString.call(process) === '[object process]';
+		}
+
+		function hasMutationObserver () {
+			return (typeof MutationObserver === 'function' && MutationObserver) ||
+				(typeof WebKitMutationObserver === 'function' && WebKitMutationObserver);
+		}
+
+		function initMutationObserver(MutationObserver) {
+			var scheduled;
+			var node = document.createTextNode('');
+			var o = new MutationObserver(run);
+			o.observe(node, { characterData: true });
+
+			function run() {
+				var f = scheduled;
+				scheduled = void 0;
+				f();
+			}
+
+			var i = 0;
+			return function (f) {
+				scheduled = f;
+				node.data = (i ^= 1);
+			};
+		}
+	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+	}(__webpack_require__(32)));
+	
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(40)))
+
+/***/ },
+/* 34 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/* WEBPACK VAR INJECTION */(function(process) {/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -5469,7 +5549,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(40)))
 
 /***/ },
-/* 34 */
+/* 35 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/** @license MIT License (c) copyright 2010-2014 original author or authors */
@@ -5553,86 +5633,6 @@
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 	}(__webpack_require__(32)));
 
-
-/***/ },
-/* 35 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var __WEBPACK_AMD_DEFINE_RESULT__;var require;/* WEBPACK VAR INJECTION */(function(process) {/** @license MIT License (c) copyright 2010-2014 original author or authors */
-	/** @author Brian Cavalier */
-	/** @author John Hann */
-
-	/*global process,document,setTimeout,clearTimeout,MutationObserver,WebKitMutationObserver*/
-	(function(define) { 'use strict';
-	!(__WEBPACK_AMD_DEFINE_RESULT__ = function(require) {
-		/*jshint maxcomplexity:6*/
-
-		// Sniff "best" async scheduling option
-		// Prefer process.nextTick or MutationObserver, then check for
-		// setTimeout, and finally vertx, since its the only env that doesn't
-		// have setTimeout
-
-		var MutationObs;
-		var capturedSetTimeout = typeof setTimeout !== 'undefined' && setTimeout;
-
-		// Default env
-		var setTimer = function(f, ms) { return setTimeout(f, ms); };
-		var clearTimer = function(t) { return clearTimeout(t); };
-		var asap = function (f) { return capturedSetTimeout(f, 0); };
-
-		// Detect specific env
-		if (isNode()) { // Node
-			asap = function (f) { return process.nextTick(f); };
-
-		} else if (MutationObs = hasMutationObserver()) { // Modern browser
-			asap = initMutationObserver(MutationObs);
-
-		} else if (!capturedSetTimeout) { // vert.x
-			var vertxRequire = require;
-			var vertx = __webpack_require__(38);
-			setTimer = function (f, ms) { return vertx.setTimer(ms, f); };
-			clearTimer = vertx.cancelTimer;
-			asap = vertx.runOnLoop || vertx.runOnContext;
-		}
-
-		return {
-			setTimer: setTimer,
-			clearTimer: clearTimer,
-			asap: asap
-		};
-
-		function isNode () {
-			return typeof process !== 'undefined' &&
-				Object.prototype.toString.call(process) === '[object process]';
-		}
-
-		function hasMutationObserver () {
-			return (typeof MutationObserver === 'function' && MutationObserver) ||
-				(typeof WebKitMutationObserver === 'function' && WebKitMutationObserver);
-		}
-
-		function initMutationObserver(MutationObserver) {
-			var scheduled;
-			var node = document.createTextNode('');
-			var o = new MutationObserver(run);
-			o.observe(node, { characterData: true });
-
-			function run() {
-				var f = scheduled;
-				scheduled = void 0;
-				f();
-			}
-
-			var i = 0;
-			return function (f) {
-				scheduled = f;
-				node.data = (i ^= 1);
-			};
-		}
-	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	}(__webpack_require__(32)));
-	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(40)))
 
 /***/ },
 /* 36 */
