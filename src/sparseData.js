@@ -48,6 +48,17 @@ function createWorkerNow() {
 }
 
 /**
+ * Terminate the worker immediately.  The SparseCollection worker is intentionally
+ * configured to never terminate automatically, since it holds the canonical copy of
+ * the data. However, if you have finished processing the data and have populated all the
+ * models you need, stopping the worker will conserve resources.
+ */
+function stopWorkerNow() {
+    _ensureBoss.call(this);
+    this._boss.terminate();
+}
+
+/**
  * This method is used to retrieve data from the worker and prepare to use it in the main
  * thread.
  * @param items Specify what to retrieve.  Possibilities:
@@ -555,7 +566,14 @@ function _ensureBoss() {
 
         // Components specified in the base Conduit configuration, plus
         // components specified for this Collection type
-        components = _.compact(_.union(components, config.getComponents(), _.result(this, 'conduitComponents')));
+
+        // ToDeprecate:  Remove after 0.7.X
+        if (this.conduitComponents) {
+            console.log('Warning:  specifying Conduit components as "conduitComponents" will be removed in the next release.  Use "conduit: { components: [...] }" instead."');
+            this.conduit = this.conduit || {};
+            this.conduit.components = this.conduitComponents;
+        }
+        components = _.compact(_.union(components, config.getComponents(), _.result(this.conduit, 'components')));
 
         this._boss = new Boss({
             Worker: config.getWorkerConstructor(),
@@ -599,6 +617,8 @@ var mixinObj = {
         The public sparseData interface:
      */
     createWorkerNow: createWorkerNow,
+
+    stopWorkerNow: stopWorkerNow,
 
     prepare: prepare,
 

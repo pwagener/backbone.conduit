@@ -11,10 +11,10 @@ var mockConduitWorker = require('./worker/mockConduitWorker');
 var sparseData = require('./../src/sparseData');
 
 
-function makeInThreadBoss() {
+function makeInThreadBoss(sinon) {
     mockConduitWorker.reset();
 
-    var inThreadBoss = new InThreadBoss([
+    var inThreadBoss = new InThreadBoss(sinon, [
         // Method handlers that can be called directly
         require('./../src/worker/data/setData'),
         require('./../src/worker/data/prepare'),
@@ -136,18 +136,24 @@ describe("The sparseData module", function() {
     });
 
     describe('when communicating with the boss', function() {
-        var bossPromiseSpy, collection;
+        var bossPromiseSpy, collection, mockBoss;
 
         beforeEach(function() {
-            var mockBoss = makeInThreadBoss();
+            mockBoss = makeInThreadBoss(this.sinon);
 
-            bossPromiseSpy = this.sinon.spy(mockBoss, 'makePromise');
+            bossPromiseSpy = mockBoss.makePromise;
             collection = new Collection();
             collection._boss = mockBoss;
         });
 
-        afterEach(function() {
-            bossPromiseSpy.restore();
+        it('delegates to the Boss when immediately creating the worker', function() {
+            collection.createWorkerNow();
+            expect(mockBoss.createWorkerNow.callCount).to.equal(1);
+        });
+
+        it('delegates to the Boss when immediately stopping the worker', function() {
+            collection.stopWorkerNow();
+            expect(mockBoss.terminate.callCount).to.equal(1);
         });
 
         it('calls "setData" when adding data with "refill"', function() {
@@ -201,8 +207,8 @@ describe("The sparseData module", function() {
 
         beforeEach(function() {
             collection = new Collection();
-            collection._boss = testBoss = makeInThreadBoss();
-            makePromiseSpy = this.sinon.spy(testBoss, 'makePromise');
+            collection._boss = testBoss = makeInThreadBoss(this.sinon);
+            makePromiseSpy = testBoss.makePromise;
 
             fillSpy = this.sinon.spy(collection, 'fill');
             refillSpy = this.sinon.spy(collection, 'refill');
@@ -234,7 +240,7 @@ describe("The sparseData module", function() {
         beforeEach(function() {
             // We mock out an in-thread-like boss
             collection = new Collection();
-            collection._boss = makeInThreadBoss();
+            collection._boss = makeInThreadBoss(this.sinon);
 
             collection.refill(this.getSampleData());
         });
@@ -360,7 +366,7 @@ describe("The sparseData module", function() {
         var setUpCollectionForTest = function(done) {
             // We mock out an in-thread-like boss
             collection = new Collection();
-            collection._boss = makeInThreadBoss();
+            collection._boss = makeInThreadBoss(this.sinon);
             collection.refill(this.getSampleData());
 
             preparedSpy = this.sinon.spy();
