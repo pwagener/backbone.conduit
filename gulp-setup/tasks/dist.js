@@ -2,4 +2,4 @@
 
 var gulp = require('gulp');
 
-gulp.task('dist', "Create distribution", ['dist:library', 'dist:worker', 'dist:examples']);
+gulp.task('dist', "Create distribution", ['dist:library', 'dist:worker']);

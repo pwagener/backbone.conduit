@@ -70,7 +70,7 @@ a `SparseCollection` can handle hundreds of thousands of items easily.
 
 
 ### Interesting.  Can you tell me more?
-- Sure!  Here's [The Documentation](http://pwagener.github.io/backbone.conduit/).
+- Sure!  Here's [The Documentation](http://conduit.wagener.org/docs).
 
 ### Reading bores me.  Can you show me instead?
 - Yes!  Check out [the Demo](http://conduit.wagener.org).

@@ -3,6 +3,9 @@
 
 Conduit is a Backbone plugin that improves the ability of Backbone to handle large scale data sets.  
 
+## Other Forms of Documentation?
+Here's [a pdf](backbone-conduit.pdf) with all the same content.
+
 ## Reading bores me.  Can you show me instead?
 Yes!  Check out [the Demo](http://conduit.wagener.org).
 

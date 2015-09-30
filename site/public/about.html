@@ -47,7 +47,7 @@
         <div class="collapse navbar-collapse pull-right" id="bs-example-navbar-collapse-1">
             <ul class="nav navbar-nav">
                 <li>
-                    <a href="http://pwagener.github.io/backbone.conduit/">
+                    <a href="docs">
                         See The Docs
                         <span class="glyphicon glyphicon-book"></span>
                     </a>
@@ -88,9 +88,8 @@
         </p>
         <p>
             The demo runs through the same cycle using three different techniques: One uses basic Backbone techniques, while
-            the other two leverage the <a href="http://pwagener.github.io/backbone.conduit/">Backbone.Conduit</a>
-            plugin, which provides different <code>Backbone.Collection</code> implementations that are optimized for
-            larger data.
+            the other two leverage the Backbone.Conduit plugin, which provides different <code>Backbone.Collection</code>
+            implementations that are optimized for larger data.
         </p>
 
         <hr/>
@@ -196,22 +195,17 @@
 
         <h2>Where Do We Go From Here</h2>
         <p>
-            The <code>Backbone.Conduit</code> plugin <a href="http://pwagener.github.io/backbone.conduit/">is in active development</a>.  The
-            <a href="http://pwagener.github.io/backbone.conduit/QuickCollection/">Conduit.QuickCollection</a> is a drop-in replacement
+            The <code>Backbone.Conduit</code> plugin <a href="docs/">is in active development</a>.  The
+            <a href="docs/QuickCollection/">Conduit.QuickCollection</a> is a drop-in replacement
             for a <code>Backbone.Collection</code> for most use cases.  It should be useful anywhere you believe you
             may have more than a few hundred models.
         </p>
         <p>
-            The <code>Conduit.SparseCollection</code> is still somewhat experimental, but is very
+            The <a href="docs/SparseCollection">Conduit.SparseCollection</a> is still somewhat experimental, but is very
             promising.  The data access pattern is fundamentally different, but all functionality is exposed via Promises
             using methods that are functional equivalents to a regular <code>Backbone.Collection</code>.  It is not a
             drop-in replacement, but if you are considering data larger than several thousand items, it is
             worth a look.
-        </p>
-        <p>
-            If you're interested in following along with the experimental development of <code>Conduit.SparseCollection</code>, check out the
-            <a href="http://pwagener.github.io/backbone.conduit/sparseData"><code>sparseData module</code>
-                documentation</a>.
         </p>
     </div>
 

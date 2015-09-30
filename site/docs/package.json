@@ -5,7 +5,8 @@
   "main": "run-examples.js",
   "scripts": {
     "setup": "gitbook install",
-    "start": "gitbook serve"
+    "start": "gitbook serve",
+    "docs": "gitbook build . ../target/docs; "
   },
   "author": "",
   "license": "MIT",
