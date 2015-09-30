@@ -1,0 +1,28 @@
+# Summary
+
+Moving Data through Backbone JS.  Backbone.Conduit improves the ability of Backbone to handle large scale data sets.
+
+* [Getting Started](Intro/index.md)
+    * [Installing](Intro/install.md)
+    * [Examples](Intro/examples.md)
+* [Quick Collection](QuickCollection/index.md)
+    * [Extend or Mixin](QuickCollection/extendormixin.md)
+    * [Usage](QuickCollection/usage.md)
+        * [fill(...)](QuickCollection/fill.md)
+        * [haul(...)](QuickCollection/haul.md)
+        * [refill(...)](QuickCollection/refill.md)
+* [Sparse Collection (Experimental)](SparseCollection/index.md)
+    * [Extend or Mixin](SparseCollection/extendormixin.md)
+    * [Configuration](SparseCollection/configuration.md)
+    * [Data Handling/Projection](SparseCollection/configuration.md)
+    * [Worker Lifecycle](SparseCollection/workerlifecycle.md)
+    * [Usage](SparseCollection/usage.md)
+        * [filterAsync(...)](SparseCollection/filterAsync.md)
+        * [isPrepared(...)](SparseCollection/isPrepared.md)
+        * [mapAsync(...)](SparseCollection/mapAsync.md)
+        * [prepare(...)](SparseCollection/prepare.md)
+        * [reduceAsync(...)](SparseCollection/reduceAsync.md)
+        * [resetProjection(...)](SparseCollection/resetProjection.md)
+        * [sortAsync(...)](SparseCollection/sortAsync.md)
+    * [Custom Methods](SparseCollection/customMethods.md)
+* [Change Log](changelog.md)

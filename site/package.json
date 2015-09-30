@@ -2,8 +2,9 @@
   "name": "backbone.conduit-examples",
   "version": "0.0.1",
   "description": "Examples for Backbone.Conduit",
-  "main": "run-examples.js",
+  "main": "server.js",
   "scripts": {
+    "start": "cp ../dist/*.js public/lib && node server.js",
     "test": "test"
   },
   "author": "",
