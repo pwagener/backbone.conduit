@@ -5,7 +5,7 @@
   "scripts": {
     "clean": "rm -rf target",
     "build-site": "bin/build-site.js",
-    "publish": "bin/build-site.js; bin/publish-site.js",
+    "site-publish": "bin/build-site.js; bin/publish-site.js",
     "test": "gulp test",
     "perf": "gulp perf",
     "dist": "gulp dist"
