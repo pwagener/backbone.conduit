@@ -81,7 +81,7 @@
 	/**
 	 * This worker method handler stores data on the worker.
 	 */
-	var _ = __webpack_require__(15);
+	var _ = __webpack_require__(14);
 
 	var dataUtils = __webpack_require__(12);
 
@@ -114,7 +114,7 @@
 	 * Module used to merge existing data sets on the worker
 	 */
 
-	var _ = __webpack_require__(15);
+	var _ = __webpack_require__(14);
 
 	var dataUtils = __webpack_require__(12);
 
@@ -149,7 +149,7 @@
 	 * This worker method handler returns data from the worker.
 	 */
 
-	var _ = __webpack_require__(15);
+	var _ = __webpack_require__(14);
 
 	var dataUtils = __webpack_require__(12);
 
@@ -195,7 +195,7 @@
 	/**
 	 * This module provides sorting for the worker
 	 */
-	var _ = __webpack_require__(15);
+	var _ = __webpack_require__(14);
 	var dataUtils = __webpack_require__(12);
 
 	module.exports = {
@@ -242,7 +242,7 @@
 	/**
 	 * This module provides filtering for the worker.
 	 */
-	var _ = __webpack_require__(15);
+	var _ = __webpack_require__(14);
 	var dataUtils = __webpack_require__(12);
 
 	module.exports = {
@@ -292,7 +292,7 @@
 	'use strict';
 
 
-	var _ = __webpack_require__(15);
+	var _ = __webpack_require__(14);
 	var dataUtils = __webpack_require__(12);
 
 	module.exports = {
@@ -332,7 +332,7 @@
 	/**
 	 * This worker module provides a 'reduce(...)' method.
 	 */
-	var _ = __webpack_require__(15);
+	var _ = __webpack_require__(14);
 	var dataUtils = __webpack_require__(12);
 
 	module.exports = {
@@ -340,8 +340,8 @@
 	    name: 'reduce',
 
 	    method: function(reduceSpec) {
-	        if (reduceSpec && _.isString(reduceSpec.reducer)) {
-	            var reducer = ConduitWorker.handlers[reduceSpec.reducer];
+	        if (reduceSpec && _.isString(reduceSpec.method)) {
+	            var reducer = ConduitWorker.handlers[reduceSpec.method];
 	            if (_.isUndefined(reducer)) {
 	                throw new Error('No registered handler found called "' + reduceSpec.reducer + '" to use in "reduce(...)');
 	            }
@@ -352,7 +352,7 @@
 
 	            return _.reduce(data, reducer, initialValue, reduceContext);
 	        } else {
-	            throw new Error('Reduce requires an argument with a "reducer" property naming the iterating function');
+	            throw new Error('Reduce requires an argument with a "method" property naming the iterating function');
 	        }
 	    }
 	};
@@ -384,10 +384,10 @@
 
 	'use strict';
 
-	var _ = __webpack_require__(15);
+	var _ = __webpack_require__(14);
 	var when = __webpack_require__(16);
 	var dataUtils = __webpack_require__(12);
-	var nanoAjax = __webpack_require__(13);
+	var nanoAjax = __webpack_require__(15);
 
 	module.exports = {
 	    name: 'restGet',
@@ -451,10 +451,10 @@
 	 * Implement POST and PUT REST-ful calls
 	 */
 
-	var _ = __webpack_require__(15);
+	var _ = __webpack_require__(14);
 	var when = __webpack_require__(16);
 	var dataUtils = __webpack_require__(12);
-	var nanoAjax = __webpack_require__(13);
+	var nanoAjax = __webpack_require__(15);
 
 	module.exports = {
 	    name: 'restSave',
@@ -515,10 +515,10 @@
 	 * Implement DELETE REST-ful calls
 	 */
 
-	var _ = __webpack_require__(15);
+	var _ = __webpack_require__(14);
 	var when = __webpack_require__(16);
 	var dataUtils = __webpack_require__(12);
-	var nanoAjax = __webpack_require__(13);
+	var nanoAjax = __webpack_require__(15);
 
 	module.exports = {
 	    name: 'restDestroy',
@@ -604,8 +604,8 @@
 	 * that allow us to not constantly iterate over the whole set.
 	 */
 
-	var _ = __webpack_require__(15);
-	var managedContext = __webpack_require__(14);
+	var _ = __webpack_require__(14);
+	var managedContext = __webpack_require__(13);
 
 	function _getContext(skipInit) {
 	    if (!ConduitWorker._data && !skipInit) {
@@ -662,7 +662,7 @@
 	            }
 	            item._dataIndex = index;
 
-	            if (item._conduitId === void 0) {
+	            if (context.writeable &&  item._conduitId === void 0) {
 	                // An item created in a 'map' projection needs a ConduitID
 	                item._conduitId = _.uniqueId('conduit');
 	            }
@@ -882,56 +882,6 @@
 /* 13 */
 /***/ function(module, exports, __webpack_require__) {
 
-	/* WEBPACK VAR INJECTION */(function(global) {exports.ajax = function (params, callback) {
-	  if (typeof params == 'string') params = {url: params}
-	  var headers = params.headers || {}
-	    , body = params.body
-	    , method = params.method || (body ? 'POST' : 'GET')
-	    , withCredentials = params.withCredentials || false
-
-	  var req = getRequest()
-
-	  req.onreadystatechange = function () {
-	    if (req.readyState == 4)
-	      callback(req.status, req.responseText, req)
-	  }
-
-	  if (body) {
-	    setDefault(headers, 'X-Requested-With', 'XMLHttpRequest')
-	    setDefault(headers, 'Content-Type', 'application/x-www-form-urlencoded')
-	  }
-
-	  req.open(method, params.url, true)
-
-	  // has no effect in IE
-	  // has no effect for same-origin requests
-	  // has no effect in CORS if user has disabled 3rd party cookies
-	  req.withCredentials = withCredentials
-
-	  for (var field in headers)
-	    req.setRequestHeader(field, headers[field])
-
-	  req.send(body)
-	}
-
-	function getRequest() {
-	  if (global.XMLHttpRequest)
-	    return new global.XMLHttpRequest;
-	  else
-	    try { return new global.ActiveXObject("MSXML2.XMLHTTP.3.0"); } catch(e) {}
-	  throw new Error('no xmlhttp request able to be created')
-	}
-
-	function setDefault(obj, key, value) {
-	  obj[key] = obj[key] || value
-	}
-	
-	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
-
-/***/ },
-/* 14 */
-/***/ function(module, exports, __webpack_require__) {
-
 	/* WEBPACK VAR INJECTION */(function(global) {'use strict';
 
 	/**
@@ -941,7 +891,7 @@
 	 * to communicate with the main thread.
 	 */
 
-	var _ = __webpack_require__(15);
+	var _ = __webpack_require__(14);
 	var util = __webpack_require__(31);
 	var when = __webpack_require__(16);
 
@@ -1151,7 +1101,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
-/* 15 */
+/* 14 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;//     Underscore.js 1.8.3
@@ -2705,6 +2655,56 @@
 
 
 /***/ },
+/* 15 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/* WEBPACK VAR INJECTION */(function(global) {exports.ajax = function (params, callback) {
+	  if (typeof params == 'string') params = {url: params}
+	  var headers = params.headers || {}
+	    , body = params.body
+	    , method = params.method || (body ? 'POST' : 'GET')
+	    , withCredentials = params.withCredentials || false
+
+	  var req = getRequest()
+
+	  req.onreadystatechange = function () {
+	    if (req.readyState == 4)
+	      callback(req.status, req.responseText, req)
+	  }
+
+	  if (body) {
+	    setDefault(headers, 'X-Requested-With', 'XMLHttpRequest')
+	    setDefault(headers, 'Content-Type', 'application/x-www-form-urlencoded')
+	  }
+
+	  req.open(method, params.url, true)
+
+	  // has no effect in IE
+	  // has no effect for same-origin requests
+	  // has no effect in CORS if user has disabled 3rd party cookies
+	  req.withCredentials = withCredentials
+
+	  for (var field in headers)
+	    req.setRequestHeader(field, headers[field])
+
+	  req.send(body)
+	}
+
+	function getRequest() {
+	  if (global.XMLHttpRequest)
+	    return new global.XMLHttpRequest;
+	  else
+	    try { return new global.ActiveXObject("MSXML2.XMLHTTP.3.0"); } catch(e) {}
+	  throw new Error('no xmlhttp request able to be created')
+	}
+
+	function setDefault(obj, key, value) {
+	  obj[key] = obj[key] || value
+	}
+	
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
+
+/***/ },
 /* 16 */
 /***/ function(module, exports, __webpack_require__) {
 
@@ -2966,7 +2966,7 @@
 	/**
 	 * This module allows you to pass a configuration into the worker's context
 	 */
-	var managedContext = __webpack_require__(14);
+	var managedContext = __webpack_require__(13);
 	var util = __webpack_require__(31);
 
 	module.exports = {
