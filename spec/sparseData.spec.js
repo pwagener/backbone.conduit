@@ -34,29 +34,66 @@ function makeInThreadBoss(sinon) {
 }
 
 describe("The sparseData module", function() {
-    var Collection;
+    var WriteableCollection, ReadOnlyCollection, collection, preparedSpy;
+
+    var setUpCollectionForTest = function(CollectionConstructor, done) {
+        // We mock out an in-thread-like boss
+        collection = new CollectionConstructor();
+        collection._boss = makeInThreadBoss(this.sinon);
+        collection.refill(this.getSampleData());
+
+        preparedSpy = this.sinon.spy();
+        collection.on('prepared', preparedSpy);
+
+        // Then prepare some subset of that data
+        collection.prepare({
+            ids: [1, 3]
+        }).done(function() {
+            done();
+        }, function(err) {
+            console.log('Test Error: ' + err);
+        });
+    };
 
     beforeEach(function() {
-        Collection = Backbone.Collection.extend({
+        // Collection is a writeable
+        WriteableCollection = Backbone.Collection.extend({
             url: '/foo',
 
             postFetchTransform: {
                 method: 'calculateDifference'
+            },
+
+            conduit: {
+                writeable: true
             }
         });
+        sparseData.mixin(WriteableCollection);
 
-        Collection = sparseData.mixin(Collection);
+        ReadOnlyCollection = Backbone.Collection.extend({
+            url: '/foo',
+
+            postFetchTransform: {
+                method: 'calculateDifference'
+            },
+
+            conduit: {
+                suppressWriteableWarning: true
+            }
+        });
+        sparseData.mixin(ReadOnlyCollection);
     });
 
+
     it('returns a Constructor when mixed in', function() {
-        expect(Collection).to.be.a('function');
+        expect(WriteableCollection).to.be.a('function');
     });
 
     describe('after collection instantiation', function() {
         var collection;
 
         beforeEach(function () {
-            collection = new Collection();
+            collection = new WriteableCollection();
         });
 
         it('is an instance of Backbone.Collection', function () {
@@ -142,7 +179,7 @@ describe("The sparseData module", function() {
             mockBoss = makeInThreadBoss(this.sinon);
 
             bossPromiseSpy = mockBoss.makePromise;
-            collection = new Collection();
+            collection = new WriteableCollection();
             collection._boss = mockBoss;
         });
 
@@ -206,7 +243,7 @@ describe("The sparseData module", function() {
         var collection, fillSpy, refillSpy, testBoss, makePromiseSpy;
 
         beforeEach(function() {
-            collection = new Collection();
+            collection = new WriteableCollection();
             collection._boss = testBoss = makeInThreadBoss(this.sinon);
             makePromiseSpy = testBoss.makePromise;
 
@@ -239,7 +276,7 @@ describe("The sparseData module", function() {
         var collection;
         beforeEach(function() {
             // We mock out an in-thread-like boss
-            collection = new Collection();
+            collection = new WriteableCollection();
             collection._boss = makeInThreadBoss(this.sinon);
 
             collection.refill(this.getSampleData());
@@ -329,7 +366,7 @@ describe("The sparseData module", function() {
 
         it('maps its data in the worker', function(done) {
             collection.mapAsync({
-                mapper: 'addFirstAndSecond'
+                method: 'addFirstAndSecond'
             }).then(function() {
                 return collection.prepare({
                     indexes: { min: 0, max: 2 }
@@ -351,7 +388,7 @@ describe("The sparseData module", function() {
 
         it('reduces data in the worker', function(done) {
             collection.reduceAsync({
-                reducer: 'sumOfFirstAndSecondProperties',
+                method: 'sumOfFirstAndSecondProperties',
                 memo: 0
             }).then(function(result) {
                 expect(result).to.equal(6);
@@ -361,29 +398,8 @@ describe("The sparseData module", function() {
     });
 
     describe('after preparing its collection', function() {
-        var collection, preparedSpy;
-
-        var setUpCollectionForTest = function(done) {
-            // We mock out an in-thread-like boss
-            collection = new Collection();
-            collection._boss = makeInThreadBoss(this.sinon);
-            collection.refill(this.getSampleData());
-
-            preparedSpy = this.sinon.spy();
-            collection.on('prepared', preparedSpy);
-
-            // Then prepare some subset of that data
-            collection.prepare({
-                ids: [1, 3]
-            }).done(function() {
-                done();
-            }, function(err) {
-                console.log('Test Error: ' + err);
-            });
-        };
-
         beforeEach(function(done) {
-            setUpCollectionForTest.call(this, done);
+            setUpCollectionForTest.call(this, WriteableCollection, done);
         });
 
         it('has the correct length', function() {
@@ -470,7 +486,7 @@ describe("The sparseData module", function() {
         describe('when a model has changed', function() {
             var modelThree;
             beforeEach(function(done) {
-                setUpCollectionForTest.call(this, function() {
+                setUpCollectionForTest.call(this, WriteableCollection, function() {
                     expect(collection.hasDirtyData()).to.be.false;
                     // Change a model within the collection
                     modelThree = collection.get(3);
@@ -569,7 +585,7 @@ describe("The sparseData module", function() {
 
         describe('when a new model is added as raw data', function() {
             beforeEach(function(done) {
-                setUpCollectionForTest.call(this, function() {
+                setUpCollectionForTest.call(this, WriteableCollection, function() {
                     expect(collection.hasDirtyData()).to.be.false;
                     collection.addAsync({
                         id: 10, name: 'ten', first: 7, second: 3
@@ -622,6 +638,39 @@ describe("The sparseData module", function() {
             it('removes the model from the collection');
 
             it('provides the correct length after sweeping');
+        });
+    });
+
+    describe('after changing a model from a read-only collection', function() {
+
+        beforeEach(function(done) {
+            setUpCollectionForTest.call(this, ReadOnlyCollection, function() {
+                    expect(collection.hasDirtyData()).to.be.false;
+                    // Change a model within the collection
+                    var modelThree = collection.get(3);
+                    modelThree.once('change', function() {
+                        done();
+                    });
+
+                    modelThree.set({
+                        first: 3,
+                        second: 0
+                    });
+                });
+            });
+
+
+        it('does not report a collection as being dirty', function() {
+            expect(collection.hasDirtyData()).to.be.false;
+        });
+
+        it('does not modify collection data when a model changes', function(done) {
+            collection.prepare({ id: 3 }).then(function(modelFromWorker) {
+                var modelData = modelFromWorker.toJSON();
+                expect(modelData).to.have.property('first', 1);
+                expect(modelData).to.have.property('second', 2);
+                done();
+            });
         });
     });
 });

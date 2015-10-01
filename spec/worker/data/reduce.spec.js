@@ -36,13 +36,13 @@ describe('The data/reduce module', function() {
 
         it('adds up the "second" values of the data', function() {
             var result = context.reduce({
-                reducer: 'addSecondValues',
+                method: 'addSecondValues',
                 memo: 0
             });
             expect(result).to.equal(4);
 
             result = context.reduce({
-                reducer: 'addSecondValues',
+                method: 'addSecondValues',
                 memo: 10
             });
             expect(result).to.equal(14);

@@ -11,8 +11,8 @@ module.exports = {
     name: 'reduce',
 
     method: function(reduceSpec) {
-        if (reduceSpec && _.isString(reduceSpec.reducer)) {
-            var reducer = ConduitWorker.handlers[reduceSpec.reducer];
+        if (reduceSpec && _.isString(reduceSpec.method)) {
+            var reducer = ConduitWorker.handlers[reduceSpec.method];
             if (_.isUndefined(reducer)) {
                 throw new Error('No registered handler found called "' + reduceSpec.reducer + '" to use in "reduce(...)');
             }
@@ -23,7 +23,7 @@ module.exports = {
 
             return _.reduce(data, reducer, initialValue, reduceContext);
         } else {
-            throw new Error('Reduce requires an argument with a "reducer" property naming the iterating function');
+            throw new Error('Reduce requires an argument with a "method" property naming the iterating function');
         }
     }
 };
