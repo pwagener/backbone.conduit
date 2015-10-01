@@ -81,7 +81,7 @@ function prepare(items) {
         _.each(converted, function(model) {
             self.listenTo(model, 'change', self._updateDataInWorker);
         });
-
+// TODO:  what if we prepare the same model twice?  The listener of the initial one is then lost ... ?
         self.trigger('prepared', converted);
         return(converted);
     });
@@ -163,13 +163,6 @@ function _sparseSet(models, options) {
         if (_.isUndefined(itemIndex)) {
             throw new Error('Worker data did not provide _dataIndex');
         }
-        delete attrs._dataIndex;
-
-        var conduitId = attrs._conduitId;
-        if (_.isUndefined(conduitId)) {
-            throw new Error('Worker data did not provide _conduitId');
-        }
-        delete attrs._conduitId;
 
         id = attrs[targetModel.prototype.idAttribute || 'id'];
 
@@ -198,6 +191,7 @@ function _sparseSet(models, options) {
 
             this.models[itemIndex] = model;
         }
+        // TODO:  add _conduitId and _dataIndex as properties on the model object
     }
 
     // NOTE:  we don't sort *or* fire any events
@@ -500,9 +494,18 @@ function hasDirtyData() {
 }
 
 function _updateDataInWorker(model, options) {
+    var config = this.conduit;
+    if (!config || !config.writeable) {
+        // This collection was not created as a writeable one.
+        if (!config || !config.suppressWriteableWarning) {
+            console.log('Warning: model is read-only, sparse collection modified (cid: ' + model.cid + ')');
+            console.log('The modified data will not be propagated to the worker');
+        }
+        return;
+    }
+
     // TODO:  if we unset values in the model, do those changes propagate to the
     // worker successfully?
-
     _ensureBoss.call(this);
     var dataToMerge = model.toJSON();
 

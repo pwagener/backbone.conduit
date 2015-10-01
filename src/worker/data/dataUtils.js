@@ -66,7 +66,7 @@ function _rebuildIdsAndIndexes(context) {
             }
             item._dataIndex = index;
 
-            if (item._conduitId === void 0) {
+            if (context.writeable &&  item._conduitId === void 0) {
                 // An item created in a 'map' projection needs a ConduitID
                 item._conduitId = _.uniqueId('conduit');
             }
