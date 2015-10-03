@@ -25,6 +25,9 @@ describe('The data/reduce module', function() {
                     name: 'addSecondValues',
 
                     method: function(memo, item) {
+                        if (!_.isUndefined(this.count)) {
+                            this.count++;
+                        }
                         return memo + item.second;
                     }
                 }]
@@ -52,10 +55,20 @@ describe('The data/reduce module', function() {
             expect(context.reduce).to.throw(Error);
         });
 
-        it('errors if you request a reducer that does not exist', function() {
-            var bound = _.bind(context.reduce, context, { reducer: 'Foo!' });
+        it('errors if you request a reduce method that does not exist', function() {
+            var bound = _.bind(context.reduce, context, { method: 'Foo!' });
             expect(bound).to.throw(Error);
         });
 
+        it('allows you to provide a "context" option', function() {
+            var reduceContext = { count: 0 };
+            context.reduce({
+                method: 'addSecondValues',
+                memo: 0,
+                context: reduceContext
+            });
+
+            expect(reduceContext).to.have.property('count', 3);
+        });
     });
 });

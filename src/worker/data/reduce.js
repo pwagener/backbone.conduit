@@ -18,7 +18,7 @@ module.exports = {
             }
 
             var initialValue = reduceSpec.memo;
-            var reduceContext = {};
+            var reduceContext = reduceSpec.context || {};
             var data = dataUtils.getData();
 
             return _.reduce(data, reducer, initialValue, reduceContext);
