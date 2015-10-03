@@ -16,5 +16,21 @@ collection.reduceAsync({
 });
 ```
 
-Note this method's returned promise resolves to the final reduction value.  It does not apply a projection on the 
-underlying data set.
+Note this method's returned promise resolves to the final reduction value.  It is not a projection, so it
+does not modify the underlying data set stored on the worker.
+
+Finally, you may provide a `context` option to `reduceAsync(...)`.  The value provided there will be accessible
+as `this` in your reduction method.
+
+```javascript
+collection.reduceAsync({
+    method: 'summarize',
+    context: { 
+        definitions: {
+            ...
+        }
+    }
+}).then(function(summary) {
+    // ...
+});
+```

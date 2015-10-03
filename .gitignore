@@ -8,7 +8,9 @@ node_modules
 npm-debug.log
 spec/browser/browserSpec.bundle.js
 spec/browser/browserSpec-worker.bundle.js
-perf/browser/browserPerf.bundle.js
+
+site/public/lib/backbone.conduit*
+site/public/lib/conduit.worker*
 
 # Book build output
 _book
@@ -16,7 +18,7 @@ _book
 # eBook build output
 *.epub
 *.mobi
-*.pdf
+
 ### OSX template
 .DS_Store
 .AppleDouble
