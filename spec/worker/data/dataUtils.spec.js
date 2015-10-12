@@ -156,6 +156,14 @@ describe('The worker/dataUtils module', function() {
             var projected = dataUtils.getData();
             expect(projected).to.equal(storedData);
         });
+
+        it('does not generate IDs', function() {
+            var result = dataUtils.getData();
+
+            expect(result[0]).to.not.have.property('_conduitId');
+            expect(result[1]).to.not.have.property('_conduitId');
+            expect(result[2]).to.not.have.property('_conduitId');
+        })
     });
 
     describe('when one projection has been applied', function() {
@@ -245,6 +253,53 @@ describe('The worker/dataUtils module', function() {
 
             expect(projectionSpy.callCount).to.equal(1);
             expect(secondProjectionSpy.callCount).to.equal(1);
+        });
+    });
+
+    describe('when initialized to generate IDs', function() {
+
+        beforeEach(function() {
+            mockConduitWorker.reset();
+            context = mockConduitWorker.get();
+
+            dataUtils.initStore({
+                generateIds: true
+            });
+        });
+
+        it('adds "_conduitId" to any new data', function() {
+            dataUtils.addTo(this.getSampleData());
+
+            var result = dataUtils.getData();
+            expect(result[0]).to.have.property('_conduitId');
+            expect(result[1]).to.have.property('_conduitId');
+            expect(result[2]).to.have.property('_conduitId');
+        });
+
+        it('does not change "_conduitId" when object is replaced', function() {
+            dataUtils.addTo(this.getSampleData());
+
+            // Sanity check
+            var results = dataUtils.getData();
+            var itemTwo = results[0];
+            expect(itemTwo).to.have.property('_conduitId');
+            expect(itemTwo).to.have.property('name', 'two');
+
+            var origConduitId = itemTwo._conduitId;
+
+            // Update the data
+            dataUtils.addTo([{
+                id: 2,
+                name: 'two',
+                first: 2
+            }], { replace: true });
+
+            results = dataUtils.getData();
+            itemTwo = results[0];
+            expect(itemTwo).to.have.property('name', 'two');
+
+            // Must have the same ConduitID
+            expect(itemTwo).to.have.property('_conduitId', origConduitId);
         });
     });
 });

@@ -27,8 +27,10 @@ function initStore(options) {
     if (options.reset || !context._data) {
         context._data = [];
         context._idKey = options.idKey || 'id';
-        context._byId = {};
+        context._generateIds = !!options.generateIds;
+
         resetProjection();
+        _rebuildIdsAndIndexes(context);
     }
 
     if (context._idKey && options.idKey && (context._idKey != options.idKey)) {
@@ -57,6 +59,10 @@ function _rebuildIdsAndIndexes(context) {
     var data = getData();
 
     context._byId = {};
+    if (context._generateIds) {
+        context._byConduitId = {};
+    }
+
     var index = 0;
     _.each(data, function(item) {
         if (item !== void 0 && item !== null) {
@@ -64,12 +70,16 @@ function _rebuildIdsAndIndexes(context) {
             if (id !== void 0) {
                 context._byId[id] = item;
             }
-            item._dataIndex = index;
 
-            if (context.writeable &&  item._conduitId === void 0) {
-                // An item created in a 'map' projection needs a ConduitID
-                item._conduitId = _.uniqueId('conduit');
+            if (context._generateIds) {
+                if (item._conduitId === void 0) {
+                    // An item created in a 'map' projection needs a ConduitID
+                    item._conduitId = _.uniqueId('conduit');
+                }
+                context._byConduitId[item._conduitId] = item;
             }
+
+            item._dataIndex = index;
         }
         index++;
     });
@@ -112,12 +122,12 @@ function addTo(data, options) {
                 if (options.replace) {
                     // Replace item properties
                     var existingIndex = context._data.indexOf(existing);
-                    if (existingIndex !== void 0) {
+                    if (existingIndex !== -1) {
                         context._data[existingIndex] = item;
                     }
-
+                    // If we had a reference in _projectedData, get rid of it too.  TODO:  not necessary ?
                     existingIndex = context._projectedData.indexOf(existing);
-                    if (existingIndex !== void 0) {
+                    if (existingIndex !== -1) {
                         context._projectedData[existingIndex] = item;
                     }
 
@@ -199,6 +209,21 @@ function findByIndexes(indexes) {
     return found;
 }
 
+function findByConduitIds(conduitIds) {
+    var found = [];
+
+    var context = _getContext();  // TODO:  how can we get here with 'conduitIds' as an array of 'undefined'?
+    var byConduitId = context._byConduitId;
+    _.each(conduitIds, function(conduitId) {
+        var existing;
+        if (conduitId !== void 0) {
+            existing = byConduitId[conduitId];
+        }
+        found.push(existing);
+    });
+
+    return found;
+}
 
 /**
  * 'setData' and 'mergeData' can both accept either an array of items, or a string of JSON.
@@ -276,6 +301,8 @@ module.exports = {
     findByIndex: findByIndex,
 
     findByIndexes: findByIndexes,
+
+    findByConduitIds: findByConduitIds,
 
     parseData: parseData,
 
