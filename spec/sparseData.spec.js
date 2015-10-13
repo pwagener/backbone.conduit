@@ -217,7 +217,7 @@ describe("The sparseData module", function() {
                 expect(bossPromiseSpy.called).to.be.true;
                 var callArgs = bossPromiseSpy.args[0];
                 expect(callArgs[0]).to.have.property('method', 'restGet');
-                var getArgs = callArgs[0].arguments[0];
+                var getArgs = callArgs[0].args[0];
                 expect(getArgs).to.not.have.property('reset');
 
                 done();
@@ -229,7 +229,7 @@ describe("The sparseData module", function() {
                 expect(bossPromiseSpy.called).to.be.true;
                 var callArgs = bossPromiseSpy.args[0];
                 expect(callArgs[0]).to.have.property('method', 'restGet');
-                var getArgs = callArgs[0].arguments[0];
+                var getArgs = callArgs[0].args[0];
                 expect(getArgs).to.have.property('reset', true);
 
                 done();
@@ -264,7 +264,7 @@ describe("The sparseData module", function() {
             collection.haul().then(function() {
                 expect(makePromiseSpy.callCount).to.equal(1);
                 var args = makePromiseSpy.getCall(0).args;
-                var loadArgs = args[0].arguments[0];
+                var loadArgs = args[0].args[0];
                 expect(loadArgs).to.have.property('postFetchTransform');
                 expect(loadArgs.postFetchTransform).to.eql({ method: 'calculateDifference' });
                 done();

@@ -8,9 +8,14 @@ var context = require('../../src/worker/managedContext');
 describe('The managedContext module', function() {
     var global;
 
-    var callContextMethod = function(methodName, args) {
+    var callContextMethod = function(methodName, args, requestId) {
+        requestId = requestId || _.uniqueId('fakeRequest');
         global.onmessage({
-            data: { method: methodName, arguments: args }
+            data: {
+                method: methodName,
+                args: args,
+                requestId: requestId
+            }
         });
     };
 
@@ -147,7 +152,12 @@ describe('The managedContext module', function() {
                         then: function(callback) {
                             callback({
                                 baz: 'resolved'
-                            })
+                            });
+
+                            return {
+                                catch: function() {
+                                }
+                            }
                         }
                     };
                 }
@@ -179,7 +189,9 @@ describe('The managedContext module', function() {
             callContextMethod(fooHandler.name);
             var callArgs = postMessageSpy.getCall(0).args;
             var response = callArgs[0];
-            expect(response).to.have.property('foo', 'bar');
+            expect(response).to.have.property('result');
+            var result = response.result;
+            expect(result).to.have.property('foo', 'bar');
         });
 
         it('provides the resolved value if the handler returns a promise', function() {
@@ -187,7 +199,9 @@ describe('The managedContext module', function() {
             expect(postMessageSpy.callCount).to.equal(1);
             var callArgs = postMessageSpy.getCall(0).args;
             var response = callArgs[0];
-            expect(response).to.have.property('baz', 'resolved');
+            expect(response).to.have.property('result');
+            var result = response.result;
+            expect(result).to.have.property('baz', 'resolved');
         });
 
         it('returns an Error when calling an unregistered handler', function() {
@@ -195,8 +209,10 @@ describe('The managedContext module', function() {
 
             var callArgs = postMessageSpy.getCall(0).args;
             var response = callArgs[0];
-            expect(response).to.be.an.instanceOf(Error);
-            expect(response.message).to.contain("'bleah'");
+            expect(response).to.not.have.property('result');
+            var error = response.error;
+            expect(error).to.be.an.instanceOf(Error);
+            expect(error.message).to.contain("'bleah'");
         });
     });
 });

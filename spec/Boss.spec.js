@@ -9,27 +9,46 @@ var Boss = require('./../src/Boss');
  * Method to create a Worker constructor that is mocked out for testing the Boss.
  * These unit tests can then run via Node instead of in a browser.
  * @param sinon The sinon instance to use for mocking
- * @param data The response the worker should provide asynchronously
+ * @param response The response the worker should provide asynchronously
  * from any "postMessage" call.
  * @return {Function} The mocked-out Worker constructor
  */
-function makeMockWorker(sinon, data) {
+function makeMockWorker(sinon, response) {
     //noinspection UnnecessaryLocalVariableJS
     var MockWorker = function() {
         // Spy on our "postMessage" impl
         sinon.spy(this, 'postMessage');
+
+        if (response) {
+            this.defaultResponse = response;
+        }
+
+        this.responses = {};
     };
 
-    MockWorker.prototype.postMessage = function() {
+    // Implement postMessage to call 'onmessage' after a short delay.
+    MockWorker.prototype.postMessage = function(message) {
         var self = this;
+        var methodName = message.method;
         _.delay(function() {
             self.onmessage({
-                data: data
+                data: {
+                    requestId: message.requestId,
+                    result: self.getResponse(methodName)
+                }
             });
-        }, 10);
+        }, 50);
     };
 
     MockWorker.prototype.terminate = sinon.spy();
+
+    MockWorker.prototype.setResponse = function(details) {
+        this.responses[details.method] = details.response;
+    };
+
+    MockWorker.prototype.getResponse = function(methodName) {
+        return this.responses[methodName] || this.defaultResponse;
+    };
 
     return MockWorker;
 }
@@ -63,11 +82,48 @@ describe('The Boss module', function() {
         }
     });
 
+    it('terminates its worker immediately when "autoTerminate" is true', function(done) {
+        var boss = new Boss({
+            Worker: makeMockWorker(this.sinon, { blah: 'true' }),
+            fileLocation: '/fake/location',
+            autoTerminate: true
+        });
+
+        boss.makePromise({
+            method: 'foo'
+        }).then(function() {
+            // The worker is terminated before the promise resolves, so ...
+            expect(boss.worker).to.be.null;
+            done();
+        });
+    });
+
+    it('can optionally terminate its worker after a number of milliseconds', function(done) {
+        // To make for a fast-enough test we'll ask it to maintain the worker for 100ms
+        var boss = new Boss({
+            Worker: makeMockWorker(this.sinon, { blah: 'true' }),
+            fileLocation: '/fake/location',
+            autoTerminate: 100
+        });
+
+        boss.makePromise({
+            method: 'foo'
+        }).then(function() {
+            expect(boss.worker).to.be.an('object');
+            _.delay(function() {
+                //noinspection BadExpressionStatementJS
+                expect(boss.worker).to.be.null;
+                done();
+            }, 150);
+        });
+    });
+
+
     describe('when instantiated', function() {
         var boss, responseData;
 
         beforeEach(function () {
-            responseData = {bar: "baz"};
+            responseData = { bar: "baz" };
             boss = new Boss({
                 Worker: makeMockWorker(this.sinon, responseData),
                 fileLocation: '/fake/location'
@@ -113,7 +169,7 @@ describe('The Boss module', function() {
                 method: 'foo'
             });
 
-            promise.then(function (response) {
+            promise.then(function () {
                 //noinspection BadExpressionStatementJS
                 expect(boss.worker.postMessage.called).to.be.true;
                 done();
@@ -121,12 +177,17 @@ describe('The Boss module', function() {
         });
 
         it('resolves the promise with the data from the worker', function (done) {
-            boss.makePromise({
-                method: 'foo'
-            }).then(function (response) {
-                expect(response).to.equal(responseData);
-                done();
+            boss.createWorkerNow().then(function() {
+                boss.worker.setResponse(responseData);
+
+                boss.makePromise({
+                    method: 'foo'
+                }).then(function (result) {
+                    expect(result).to.equal(responseData);
+                    done();
+                });
             });
+
         });
 
         it('keeps the worker after the promise resolves', function (done) {
@@ -137,41 +198,46 @@ describe('The Boss module', function() {
                 done();
             });
         });
-    });
 
-    it('can optionally terminate its worker immediately', function(done) {
-        var boss = new Boss({
-            Worker: makeMockWorker(this.sinon, { blah: 'true' }),
-            fileLocation: '/fake/location',
-            autoTerminate: true
-        });
+        it('handles multiple async calls at the same time', function(done) {
+            boss.createWorkerNow().then(function() {
+                boss.worker.setResponse({
+                    method: 'foo',
+                    response: 'from foo'
+                });
 
-        boss.makePromise({
-            method: 'foo'
-        }).then(function() {
-            // The worker is terminated synchronously after the promise resolves, so ...
-            expect(boss.worker).to.be.null;
-            done();
-        });
-    });
+                boss.worker.setResponse({
+                    method: 'bar',
+                    response: 'from bar'
+                });
 
-    it('can optionally terminate its worker after a number of milliseconds', function(done) {
-        // To make for a fast-enough test we'll ask it to maintain the worker for 100ms
-        var boss = new Boss({
-            Worker: makeMockWorker(this.sinon, { blah: 'true' }),
-            fileLocation: '/fake/location',
-            autoTerminate: 100
-        });
+                var promise1 = boss.makePromise({
+                    method: 'foo'
+                });
 
-        boss.makePromise({
-            method: 'foo'
-        }).then(function() {
-            expect(boss.worker).to.be.an('object');
-            _.delay(function() {
-                //noinspection BadExpressionStatementJS
-                expect(boss.worker).to.be.null;
-                done();
-            }, 150);
+                var promise2 = boss.makePromise({
+                    method: 'bar'
+                });
+
+                var foundOne = false;
+                var foundTwo = false;
+
+                promise1.then(function(result) {
+                    expect(result).to.equal('from foo');
+                    foundOne = true;
+                    if (foundOne && foundTwo) {
+                        done();
+                    }
+                });
+
+                promise2.then(function(result) {
+                    expect(result).to.equal('from bar');
+                    foundTwo = true;
+                    if (foundOne && foundTwo) {
+                        done();
+                    }
+                });
+            });
         });
     });
 
