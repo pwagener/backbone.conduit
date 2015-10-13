@@ -21,6 +21,8 @@ module.exports = {
      *   o ids: An array of IDs to return
      *   o index: The index of the item
      *   o indexes: An object specifying 'min' and 'max' of indexes to return
+     *   o conduitIds: Internal option used to load items by an ID generated on
+     *       the Conduit worker
      * @return {*} Either the single item or an array of items, depending how it
      * was called
      */
@@ -35,6 +37,8 @@ module.exports = {
             found = dataUtils.findByIndex(options.index);
         } else if (_.isObject(options.indexes)) {
             found = dataUtils.findByIndexes(options.indexes);
+        } else if (_.isArray(options.conduitIds)) {
+            found = dataUtils.findByConduitIds(options.conduitIds);
         }
 
         return found;

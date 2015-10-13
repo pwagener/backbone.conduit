@@ -201,6 +201,13 @@ function configure(config) {
 
 }
 
+function getConfig() {
+    var conduitWorker = _getConduitWorker();
+
+    // Make them a copy; we don't worry about dates so ...
+    return JSON.parse(JSON.stringify(conduitWorker.config));
+}
+
 function enableCoreHandlers() {
     var conduitWorker = _getConduitWorker();
     conduitWorker.registerComponent({
@@ -215,9 +222,16 @@ function enableCoreHandlers() {
 module.exports = {
 
     /**
-     * Set the global context; this is only useful for testing.
+     * Set the global context; only used for testing.
      */
     setAsGlobal: setAsGlobal,
+
+    /**
+     * Retrieve a reference to the worker's context.  Use with extreme care.
+     */
+    get: function() {
+        return _getConduitWorker();
+    },
 
     /**
      * Method to enable the built-in method handlers we expose
@@ -229,6 +243,11 @@ module.exports = {
      *
      */
     configure: configure,
+
+    /**
+     * Method to retrieve the full configuration of the worker.
+     */
+    getConfig: getConfig,
 
     /**
      * Write a debug message (if we have been configured to do so)

@@ -17,7 +17,7 @@ describe('The data/prepare module', function() {
 
         beforeEach(function() {
             mockConduitWorker.reset();
-            dataUtils.initStore({ reset: true });
+            dataUtils.initStore();
             dataUtils.addTo(this.getSampleData());
 
             context = mockConduitWorker.bindModule(workerPrepare);

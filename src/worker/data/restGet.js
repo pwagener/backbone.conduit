@@ -43,7 +43,7 @@ module.exports = {
                     }
 
                     if (options.reset) {
-                        dataUtils.initStore({ reset: true });
+                        dataUtils.initStore();
                     }
                     dataUtils.addTo(data);
 

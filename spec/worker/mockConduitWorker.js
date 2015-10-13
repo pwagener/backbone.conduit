@@ -12,10 +12,12 @@ function _reset(global) {
 }
 
 module.exports = {
-    // TODO:  might want to rather use 'dataUtils.initStore({ reset: true })' here instead
-    // of recreating the global.
     reset: function(){
-        _reset(global);
+        var context = managedContext.get();
+
+        _.each(_.keys(context), function(key) {
+            delete context[key];
+        });
     },
 
     get: function() {

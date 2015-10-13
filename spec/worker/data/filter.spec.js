@@ -41,7 +41,7 @@ describe('the data/filter module', function() {
                 }]
             });
 
-            dataUtils.initStore({ reset: true });
+            dataUtils.initStore();
             dataUtils.addTo(this.getSampleData());
         });
 

@@ -23,7 +23,7 @@ var setupContext = function(setupOptions) {
 
     mockConduitWorker.reset();
     var context = mockConduitWorker.bindModule(setupOptions.moduleToBind);
-    dataUtils.initStore({reset: true});
+    dataUtils.initStore();
 
     if (setupOptions.initialData) {
         dataUtils.addTo(setupOptions.initialData);

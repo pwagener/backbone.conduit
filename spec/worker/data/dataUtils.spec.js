@@ -24,15 +24,11 @@ describe('The worker/dataUtils module', function() {
         expect(initial).to.be.an('array');
     });
 
-    it('will not recreate the data store by default', function() {
-        var initial = dataUtils.getData();
+    it('always recreates the data store on "initStore"', function() {
         dataUtils.initStore();
-        expect(initial).to.equal(dataUtils.getData());
-    });
-
-    it('will recreate the data store if explicitly requested', function() {
         var initial = dataUtils.getData();
-        dataUtils.initStore({ reset: true });
+
+        dataUtils.initStore();
         expect(initial).to.not.equal(dataUtils.getData());
     });
 
@@ -58,7 +54,7 @@ describe('The worker/dataUtils module', function() {
     describe('after initializing and adding data', function() {
         var storedData;
         beforeEach(function() {
-            dataUtils.initStore({ reset: true });
+            dataUtils.initStore();
             dataUtils.addTo(this.getSampleData());
             storedData = dataUtils.getData();
         });
@@ -176,7 +172,7 @@ describe('The worker/dataUtils module', function() {
             };
             projectionSpy = this.sinon.spy(nameMustStartWithT);
 
-            dataUtils.initStore({ reset: true });
+            dataUtils.initStore();
             dataUtils.addTo(this.getSampleData());
             dataUtils.applyProjection(projectionSpy);
             storedData = dataUtils.getData();

@@ -45,7 +45,7 @@ module.exports = {
                     reject(error);
                 } else {
                     if (options.reset) {
-                        dataUtils.initStore({ reset: true });
+                        dataUtils.initStore();
                     }
                     // The returned data should be the full representation of the
                     // saved object.  Add it into the data set.

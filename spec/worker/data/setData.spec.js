@@ -4,11 +4,14 @@ var _ = require('underscore');
 
 var workerSetData = require('./../../../src/worker/data/setData');
 var mockConduitWorker = require('../mockConduitWorker');
+var dataUtils = require('../../../src/worker/data/dataUtils');
+
 
 describe('The data/setData module', function() {
     var context;
     beforeEach(function() {
         mockConduitWorker.reset();
+        dataUtils.initStore();
         context = mockConduitWorker.bindModule(workerSetData);
     });
 
@@ -20,9 +23,10 @@ describe('The data/setData module', function() {
         context.setData({
             data: this.getSampleData()
         });
+        var result = dataUtils.getData();
 
-        expect(context._data).to.have.length(3);
-        expect(context._data[2].name).to.equal('three');
+        expect(result).to.have.length(3);
+        expect(result[2].name).to.equal('three');
     });
 
     it('returns the length of the provided data', function() {
@@ -37,9 +41,10 @@ describe('The data/setData module', function() {
         context.setData({
             data: JSON.stringify(this.getSampleData())
         });
+        var result = dataUtils.getData();
 
-        expect(context._data).to.have.length(3);
-        expect(context._data[1].name).to.equal('one');
+        expect(result).to.have.length(3);
+        expect(result[1].name).to.equal('one');
     });
 
     it('errors if you don\'t provide data correctly', function() {

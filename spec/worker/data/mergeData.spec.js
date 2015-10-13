@@ -15,6 +15,7 @@ describe('The data/mergeData module', function() {
 
     beforeEach(function() {
         mockConduitWorker.reset();
+        dataUtils.initStore();
         context = mockConduitWorker.bindModule(workerMergeData);
     });
 
@@ -35,7 +36,7 @@ describe('The data/mergeData module', function() {
     describe('when data is added initially', function() {
         var data;
         beforeEach(function() {
-            dataUtils.initStore({ reset: true });
+            dataUtils.initStore();
             context = mockConduitWorker.bindModule(workerMergeData);
 
             var length = context.mergeData({
@@ -84,11 +85,10 @@ describe('The data/mergeData module', function() {
         });
     });
 
-    describe('when the data is added with an idKey', function() {
+    describe('when the data is added with a non-default idKey', function() {
         var data;
         beforeEach(function() {
             dataUtils.initStore({
-                reset: true,
                 idKey: 'name'
             });
             var length = context.mergeData({

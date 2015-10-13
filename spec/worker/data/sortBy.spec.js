@@ -17,7 +17,7 @@ describe("The data/sortBy module", function() {
             mockConduitWorker.reset();
             context = mockConduitWorker.bindModule(workerSort);
 
-            dataUtils.initStore({ reset: true });
+            dataUtils.initStore();
             dataUtils.addTo(this.getSampleData());
         });
 

@@ -23,7 +23,7 @@ describe('The data/resetProjection module', function() {
         beforeEach(function() {
             mockConduitWorker.reset();
             context = mockConduitWorker.bindModule(resetProjection);
-            dataUtils.initStore(({ reset: true }));
+            dataUtils.initStore();
             sampleData = this.getSampleData();
             dataUtils.addTo(sampleData);
 

@@ -33,7 +33,7 @@ describe('The data/reduce module', function() {
                 }]
             });
 
-            dataUtils.initStore({ reset: true });
+            dataUtils.initStore();
             dataUtils.addTo(this.getSampleData());
         });
 

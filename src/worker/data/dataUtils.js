@@ -11,40 +11,29 @@
 var _ = require('underscore');
 var managedContext = require('../managedContext');
 
-function _getContext(skipInit) {
-    if (!ConduitWorker._data && !skipInit) {
-        // We haven't been initialized yet
-        initStore();
-    }
-
-    return ConduitWorker;
-}
-
 function initStore(options) {
-    var context = _getContext(true);
+    var context = managedContext.get();
     options = options || {};
 
-    if (options.reset || !context._data) {
-        context._data = [];
-        context._idKey = options.idKey || 'id';
-        context._generateIds = !!options.generateIds;
-
-        resetProjection();
-        _rebuildIdsAndIndexes(context);
+    if (!context._data) {
+        // We are initializing for the very first time.  Look at the context configuration
+        // for our interesting options.
+        var config = managedContext.getConfig();
+        context._idKey = config.idKey || options.idKey || 'id';  // TODO: don't look at the options
+        context._generateIds = !!config.writeable;
     }
 
-    if (context._idKey && options.idKey && (context._idKey != options.idKey)) {
-        throw new Error('Cannot change the ID key of existing data');
-    }
+    context._data = [];
+    resetProjection();
 }
 
 function getData() {
-    var context = _getContext();
+    var context = managedContext.get();
     return context._projectedData;
 }
 
 function getIdKey() {
-    var context = _getContext();
+    var context = managedContext.get();
     return context._idKey;
 }
 
@@ -86,7 +75,7 @@ function _rebuildIdsAndIndexes(context) {
 }
 
 function applyProjection(toApply) {
-    var context = _getContext();
+    var context = managedContext.get();
     context._projections.push(toApply);
 
     context._projectedData = toApply(getData());
@@ -94,7 +83,7 @@ function applyProjection(toApply) {
 }
 
 function resetProjection() {
-    var context = _getContext();
+    var context = managedContext.get();
     context._projectedData = context._data;
     context._projections = [];
     _rebuildIdsAndIndexes(context);
@@ -102,7 +91,7 @@ function resetProjection() {
 
 function addTo(data, options) {
     options = options || {};
-    var context = _getContext();
+    var context = managedContext.get();
 
     data = data || [];
     if (!_.isArray(data)) {
@@ -117,7 +106,11 @@ function addTo(data, options) {
             var existing;
             if (id !== void 0) {
                 existing = byId[id];
+            }  else if (context._generateIds) {
+                var conduitId = item['conduitId'];
+                existing = context._byConduitId[conduitId]
             }
+
             if (existing) {
                 if (options.replace) {
                     // Replace item properties
@@ -125,12 +118,6 @@ function addTo(data, options) {
                     if (existingIndex !== -1) {
                         context._data[existingIndex] = item;
                     }
-                    // If we had a reference in _projectedData, get rid of it too.  TODO:  not necessary ?
-                    existingIndex = context._projectedData.indexOf(existing);
-                    if (existingIndex !== -1) {
-                        context._projectedData[existingIndex] = item;
-                    }
-
                     item._conduitId = existing._conduitId;
                 } else {
                     // Merge item properties
@@ -157,7 +144,7 @@ function addTo(data, options) {
 }
 
 function removeById(id) {
-    var context = _getContext();
+    var context = managedContext.get();
 
     var item = context._byId[id];
     if (item !== void 0  && item !== null) {
@@ -171,14 +158,14 @@ function removeById(id) {
 }
 
 function findById(id) {
-    var context = _getContext();
+    var context = managedContext.get();
     return context._byId[id];
 }
 
 function findByIds(idArray) {
     var matches = [];
 
-    var context = _getContext();
+    var context = managedContext.get();
     for (var i = 0; i < idArray.length; i++) {
         var match = context._byId[idArray[i]];
         if (_.isUndefined(match)) {
@@ -212,9 +199,9 @@ function findByIndexes(indexes) {
 function findByConduitIds(conduitIds) {
     var found = [];
 
-    var context = _getContext();  // TODO:  how can we get here with 'conduitIds' as an array of 'undefined'?
+    var context = managedContext.get();  // TODO:  how can we get here with 'conduitIds' as an array of 'undefined'?
     var byConduitId = context._byConduitId;
-    _.each(conduitIds, function(conduitId) {
+    _.each(conduitIds, function(conduitId) { // TODO:  is this called twice?
         var existing;
         if (conduitId !== void 0) {
             existing = byConduitId[conduitId];
@@ -253,6 +240,14 @@ function length() {
 
 module.exports = {
 
+    /**
+     * Method called to completely reset the data store.  Any stored data
+     * is lost when this is called.
+     * @param options May include:
+     *   - idKey:  The name of the property on the data to treat as an ID.
+     *   - generateIds: If true, we will independently generate IDs and store them as
+     *     '_conduitId' on each item added.
+     */
     initStore: initStore,
 
     /**

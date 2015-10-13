@@ -23,4 +23,8 @@ if (typeof ConduitWorker !== 'undefined') {
             require('./restDestroy')
         ]
     });
+
+    // Call 'setData' with no args to initialize things
+    var setData = ConduitWorker.handlers['setData'];
+    setData.call(ConduitWorker);
 }

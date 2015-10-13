@@ -51,7 +51,7 @@ describe('The data/map module', function() {
                 }]
             });
 
-            dataUtils.initStore({ reset: true });
+            dataUtils.initStore();
             dataUtils.addTo(this.getSampleData());
 
             context.map({

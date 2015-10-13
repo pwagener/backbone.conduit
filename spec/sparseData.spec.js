@@ -6,13 +6,12 @@ var when = require('when');
 
 var InThreadBoss = require('./InThreadBoss');
 
-var mockConduitWorker = require('./worker/mockConduitWorker');
-
+var managedContext = require('../src/worker/managedContext');
 var sparseData = require('./../src/sparseData');
 
 
-function makeInThreadBoss(sinon) {
-    mockConduitWorker.reset();
+function makeInThreadBoss(sinon, options) {
+    options = options || {};
 
     var inThreadBoss = new InThreadBoss(sinon, [
         // Method handlers that can be called directly
@@ -30,6 +29,14 @@ function makeInThreadBoss(sinon) {
     inThreadBoss.registerOther(require('./worker/data/addFirstAndSecond'));
     inThreadBoss.registerOther(require('./worker/data/sumOfFirstAndSecondProperties'));
 
+    // TODO:  not the greatest way to reset things, but ...
+    var context = managedContext.get();
+    delete context._data;
+    managedContext.configure({
+        writeable: options.writeable
+    });
+    inThreadBoss.setData();
+
     return inThreadBoss;
 }
 
@@ -39,7 +46,10 @@ describe("The sparseData module", function() {
     var setUpCollectionForTest = function(CollectionConstructor, done) {
         // We mock out an in-thread-like boss
         collection = new CollectionConstructor();
-        collection._boss = makeInThreadBoss(this.sinon);
+        collection._boss = makeInThreadBoss(this.sinon, {
+            writeable: collection.conduit.writeable
+        });
+
         collection.refill(this.getSampleData());
 
         preparedSpy = this.sinon.spy();
@@ -56,7 +66,7 @@ describe("The sparseData module", function() {
     };
 
     beforeEach(function() {
-        // Collection is a writeable
+        // Collection is a writeable one.  TODO: shouldn't most tests be for the ReadOnly one?  That's the default....
         WriteableCollection = Backbone.Collection.extend({
             url: '/foo',
 
@@ -176,10 +186,11 @@ describe("The sparseData module", function() {
         var bossPromiseSpy, collection, mockBoss;
 
         beforeEach(function() {
-            mockBoss = makeInThreadBoss(this.sinon);
-
-            bossPromiseSpy = mockBoss.makePromise;
             collection = new WriteableCollection();
+            mockBoss = makeInThreadBoss(this.sinon, {
+                writeable: true
+            });
+            bossPromiseSpy = mockBoss.makePromise;
             collection._boss = mockBoss;
         });
 
@@ -244,7 +255,9 @@ describe("The sparseData module", function() {
 
         beforeEach(function() {
             collection = new WriteableCollection();
-            collection._boss = testBoss = makeInThreadBoss(this.sinon);
+            collection._boss = testBoss = makeInThreadBoss(this.sinon, {
+                writeable: true
+            });
             makePromiseSpy = testBoss.makePromise;
 
             fillSpy = this.sinon.spy(collection, 'fill');
@@ -277,7 +290,9 @@ describe("The sparseData module", function() {
         beforeEach(function() {
             // We mock out an in-thread-like boss
             collection = new WriteableCollection();
-            collection._boss = makeInThreadBoss(this.sinon);
+            collection._boss = makeInThreadBoss(this.sinon, {
+                writeable: true
+            });
 
             collection.refill(this.getSampleData());
         });
@@ -581,7 +596,7 @@ describe("The sparseData module", function() {
                 expect(modelThree.get('first')).to.equal(3);
             });
 
-            xit('removes attributes in the worker when appropriate', function(done) {
+            it('removes attributes in the worker when appropriate', function(done) {
                 modelThree.unset('second');
                 collection.cleanDirtyData().then(function() {
                     // Re-prepare the data of the changed model to get the data from the
@@ -593,7 +608,7 @@ describe("The sparseData module", function() {
                 });
             });
 
-            xit('recalculates the index when the change affects sorting', function(done) {
+            it('recalculates the index when the change affects sorting', function(done) {
                 collection.sortAsync({ property: 'name' })
                     .then(function() {
                         return collection.prepare({
@@ -601,19 +616,20 @@ describe("The sparseData module", function() {
                         });
                     }).then(function() {
                         // This change should affect sorting
-                        return modelThree.set('name', 'THREE');
+                        return modelThree.set('name', 'aaaa-three');
                     }).then(function() {
-                        // Wait for changes to propagate to the worker
+                        // Wait for changes to propagate
                         return collection.cleanDirtyData();
                     }).then(function() {
                         // All three models should still be prepared
                         expect(collection.isPrepared({
-                            indexes: { min: 0, max: 3 }
+                            ids: [ 1, 2, 3 ]
                         })).to.be.true;
 
-                        // Should now be 'THREE' 'one' 'two'
+                        // Should now be 'aaaa-three' 'one' 'two'
                         var firstModel = collection.at(0);
-                        expect(firstModel.id).to.equal(3);
+                        var firstItem = firstModel.toJSON();
+                        expect(firstItem).to.have.property('name', 'aaaa-three');
 
                         done();
                     });

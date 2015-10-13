@@ -7,13 +7,15 @@
 
 var when = require('when');
 var _ = require('underscore');
-var mockConduitWorker = require('./worker/mockConduitWorker');
+var managedContext = require('../src/worker/managedContext');
 
 function InThreadBoss(sinon, workerHandlers) {
     var self = this;
+
+    var context = managedContext.get();
     _.each(workerHandlers, function(methodDefinition) {
         self[methodDefinition.name] = function() {
-            return methodDefinition.method.apply(self, arguments);
+            return methodDefinition.method.apply(context, arguments);
         }
     });
 
@@ -23,7 +25,7 @@ function InThreadBoss(sinon, workerHandlers) {
 }
 
 InThreadBoss.prototype.registerOther = function(otherHandler) {
-    var context = mockConduitWorker.get();
+    var context = managedContext.get();
     if (!context.handlers) {
         context.handlers = [];
     }
@@ -41,7 +43,6 @@ InThreadBoss.prototype.makePromise = function(details) {
     var result = method.apply(this, details.args);
     return when.resolve(result);
 };
-
 
 
 module.exports = InThreadBoss;

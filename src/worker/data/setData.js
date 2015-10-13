@@ -15,9 +15,7 @@ module.exports = {
         var data = argument.data || [];
         data = dataUtils.parseData(data);
 
-        // We're resetting the data completely
-        dataUtils.initStore({
-            reset: true,
+        dataUtils.initStore({ // TODO:  pass the idKey into the 'configure' call instead of this one
             idKey: argument.idKey
         });
 

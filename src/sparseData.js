@@ -66,8 +66,11 @@ function stopWorkerNow() {
  *   o ids: An array of IDs to prepare
  *   o index:  The single index to prepare
  *   o indexes: An object with 'min' and 'max' to specify the indexes to return
+ * @param options Preparations options.  May include:
+ *   o silent - Don't trigger any events (not recommended)
  */
-function prepare(items) {
+function prepare(items, options) {
+    options = options || {};
     _ensureBoss.call(this);
 
     var self = this;
@@ -75,14 +78,19 @@ function prepare(items) {
         method: 'prepare',
         args: [ items ]
     }).then(function(rawData) {
-        var converted = self._sparseSet(rawData);
+        var converted = _sparseSet.call(self, rawData);
 
-        // Listen to any changes on the models to do auto synchronization
+        // Listen to any changes on the models to do auto synchronization or warn
+        // TODO:  if _sparseSet returns an existing model, this causes us to add multiple listeners.
         _.each(converted, function(model) {
-            self.listenTo(model, 'change', self._updateDataInWorker);
+            self.listenTo(model, 'change', function() {
+                _onModelDataChanged.apply(self, arguments);
+            });
         });
-// TODO:  what if we prepare the same model twice?  The listener of the initial one is then lost ... ?
-        self.trigger('prepared', converted);
+
+        if (!options.silent) {
+            self.trigger('prepared', converted);
+        }
         return(converted);
     });
 }
@@ -131,8 +139,7 @@ var setOptions = {add: true, remove: true, merge: true};
  * Function to create & store a Backbone.Model on the main thread.  This is
  * a simplified variant of Backbone.Collection.set(...).
  * @param models The array of raw data to translate into models
- * @param options Any options.  A special option is available here, _sparseSetAt, which
- * provides an array of indexes to add the items at.
+ * @param options Any options.
  * @return Array An array of Backbone.Model instances in corresponding order as 'models'
  * @private  This should only be called by this module when creating & caching data from
  * the worker in the form of a model
@@ -166,9 +173,11 @@ function _sparseSet(models, options) {
 
         id = attrs[targetModel.prototype.idAttribute || 'id'];
 
+        var conduitId = attrs._conduitId;
+        delete attrs._conduitId;
+
         // If a duplicate is found, prevent it from being added and
         // optionally merge it into the existing model.
-        // TODO:  not much of a fan of 'skipCheck'....
         if (existing = this.get(id, { skipCheck: true })) {
             if (remove) {
                 modelMap[existing.cid] = true;
@@ -179,7 +188,7 @@ function _sparseSet(models, options) {
                 existing.set(attrs, options);
                 if (sortable && !sort && existing.hasChanged(sortAttr)) sort = true;
             }
-            models[i] = existing;
+            models[i] = model = existing;
 
             // If this is a new, valid model, push it to the `toAdd` list.
         } else if (add) {
@@ -191,7 +200,10 @@ function _sparseSet(models, options) {
 
             this.models[itemIndex] = model;
         }
-        // TODO:  add _conduitId and _dataIndex as properties on the model object
+
+        if (conduitId) {
+            model._conduitId = conduitId;
+        }
     }
 
     // NOTE:  we don't sort *or* fire any events
@@ -219,11 +231,11 @@ function addAsync(models, options) {
     var promise = this.fill(models)
         .then(function() {
             // Remove our promise from the list of outstanding ones
-            self._noLongerDirty(dirtyId);
+            _noLongerDirty.call(self, dirtyId);
         });
 
     // Keep track of this as an outstanding promise
-    var dirtyId = this._trackAsDirty(promise, models);
+    var dirtyId = _trackAsDirty.call(this, promise, models);
     return promise;
 }
 
@@ -357,6 +369,22 @@ function sortAsync(sortSpec) {
         self.trigger('sortAsync');
         return result.context;
     });
+}
+
+/**
+ * Method that runs in the context of the worker that will re-prepare all models.
+ * This occurs whenever a Projection is applied (sort, filter, map), or when a writeable
+ * collection has a modified model.
+ * @private
+ */
+function _rePrepareModels() {
+    var preparedModels = _.compact(this.models);
+    var conduitIds = _.pluck(preparedModels, '_conduitId');
+
+    _ensureBoss.call(this);
+    return this.prepare({
+        conduitIds: conduitIds
+    }, { silent: true });
 }
 
 function _resetPreparedModels() {
@@ -493,40 +521,50 @@ function hasDirtyData() {
     return dirtyIds.length > 0;
 }
 
-function _updateDataInWorker(model, options) {
+/**
+ * Method that runs when a model is changed.
+ * @param model The model that was updated
+ * @param options Update options
+ * @return {Promise}  That resolves when the data in the worker has been updated, if necessary.
+ * @private
+ */
+function _onModelDataChanged(model, options) {
     var config = this.conduit;
     if (!config || !config.writeable) {
-        // This collection was not created as a writeable one.
+        // This collection was not created as writeable.  Warn if not suppressed.
         if (!config || !config.suppressWriteableWarning) {
             console.log('Warning: model is read-only, sparse collection modified (cid: ' + model.cid + ')');
-            console.log('The modified data will not be propagated to the worker');
+            console.log('The modified data will not be propagated to the worker.');
         }
-        return;
+
+        return when.resolve();
+    } else {
+        // Handle the model changing by merging the data and re-preparing *all* models
+        _ensureBoss.call(this);
+        var dataToMerge = _.extend(model.toJSON(), { _conduitId: model._conduitId });  // TODO:  verify this is necessary
+
+        // Rather than a regular merge, we should fully replace the attributes
+        // in the worker.
+        var mergeOptions = {
+            replace: true
+        };
+
+        var self = this;
+        var promise = this._boss.makePromise({
+            method: 'mergeData',
+            args: [
+                {data: [dataToMerge], options: mergeOptions}
+            ]
+        }).then(function() {
+            // We need to re-prepare all the models
+            return _rePrepareModels.call(self);
+        }).then(function() {
+            _noLongerDirty.call(self, dirtyHandle);
+        });
+
+        var dirtyHandle = _trackAsDirty.call(this, promise, model);
+        return promise;
     }
-
-    // TODO:  if we unset values in the model, do those changes propagate to the
-    // worker successfully?
-    _ensureBoss.call(this);
-    var dataToMerge = model.toJSON();
-
-    // Rather than a regular merge, we should fully replace the attributes
-    // in the worker.
-    var mergeOptions = {
-        replace: true
-    };
-
-    var self = this;
-    var promise = this._boss.makePromise({
-        method: 'mergeData',
-        args: [
-            { data: [ dataToMerge ], options: mergeOptions }
-        ]
-    }).then(function() {
-        self._noLongerDirty(dirtyHandle);
-    });
-
-    var dirtyHandle = this._trackAsDirty(promise, model);
-    return promise;
 }
 
 function _trackAsDirty(promise, dirtyObj) {
@@ -545,8 +583,10 @@ function _noLongerDirty(dirtyId) {
     var inProgress = this._dirty.inProgress;
     var dirty = inProgress[dirtyId];
     if (dirty) {
-        // TODO:  should we inspect the promise to see if it's resolved?
         delete inProgress[dirtyId];
+        // TODO: not sure this event is necessary; would rather force them to call
+        // 'cleanDirtyData()'.  It does help with testability though.  It also
+        // would be more useful if there were a corresponding 'sweepStart' event.
         this.trigger('sweepComplete', dirty.target);
     }
 }
@@ -560,7 +600,7 @@ function cleanDirtyData() {
 
 function _ensureBoss() {
     if (!this._boss) {
-        // TODO: This is untestable as written w/o growing the scope of the spec to fully configured a worker.
+        // TODO: This is untestable as written w/o growing the scope of the spec to a fully configured worker.
 
         // Components that Backbone.Conduit needs
         var components = [
@@ -578,6 +618,8 @@ function _ensureBoss() {
         }
         components = _.compact(_.union(components, config.getComponents(), _.result(this.conduit, 'components')));
 
+        var writeable = this.conduit ? !!this.conduit.writeable : false;
+
         this._boss = new Boss({
             Worker: config.getWorkerConstructor(),
             fileLocation: config.getWorkerPath(),
@@ -591,7 +633,10 @@ function _ensureBoss() {
                 debug: config.getWorkerDebug(),
 
                 // Include the Conduit components we will leverage
-                components: components
+                components: components,
+
+                // Whether the worker will need to be writeable or not
+                writeable: writeable
             }
         });
     }
@@ -608,13 +653,6 @@ var mixinObj = {
 
     // Override haul so data request & processing happens on the worker
     haul: haul,
-
-    // The sparse-friendly implementation of Collection.set(), which we call from 'prepare'
-    _sparseSet: _sparseSet,
-
-    _updateDataInWorker: _updateDataInWorker,
-    _trackAsDirty: _trackAsDirty,
-    _noLongerDirty: _noLongerDirty,
 
     /*
         The public sparseData interface:
