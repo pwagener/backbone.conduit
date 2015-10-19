@@ -54,7 +54,7 @@ var SparseCollection = window.SparseCollection = window.BasicCollection.extend({
 
     getSummaryPromise: function(numToSummarize) {
         return this.prepare({
-                indexes: { min: 0, max: numToSummarize - 1 }
+                indexes: { min: 0, max: numToSummarize }
         }).then(function(models) {
             // then return them.
             var result = '';

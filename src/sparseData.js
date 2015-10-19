@@ -112,7 +112,7 @@ function isPrepared(items) {
     }
 
     if (!_.isUndefined(items.indexes)) {
-        for (var index = items.indexes.min; index <= items.indexes.max; index++) {
+        for (var index = items.indexes.min; index < items.indexes.max; index++) {
             if (!this.models[index]) {
                 return false;
             }

@@ -325,7 +325,7 @@ describe("The sparseData module", function() {
                 property: 'name'
             }).then(function() {
                 return collection.prepare({
-                    indexes: { min: 0, max: 2 }
+                    indexes: { min: 0, max: 3 }
                 });
             }).then(function(models) {
                 expect(models).to.have.length(3);
@@ -356,7 +356,7 @@ describe("The sparseData module", function() {
                 }
             }).then(function() {
                 return collection.prepare({
-                    indexes: { min: 0, max: 2 }
+                    indexes: { min: 0, max: 3 }
                 });
             }).then(function(models) {
                 expect(models).to.have.length(1);
@@ -369,7 +369,7 @@ describe("The sparseData module", function() {
                 method: 'addFirstAndSecond'
             }).then(function() {
                 return collection.prepare({
-                    indexes: { min: 0, max: 2 }
+                    indexes: { min: 0, max: 3 }
                 });
             }).then(function(models) {
                 expect(models).to.have.length(3);
@@ -471,11 +471,11 @@ describe("The sparseData module", function() {
 
         it('can determine if a range of indexes has been prepared', function() {
             expect(collection.isPrepared({
-                indexes: { min: 0, max: 1}
+                indexes: { min: 0, max: 2 }
             })).to.be.false;
 
             expect(collection.isPrepared({
-                indexes: { min: 1, max: 2 }
+                indexes: { min: 1, max: 3 }
             })).to.be.true;
         });
 
@@ -560,7 +560,7 @@ describe("The sparseData module", function() {
                 collection.sortAsync({ property: 'name' })
                     .then(function() {
                         return collection.prepare({
-                            indexes: { min: 0, max: 2 }
+                            indexes: { min: 0, max: 3 }
                         });
                     }).then(function() {
                         // This change should affect sorting
@@ -571,7 +571,7 @@ describe("The sparseData module", function() {
                     }).then(function() {
                         // All three models should still be prepared
                         expect(collection.isPrepared({
-                            indexes: {min: 0, max: 2}
+                            indexes: { min: 0, max: 3 }
                         })).to.be.true;
 
                         // Should now be 'THREE' 'one' 'two'

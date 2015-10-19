@@ -13,9 +13,9 @@ This method allows you to specify the models to prepare by ID or by index, and a
 or in groups:
 
 ```javascript
-// Prepare a range of indexes
+// Prepare a the first 100 indexes (note 'max' is exclusive)
 collection.prepare({
-    indexes: { min: 0, max: 99 }
+    indexes: { min: 0, max: 100 }
 }).then(function(models) { ... });
 
 // Prepare one specific index
