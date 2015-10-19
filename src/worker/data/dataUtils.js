@@ -189,7 +189,7 @@ function findByIndex(index) {
 function findByIndexes(indexes) {
     var found = [];
     var allData = getData();
-    for (var i = indexes.min; i <= indexes.max; i++) {
+    for (var i = indexes.min; i < indexes.max; i++) {
         var data = allData[i];
         if (!_.isUndefined(data)) {
             found.push(data);
