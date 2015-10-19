@@ -20,7 +20,7 @@ collection.haul()
     }).then(function() {
         // Next prepare a few models
         return collection.prepare({ 
-            indexes: { min: 0, max: 9 }
+            indexes: { min: 0, max: 10 }
         });
     }).then(function(models) {
         // Use the models
