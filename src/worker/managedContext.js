@@ -72,33 +72,55 @@ function _enableHandlers(context, handlerModules) {
  */
 function _onMessage(event) {
     var method = event.data.method;
-    var args = event.data.arguments;
+    var args = event.data.args;
 
     var ConduitWorker = _getConduitWorker();
     var handler = ConduitWorker.handlers[method];
     if (handler) {
         debug('Executing "' + method + '"');
-        var result = handler.apply(ConduitWorker, args);
 
-        // If a promise is returned from a handler we want to wait for it to resolve, so ...
-        if (when.isPromiseLike(result)) {
-            result.then(function(promiseResult) {
-                _onCallComplete(event.data, promiseResult);
-            });
+        // Require the event have a request ID
+        var requestId = event.data.requestId;
+        if (!requestId) {
+            _onCallError(event.data, new Error('No "requestId" provided'));
         } else {
-            _onCallComplete(event.data, result);
-        }
+            var result = handler.apply(ConduitWorker, args);
 
+            // If a promise is returned from a handler we want
+            // to wait for it to resolve, so ...
+            if (when.isPromiseLike(result)) {
+                result.then(function(promiseResult) {
+                    _onCallComplete(event.data, promiseResult);
+                }).catch(function(error) {
+                    _onCallError(event.data, error);
+                });
+            } else {
+                _onCallComplete(event.data, result);
+            }
+        }
     } else {
         var msg = "No such Conduit worker method: '" + method + "'";
-        debug(msg);
-        managedContext.postMessage(new Error(msg));
+        _onCallError(event.data, new Error(msg));
     }
 }
 
 function _onCallComplete(eventData, result) {
-    managedContext.postMessage(result);
+    var response = {
+        requestId: eventData.requestId,
+        result: result
+    };
+
+    managedContext.postMessage(response);
     debug('Completed "' + eventData.method + '"');
+}
+
+function _onCallError(eventData, error) {
+    var response = {
+        requestId: eventData.requestId,
+        error: error
+    };
+    managedContext.postMessage(response);
+    debug(eventData.method + ' errored: ' + error);
 }
 
 function _initContext(optionalContext) {

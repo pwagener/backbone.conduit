@@ -38,7 +38,7 @@ InThreadBoss.prototype.makePromise = function(details) {
         throw new Error('No method found on the InThreadBoss: ' + details.method);
     }
 
-    var result = method.apply(this, details.arguments);
+    var result = method.apply(this, details.args);
     return when.resolve(result);
 };
 

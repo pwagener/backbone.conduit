@@ -73,7 +73,7 @@ function prepare(items) {
     var self = this;
     return this._boss.makePromise({
         method: 'prepare',
-        arguments: [ items ]
+        args: [ items ]
     }).then(function(rawData) {
         var converted = self._sparseSet(rawData);
 
@@ -236,7 +236,7 @@ function _fillOrRefillOnWorker(data, options) {
     var idKey = context.model.idAttribute;
     var bossPromise = context._boss.makePromise({
         method: method,
-        arguments: [
+        args: [
             {
                 data: data,
                 idKey: idKey
@@ -272,7 +272,7 @@ function haul(options) {
     var self = this;
     return this._boss.makePromise({
         method: 'restGet',
-        arguments: [ getOptions ]
+        args: [ getOptions ]
     }).then(function(result) {
         self.length = result.length;
         if (options.success) {
@@ -348,7 +348,7 @@ function sortAsync(sortSpec) {
 
     return this._boss.makePromise({
         method: 'sortBy',
-        arguments: [ sortSpec ]
+        args: [ sortSpec ]
     }).then(function(result) {
         // Sort was successful; remove any local models.
         // NOTE:  we could work around doing this by just re-preparing the
@@ -400,7 +400,7 @@ function filterAsync(filterSpec) {
 
     return this._boss.makePromise({
         method: 'filter',
-        arguments: [ filterSpec ]
+        args: [ filterSpec ]
     }).then(function(result) {
         self.length = result.length;
         _resetPreparedModels.call(self);
@@ -443,7 +443,7 @@ function mapAsync(mapSpec) {
 
     return this._boss.makePromise({
         method: 'map',
-        arguments: [ mapSpec ]
+        args: [ mapSpec ]
     }).then(function(result) {
         _resetPreparedModels.call(self);
         self.trigger('map');
@@ -470,7 +470,7 @@ function reduceAsync(reduceSpec) {
 
     return this._boss.makePromise({
         method: 'reduce',
-        arguments: [ reduceSpec ]
+        args: [ reduceSpec ]
     });
 }
 
@@ -518,7 +518,7 @@ function _updateDataInWorker(model, options) {
     var self = this;
     var promise = this._boss.makePromise({
         method: 'mergeData',
-        arguments: [
+        args: [
             { data: [ dataToMerge ], options: mergeOptions }
         ]
     }).then(function() {
