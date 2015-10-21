@@ -387,7 +387,7 @@
 	var _ = __webpack_require__(15);
 	var when = __webpack_require__(16);
 	var dataUtils = __webpack_require__(12);
-	var nanoAjax = __webpack_require__(13);
+	var nanoAjax = __webpack_require__(14);
 
 	module.exports = {
 	    name: 'restGet',
@@ -454,7 +454,7 @@
 	var _ = __webpack_require__(15);
 	var when = __webpack_require__(16);
 	var dataUtils = __webpack_require__(12);
-	var nanoAjax = __webpack_require__(13);
+	var nanoAjax = __webpack_require__(14);
 
 	module.exports = {
 	    name: 'restSave',
@@ -518,7 +518,7 @@
 	var _ = __webpack_require__(15);
 	var when = __webpack_require__(16);
 	var dataUtils = __webpack_require__(12);
-	var nanoAjax = __webpack_require__(13);
+	var nanoAjax = __webpack_require__(14);
 
 	module.exports = {
 	    name: 'restDestroy',
@@ -605,7 +605,7 @@
 	 */
 
 	var _ = __webpack_require__(15);
-	var managedContext = __webpack_require__(14);
+	var managedContext = __webpack_require__(13);
 
 	function _getContext(skipInit) {
 	    if (!ConduitWorker._data && !skipInit) {
@@ -882,56 +882,6 @@
 /* 13 */
 /***/ function(module, exports, __webpack_require__) {
 
-	/* WEBPACK VAR INJECTION */(function(global) {exports.ajax = function (params, callback) {
-	  if (typeof params == 'string') params = {url: params}
-	  var headers = params.headers || {}
-	    , body = params.body
-	    , method = params.method || (body ? 'POST' : 'GET')
-	    , withCredentials = params.withCredentials || false
-
-	  var req = getRequest()
-
-	  req.onreadystatechange = function () {
-	    if (req.readyState == 4)
-	      callback(req.status, req.responseText, req)
-	  }
-
-	  if (body) {
-	    setDefault(headers, 'X-Requested-With', 'XMLHttpRequest')
-	    setDefault(headers, 'Content-Type', 'application/x-www-form-urlencoded')
-	  }
-
-	  req.open(method, params.url, true)
-
-	  // has no effect in IE
-	  // has no effect for same-origin requests
-	  // has no effect in CORS if user has disabled 3rd party cookies
-	  req.withCredentials = withCredentials
-
-	  for (var field in headers)
-	    req.setRequestHeader(field, headers[field])
-
-	  req.send(body)
-	}
-
-	function getRequest() {
-	  if (global.XMLHttpRequest)
-	    return new global.XMLHttpRequest;
-	  else
-	    try { return new global.ActiveXObject("MSXML2.XMLHTTP.3.0"); } catch(e) {}
-	  throw new Error('no xmlhttp request able to be created')
-	}
-
-	function setDefault(obj, key, value) {
-	  obj[key] = obj[key] || value
-	}
-	
-	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
-
-/***/ },
-/* 14 */
-/***/ function(module, exports, __webpack_require__) {
-
 	/* WEBPACK VAR INJECTION */(function(global) {'use strict';
 
 	/**
@@ -1006,33 +956,55 @@
 	 */
 	function _onMessage(event) {
 	    var method = event.data.method;
-	    var args = event.data.arguments;
+	    var args = event.data.args;
 
 	    var ConduitWorker = _getConduitWorker();
 	    var handler = ConduitWorker.handlers[method];
 	    if (handler) {
 	        debug('Executing "' + method + '"');
-	        var result = handler.apply(ConduitWorker, args);
 
-	        // If a promise is returned from a handler we want to wait for it to resolve, so ...
-	        if (when.isPromiseLike(result)) {
-	            result.then(function(promiseResult) {
-	                _onCallComplete(event.data, promiseResult);
-	            });
+	        // Require the event have a request ID
+	        var requestId = event.data.requestId;
+	        if (!requestId) {
+	            _onCallError(event.data, new Error('No "requestId" provided'));
 	        } else {
-	            _onCallComplete(event.data, result);
-	        }
+	            var result = handler.apply(ConduitWorker, args);
 
+	            // If a promise is returned from a handler we want
+	            // to wait for it to resolve, so ...
+	            if (when.isPromiseLike(result)) {
+	                result.then(function(promiseResult) {
+	                    _onCallComplete(event.data, promiseResult);
+	                }).catch(function(error) {
+	                    _onCallError(event.data, error);
+	                });
+	            } else {
+	                _onCallComplete(event.data, result);
+	            }
+	        }
 	    } else {
 	        var msg = "No such Conduit worker method: '" + method + "'";
-	        debug(msg);
-	        managedContext.postMessage(new Error(msg));
+	        _onCallError(event.data, new Error(msg));
 	    }
 	}
 
 	function _onCallComplete(eventData, result) {
-	    managedContext.postMessage(result);
+	    var response = {
+	        requestId: eventData.requestId,
+	        result: result
+	    };
+
+	    managedContext.postMessage(response);
 	    debug('Completed "' + eventData.method + '"');
+	}
+
+	function _onCallError(eventData, error) {
+	    var response = {
+	        requestId: eventData.requestId,
+	        error: error
+	    };
+	    managedContext.postMessage(response);
+	    debug(eventData.method + ' errored: ' + error);
 	}
 
 	function _initContext(optionalContext) {
@@ -1148,6 +1120,56 @@
 	    debug: debug
 
 	};
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
+
+/***/ },
+/* 14 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/* WEBPACK VAR INJECTION */(function(global) {exports.ajax = function (params, callback) {
+	  if (typeof params == 'string') params = {url: params}
+	  var headers = params.headers || {}
+	    , body = params.body
+	    , method = params.method || (body ? 'POST' : 'GET')
+	    , withCredentials = params.withCredentials || false
+
+	  var req = getRequest()
+
+	  req.onreadystatechange = function () {
+	    if (req.readyState == 4)
+	      callback(req.status, req.responseText, req)
+	  }
+
+	  if (body) {
+	    setDefault(headers, 'X-Requested-With', 'XMLHttpRequest')
+	    setDefault(headers, 'Content-Type', 'application/x-www-form-urlencoded')
+	  }
+
+	  req.open(method, params.url, true)
+
+	  // has no effect in IE
+	  // has no effect for same-origin requests
+	  // has no effect in CORS if user has disabled 3rd party cookies
+	  req.withCredentials = withCredentials
+
+	  for (var field in headers)
+	    req.setRequestHeader(field, headers[field])
+
+	  req.send(body)
+	}
+
+	function getRequest() {
+	  if (global.XMLHttpRequest)
+	    return new global.XMLHttpRequest;
+	  else
+	    try { return new global.ActiveXObject("MSXML2.XMLHTTP.3.0"); } catch(e) {}
+	  throw new Error('no xmlhttp request able to be created')
+	}
+
+	function setDefault(obj, key, value) {
+	  obj[key] = obj[key] || value
+	}
+	
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
@@ -2966,7 +2988,7 @@
 	/**
 	 * This module allows you to pass a configuration into the worker's context
 	 */
-	var managedContext = __webpack_require__(14);
+	var managedContext = __webpack_require__(13);
 	var util = __webpack_require__(31);
 
 	module.exports = {
