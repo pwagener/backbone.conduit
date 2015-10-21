@@ -6,11 +6,6 @@
 var managedContext = require('../../src/worker/managedContext');
 var _ = require('underscore');
 
-function _reset(global) {
-    delete global.ConduitWorker;
-    managedContext.setAsGlobal(global);
-}
-
 module.exports = {
     reset: function(){
         var context = managedContext.get();
@@ -18,6 +13,8 @@ module.exports = {
         _.each(_.keys(context), function(key) {
             delete context[key];
         });
+        delete global.ConduitWorker;
+        managedContext.setAsGlobal(global);
     },
 
     get: function() {

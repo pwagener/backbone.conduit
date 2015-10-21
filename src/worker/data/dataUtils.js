@@ -20,7 +20,7 @@ function initStore(options) {
         // for our interesting options.
         var config = managedContext.getConfig();
         context._idKey = config.idKey || options.idKey || 'id';  // TODO: don't look at the options
-        context._generateIds = !!config.writeable;
+        context._generateIds = !!config.generateIds;
     }
 
     context._data = [];

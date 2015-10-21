@@ -7,6 +7,7 @@
 var _ = require('underscore');
 
 var mockConduitWorker = require('../mockConduitWorker');
+var managedContext = require('../../../src/worker/managedContext');
 
 var dataUtils = require('./../../../src/worker/data/dataUtils');
 
@@ -258,9 +259,11 @@ describe('The worker/dataUtils module', function() {
             mockConduitWorker.reset();
             context = mockConduitWorker.get();
 
-            dataUtils.initStore({
+            managedContext.configure({
                 generateIds: true
             });
+
+            dataUtils.initStore();
         });
 
         it('adds "_conduitId" to any new data', function() {

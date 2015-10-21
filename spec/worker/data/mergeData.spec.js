@@ -7,6 +7,7 @@ var _ = require('underscore');
 
 var mockConduitWorker = require('../mockConduitWorker');
 var dataUtils = require('../../../src/worker/data/dataUtils');
+var managedContext = require('../../../src/worker/managedContext');
 
 var workerMergeData = require('./../../../src/worker/data/mergeData');
 
@@ -88,9 +89,13 @@ describe('The data/mergeData module', function() {
     describe('when the data is added with a non-default idKey', function() {
         var data;
         beforeEach(function() {
-            dataUtils.initStore({
+            mockConduitWorker.reset();
+            context = mockConduitWorker.bindModule(workerMergeData);
+            managedContext.configure({
                 idKey: 'name'
             });
+            dataUtils.initStore();
+
             var length = context.mergeData({
                 data: this.getSampleData()
             });

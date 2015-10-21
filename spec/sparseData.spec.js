@@ -33,7 +33,7 @@ function makeInThreadBoss(sinon, options) {
     var context = managedContext.get();
     delete context._data;
     managedContext.configure({
-        writeable: options.writeable
+        generateIds: options.writeable
     });
     inThreadBoss.setData();
 

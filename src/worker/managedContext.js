@@ -173,7 +173,7 @@ function debug(msg) {
  * @private
  */
 function _getConduitWorker() {
-    if (!managedContext) {
+    if (!managedContext || !managedContext.ConduitWorker) {
         _initContext();
     }
 
