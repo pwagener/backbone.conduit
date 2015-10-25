@@ -15,7 +15,8 @@ filtering, and mapping.  However scaling on the server is not always the easier 
 shipping all the data to the client and letting it figure things out is a more efficient use of resources.
 
 `Backbone.Conduit` provides two different Collections you may use:
- * ([QuickCollection](QuickCollection/index.md) provides a Collection that accepts new models ~ 40% faster than the 
+
+ * [QuickCollection](QuickCollection/index.md) provides a Collection that accepts new models ~ 40% faster than the 
  base `Backbone.Collection`.  Use it in situations where you expect to have more than a few hundred of items, up to 
  several thousands.
  * [SparseCollection](SparseCollection/index.md) provides a Collection that manages all data on a different thread. This
@@ -34,7 +35,7 @@ non-opinionated, *Backbone.Conduit* takes an opinion about how to best scale.
 
 ## Other Links:
 
-* Here's [a pdf](backbone-conduit.pdf) with all the same content.
+* Here's [a pdf](backbone-conduit.pdf) of this documentation
 * Check out [the Demo](http://conduit.wagener.org).
 * Here's the [GitHub Repo](https://github.com/pwagener/backbone.conduit)
 * Please [File An Issue] if you find a problem (https://github.com/pwagener/backbone.conduit/issues).
