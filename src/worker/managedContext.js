@@ -191,10 +191,13 @@ function configure(config) {
     var conduitWorker = _getConduitWorker();
     conduitWorker.config = config;
 
+    // To make it testable, 'importScripts' can come from a few places.
+    var importScripts = managedContext.importScripts || this.importScripts;
+
     // Import any component that is listed in the configuration
     _.each(config.components, function(component) {
         debug('Loading component: ' + component);
-        managedContext.importScripts(component);
+        importScripts(component);
     });
 
     debug('ConduitWorker context configured: ' + util.inspect(config));
@@ -227,7 +230,7 @@ module.exports = {
     setAsGlobal: setAsGlobal,
 
     /**
-     * Retrieve a reference to the worker's context.  Use with extreme care.
+     * Retrieve a reference to the worker's context.  Use with extreme care.  TODO:  rename this to getConduitWorker for clarity
      */
     get: function() {
         return _getConduitWorker();

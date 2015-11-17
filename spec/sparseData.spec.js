@@ -5,6 +5,8 @@ var Backbone = require('backbone');
 var when = require('when');
 
 var InThreadBoss = require('./InThreadBoss');
+var InThreadConduitWorker = require('./InThreadConduitWorker');
+var Boss = require('../src/Boss');
 
 var managedContext = require('../src/worker/managedContext');
 var sparseData = require('./../src/sparseData');
@@ -40,13 +42,38 @@ function makeInThreadBoss(sinon, options) {
     return inThreadBoss;
 }
 
+function makeNewInThreadBoss(options) {
+    options = options || {};
+
+    var inThreadBoss = new Boss({
+        fileLocation: '/ignored/',
+        Worker: InThreadConduitWorker
+    });
+
+    inThreadBoss.worker = new InThreadConduitWorker({
+        generateIds: options.writeable,
+        components: [
+            './../src/worker/data/setData',
+            './../src/worker/data/prepare',
+            './../src/worker/data/mergeData',
+            './../src/worker/data/sortBy',
+            './../src/worker/data/filter',
+            './worker/data/mockRestGet',
+            './../src/worker/data/map',
+            './../src/worker/data/reduce'
+        ]
+    });
+
+    return inThreadBoss;
+}
+
 describe("The sparseData module", function() {
     var WriteableCollection, ReadOnlyCollection, collection, preparedSpy;
 
     var setUpCollectionForTest = function(CollectionConstructor, done) {
         // We mock out an in-thread-like boss
         collection = new CollectionConstructor();
-        collection._boss = makeInThreadBoss(this.sinon, {
+        collection._boss = makeNewInThreadBoss({
             writeable: collection.conduit.writeable
         });
 
@@ -608,7 +635,7 @@ describe("The sparseData module", function() {
                 });
             });
 
-            it('recalculates the index when the change affects sorting', function(done) {
+            xit('recalculates the index when the change affects sorting', function(done) {
                 collection.sortAsync({ property: 'name' })
                     .then(function() {
                         return collection.prepare({
@@ -616,8 +643,8 @@ describe("The sparseData module", function() {
                         });
                     }).then(function() {
                         // This change should affect sorting
-                        return modelThree.set('name', 'aaaa-three');
-                    }).then(function() {
+                        modelThree.set('name', 'aaaa-three');
+
                         // Wait for changes to propagate
                         return collection.cleanDirtyData();
                     }).then(function() {
@@ -656,11 +683,26 @@ describe("The sparseData module", function() {
                 expect(collection).to.have.length(3);
             });
 
-            it('indicates no dirty models after sweeping');
+            it('indicates no dirty data after sweeping', function(done) {
+                collection.cleanDirtyData().then(function() {
+                    expect(collection.hasDirtyData()).to.be.false;
+                    done();
+                });
+            });
 
-            it('updates the "length" after sweeping');
+            it('updates the "length" after sweeping', function(done) {
+                collection.cleanDirtyData().then(function() {
+                    expect(collection).to.have.length(4);
+                    done();
+                });
+            });
 
-            it('provides the correct length after sweeping');
+            xit('cannot prepare the model before sweeping', function(done) {
+                collection.prepare({ id: 10 })
+                    .catch(function() {
+                        done();
+                    });
+            });
 
             it('can prepare the new model after sweeping');
         });

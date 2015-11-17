@@ -1,6 +1,7 @@
 'use strict';
 
 /**
+ * @deprecated  Use the AsyncBoss.js instead
  * Module for testing that provides an in-thread Boss
  * implementation
  */

@@ -150,9 +150,7 @@ Boss.prototype = {
     terminate: function() {
         if(this.worker) {
             this._debug('Terminating worker');
-            if (_.isFunction(this.worker.terminate)) {
-                this.worker.terminate();
-            }
+            this.worker.terminate();
             this.worker = null;
         }
     },

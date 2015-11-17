@@ -621,7 +621,7 @@ function _ensureBoss() {
         var writeable = this.conduit ? !!this.conduit.writeable : false;
 
         this._boss = new Boss({
-            Worker: config.getWorkerConstructor(),
+            Worker: config.getWorkerConstructor(), // TODO:  wow, rename this to WorkerConstructor ... ?
             fileLocation: config.getWorkerPath(),
 
             // We never want the worker for this collection to terminate, as it holds all our data!
@@ -629,7 +629,7 @@ function _ensureBoss() {
 
             // Use the Backbone.Conduit config for the debug configuration
             debug: config.getDebug(),
-            worker: {
+            worker: { // TODO:  wow, rename this to 'workerConfig' for clarity ... ?
                 debug: config.getWorkerDebug(),
 
                 // Include the Conduit components we will leverage
