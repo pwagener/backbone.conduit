@@ -56,8 +56,11 @@ describe('The haul module', function() {
             collection.reset();
         });
 
-        it('receives the sample data', function() {
-            expect(haulAndWait(collection)).to.eventually.have.length(3);
+        it('receives the sample data', function(done) {
+            haulAndWait(collection).then(function() {
+                expect(collection).to.have.length(3);
+                done();
+            });
         });
 
         it('contains sorted data', function(done) {

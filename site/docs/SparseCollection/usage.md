@@ -135,7 +135,7 @@ objects that will represent the items in the collection.  Note it utilizes the c
 `userName` key from the main UI thread, shown as `this.userName` above.
 
 ## Data Projections
-Since the full copy of the data is managed on the worker thread, many/most synchronous `Backbone.Collection` method calls
+Since the full copy of the data is managed on the worker thread, most synchronous `Backbone.Collection` method calls
 on a `sparseData`-enabled collection will throw an error.  Instead, `Conduit` provides alternative, asynchronous methods
 that return promises.
 
@@ -159,6 +159,9 @@ collection.filterAsync(
     // The data is now back to its un-filtered state
 });
 ```
+
+Finally, all data projection methods emit their own events (i.e. `sortAsync`, `filterAsync`, `mapAsync`) upon completion
+to differentiate themselves from the comparable `Backbone.Collection` synchronous methods.
 
 
 ## Limitations

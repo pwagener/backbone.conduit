@@ -349,6 +349,17 @@ describe("The sparseData module", function() {
                 });
         });
 
+        it('fires a "sortAsync" event after sorting', function(done) {
+            var eventSpy = this.sinon.spy();
+            collection.on('sortAsync', eventSpy);
+            collection.sortAsync({
+                property: 'name'
+            }).then(function() {
+                expect(eventSpy.callCount).to.equal(1);
+                done();
+            });
+        });
+
         it('filters its data in the worker', function(done) {
             collection.filterAsync({
                 where: {
@@ -363,6 +374,20 @@ describe("The sparseData module", function() {
                 done();
             });
         });
+
+        it('fires a "filterAsync" event after filtering', function(done) {
+            var eventSpy = this.sinon.spy();
+            collection.on('filterAsync', eventSpy);
+            collection.filterAsync({
+                where: {
+                    name: 'one'
+                }
+            }).then(function() {
+                expect(eventSpy.callCount).to.equal(1);
+                done();
+            });
+        });
+
 
         it('maps its data in the worker', function(done) {
             collection.mapAsync({
@@ -385,6 +410,18 @@ describe("The sparseData module", function() {
                 done();
             });
         });
+
+        it('fires a "mapAsync" event after mapping', function(done) {
+            var eventSpy = this.sinon.spy();
+            collection.on('mapAsync', eventSpy);
+            collection.mapAsync({
+                method: 'addFirstAndSecond'
+            }).then(function() {
+                expect(eventSpy.callCount).to.equal(1);
+                done();
+            });
+        });
+
 
         it('reduces data in the worker', function(done) {
             collection.reduceAsync({

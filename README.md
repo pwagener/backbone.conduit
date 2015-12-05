@@ -21,7 +21,7 @@ $ npm install backbone.conduit
 var collection = new Backbone.Conduit.QuickCollection();
 
 // If you have a large amount of data injected onto the page, instead of 'reset(...)' do ...
-var aBigArray = [ ... ];
+var aBigArray = [ {}, {}, {} ]; // let's assume this was 100K objects
 collection.refill(aBigArray);
 
 // Or, if you need to get it asynchronously, instead of 'fetch()' do ...
@@ -49,18 +49,18 @@ Backbone.Conduit.enableWorker({
     paths: '/your/path/to/backbone.conduit'
 }).then(function() {
     var collection = new MyCollection();
-    collection.haul().then(function() {
-        console.log('Length: ' + collection.length); // <== "Length: 100000"
+    return collection.haul();
+}).then(function() {
+   console.log('Length: ' + collection.length); // <== "Length: 100000"
 
-    // Prepare the first 10 models for use
-    return collection.prepare({
-            indexes: { min: 0, max: 10}
-        });
-    }).then(function(models) {
-        console.log('Prepared: ' + models.length); // <== "Prepared: 10"
-        // Note the prepared models are also available via
-        // 'collection.get(...)' or 'collection.at(...)';
-    });
+   // Prepare the first 10 models for use
+   return collection.prepare({
+       indexes: { min: 0, max: 9}
+   });
+}).then(function(models) {
+  console.log('Prepared: ' + models.length); // <== "Prepared: 10"
+  // Note the prepared models are also available via
+  // 'collection.get(...)' or 'collection.at(...)';
 });
 
 ```

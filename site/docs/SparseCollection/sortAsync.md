@@ -29,3 +29,5 @@ collection.sortAsync({
 This applies a Projection to your data set.  Also, note the resulting context of the sorting function will be provided 
 by the resolved `Promise`.  See the [Data Projections Section of SparseCollection Usage](usage.html#data-projections) for 
 details.
+
+When `SparseCollection.sortAsync()` completes, it fires the `sortAsync` event prior to resolving its Promise.
