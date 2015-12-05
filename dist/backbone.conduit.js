@@ -799,7 +799,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        // NOTE:  we could work around doing this by just re-preparing the
 	        // models we have locally ...
 	        _resetPreparedModels.call(self);
-	        self.trigger('sort');
+	        self.trigger('sortAsync');
 	        return result.context;
 	    });
 	}
@@ -849,7 +849,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }).then(function(result) {
 	        self.length = result.length;
 	        _resetPreparedModels.call(self);
-	        self.trigger('filter');
+	        self.trigger('filterAsync');
 
 	        return result.context;
 	    });
@@ -891,7 +891,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        args: [ mapSpec ]
 	    }).then(function(result) {
 	        _resetPreparedModels.call(self);
-	        self.trigger('map');
+	        self.trigger('mapAsync');
 	        return result.context;
 	    });
 	}
