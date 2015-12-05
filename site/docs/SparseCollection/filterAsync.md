@@ -56,3 +56,5 @@ collection.haul().then(function() {
 
 This applies a projection on the underlying data set, which can be removed by calling `resetProjection()`.  Note that
 to filter using an evaluation function, you must provide the function separately.  See [Custom Methods](customMethods.html) for details.
+
+When `SparseCollection.filterAsync()` completes, it fires the `filterAsync` event prior to resolving its Promise.

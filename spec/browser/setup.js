@@ -5,7 +5,6 @@ var sinon = window.sinon;
 delete window.sinon;
 var chai = require('chai');
 var sinonChai = require('sinon-chai');
-var chaiAsPromised = require('chai-as-promised');
 var Backbone = require('backbone');
 var Conduit = require('src/index');
 
@@ -22,7 +21,6 @@ require('./haul.browserSpec.js');
 
 window.expect = chai.expect;
 chai.use(sinonChai);
-chai.use(chaiAsPromised);
 
 function getSampleData() {
     return[

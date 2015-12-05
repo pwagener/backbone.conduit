@@ -354,7 +354,7 @@ function sortAsync(sortSpec) {
         // NOTE:  we could work around doing this by just re-preparing the
         // models we have locally ...
         _resetPreparedModels.call(self);
-        self.trigger('sort');
+        self.trigger('sortAsync');
         return result.context;
     });
 }
@@ -404,7 +404,7 @@ function filterAsync(filterSpec) {
     }).then(function(result) {
         self.length = result.length;
         _resetPreparedModels.call(self);
-        self.trigger('filter');
+        self.trigger('filterAsync');
 
         return result.context;
     });
@@ -446,7 +446,7 @@ function mapAsync(mapSpec) {
         args: [ mapSpec ]
     }).then(function(result) {
         _resetPreparedModels.call(self);
-        self.trigger('map');
+        self.trigger('mapAsync');
         return result.context;
     });
 }

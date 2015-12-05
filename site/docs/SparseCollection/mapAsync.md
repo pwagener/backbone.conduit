@@ -21,9 +21,10 @@ If you would like, you can provide the mapping function directly on the `SparseC
 var MyCollection = Conduit.SparseCollection.extend({
     mapSpec: {
         method: 'translateToGerman'
-    },
+    }
+
     // ...
-};
+)};
 
 var collection = new MyCollection();
 collection.haul().then(function() {
@@ -33,4 +34,6 @@ collection.haul().then(function() {
 });
 ```
 
-This applies a projection on the underlying data set, which can be removed by calling `resetProjection()`.  
+This applies a projection on the underlying data set, which can be removed by calling `resetProjection()`.
+
+When `SparseCollection.mapAsync()` completes, it fires the `mapAsync` event prior to resolving its Promise.
