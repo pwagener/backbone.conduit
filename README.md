@@ -54,7 +54,7 @@ Backbone.Conduit.enableWorker({
 
     // Prepare the first 10 models for use
     return collection.prepare({
-            indexes: { min: 0, max: 9}
+            indexes: { min: 0, max: 10}
         });
     }).then(function(models) {
         console.log('Prepared: ' + models.length); // <== "Prepared: 10"

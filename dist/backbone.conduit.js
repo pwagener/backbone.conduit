@@ -518,7 +518,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var self = this;
 	    return this._boss.makePromise({
 	        method: 'prepare',
-	        arguments: [ items ]
+	        args: [ items ]
 	    }).then(function(rawData) {
 	        var converted = self._sparseSet(rawData);
 
@@ -557,7 +557,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 
 	    if (!_.isUndefined(items.indexes)) {
-	        for (var index = items.indexes.min; index <= items.indexes.max; index++) {
+	        for (var index = items.indexes.min; index < items.indexes.max; index++) {
 	            if (!this.models[index]) {
 	                return false;
 	            }
@@ -681,7 +681,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var idKey = context.model.idAttribute;
 	    var bossPromise = context._boss.makePromise({
 	        method: method,
-	        arguments: [
+	        args: [
 	            {
 	                data: data,
 	                idKey: idKey
@@ -717,7 +717,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var self = this;
 	    return this._boss.makePromise({
 	        method: 'restGet',
-	        arguments: [ getOptions ]
+	        args: [ getOptions ]
 	    }).then(function(result) {
 	        self.length = result.length;
 	        if (options.success) {
@@ -793,7 +793,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    return this._boss.makePromise({
 	        method: 'sortBy',
-	        arguments: [ sortSpec ]
+	        args: [ sortSpec ]
 	    }).then(function(result) {
 	        // Sort was successful; remove any local models.
 	        // NOTE:  we could work around doing this by just re-preparing the
@@ -845,7 +845,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    return this._boss.makePromise({
 	        method: 'filter',
-	        arguments: [ filterSpec ]
+	        args: [ filterSpec ]
 	    }).then(function(result) {
 	        self.length = result.length;
 	        _resetPreparedModels.call(self);
@@ -888,7 +888,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    return this._boss.makePromise({
 	        method: 'map',
-	        arguments: [ mapSpec ]
+	        args: [ mapSpec ]
 	    }).then(function(result) {
 	        _resetPreparedModels.call(self);
 	        self.trigger('map');
@@ -915,7 +915,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    return this._boss.makePromise({
 	        method: 'reduce',
-	        arguments: [ reduceSpec ]
+	        args: [ reduceSpec ]
 	    });
 	}
 
@@ -963,7 +963,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var self = this;
 	    var promise = this._boss.makePromise({
 	        method: 'mergeData',
-	        arguments: [
+	        args: [
 	            { data: [ dataToMerge ], options: mergeOptions }
 	        ]
 	    }).then(function() {
@@ -1311,7 +1311,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	            boss.makePromise({
 	                method: 'ping',
 	                autoTerminate: true,
-	                arguments: [
+	                args: [
 	                    { debug: debugSet }
 	                ]
 	            }).then(function(response) {
@@ -1593,6 +1593,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	        // The configuration we will provide to any new worker
 	        this.debug = options.debug;
 	        this.workerConfig = _.extend({}, options.worker);
+
+	        this._requestsInFlight = {};
 	    },
 
 	    /**
@@ -1620,8 +1622,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	     * Get a promise that will be resolved when the worker finishes
 	     * @param details Details for the method call:
 	     *   o method (required) The name of the method to call
-	     *   o arguments (optional) The array of arguments that will be passed to the
-	     *     worker method you are calling.  TODO: rename this to 'args'
+	     *   o args (optional) The array of arguments that will be passed to the
+	     *     worker method you are calling.
 	     * @return A Promise that will be resolved or rejected based on calling
 	     *   the method you are calling.
 	     */
@@ -1638,30 +1640,60 @@ return /******/ (function(modules) { // webpackBootstrap
 	        var self = this;
 
 	        return this._ensureWorker().then(function(worker) {
-	            return when.promise(function(resolve, reject) {
-	                worker.onmessage = function(event) {
-	                    var result = event.data;
-	                    self._scheduleTermination();
+	            var requestId = _.uniqueId('cReq');
 
-	                    if (result instanceof Error) {
-	                        // Reject if we get an error
-	                        reject(result);
-	                    } else {
-	                        resolve(result);
-	                    }
-	                };
-
-	                // Reject if we get an error.  This occurs, for instance, when the worker
-	                // path is invalid
-	                worker.onerror = function(err) {
-	                    self._debug('Worker call failed: ' + err.message);
-	                    self.terminate();
-	                    reject(err);
-	                };
-
-	                worker.postMessage(details);
+	            var requestDetails = _.extend({}, details, {
+	                requestId: requestId
 	            });
+
+	            // Create the request.
+	            var deferred = when.defer();
+	            self._requestsInFlight[requestId] = deferred;
+	            worker.postMessage(requestDetails);
+
+	            return deferred.promise;
 	        });
+	    },
+
+	    /**
+	     * Method that is called in response to a worker message.
+	     * @param event The worker event
+	     * @private
+	     */
+	    _onWorkerMessage: function(event) {
+	        var requestId = event.data.requestId;
+
+	        var deferred = this._requestsInFlight[requestId];
+	        if (deferred) {
+	            var result = event.data.result;
+	            if (result instanceof Error) {
+	                // Reject if we get an error
+	                deferred.reject(result);
+	            } else {
+	                deferred.resolve(result);
+	            }
+	        } else {
+	            this._debug('Worker did not provide requestId: ' + event.data);
+	        }
+
+	        this._scheduleTermination();
+	    },
+
+	    /**
+	     * Method that is called in response to a worker error.  This rejects all promises that are in-flight.
+	     * @param err The error
+	     * @private
+	     */
+	    _onWorkerError: function(err) {
+	        this._debug('Worker call failed: ' + err.message);
+
+	        _.each(_.keys(this._requestsInFlight), function(requestId) {
+	            var deferred = this._requestsInFlight[requestId];
+
+	            deferred.reject(new Error('Worker error: ' + err));
+	        }, this);
+
+	        this.terminate();
 	    },
 
 	    /**
@@ -1685,30 +1717,27 @@ return /******/ (function(modules) { // webpackBootstrap
 	     */
 	    _ensureWorker: function () {
 	        var self = this;
-	        return when.promise(function(resolve, reject) {
-	            var worker = self.worker;
-	            if (!worker) {
-	                // Note this will never throw an error; construction always succeeds
-	                // regardless of whether the path is valid or not
-	                self._debug('Creating new worker (autoTerminate: ' + self.autoTerminate + ')');
-	                worker = self.worker = new self.WorkerConstructor(self.WorkerFileLocation);
-	                // Pass the worker the configuration it should have
-	                worker.onerror = function(err) {
-	                    self.terminate();
-	                    reject(err);
-	                };
-	                worker.onmessage = function() {
-	                    resolve(worker);
-	                };
-	                worker.postMessage({
-	                    method: 'configure',
-	                    arguments: [ self.workerConfig ]
-	                });
-	            } else {
-	                // Our worker is already ready
-	                resolve(worker);
-	            }
-	        });
+
+	        var worker = this.worker;
+	        if (!worker) {
+	            // Note this will never throw an error; construction always succeeds
+	            // regardless of whether the path is valid or not
+	            self._debug('Creating new worker (autoTerminate: ' + self.autoTerminate + ')');
+	            worker = self.worker = new self.WorkerConstructor(self.WorkerFileLocation);
+
+	            worker.onmessage = _.bind(self._onWorkerMessage, self);
+	            worker.onerror = _.bind(self._onWorkerError, self);
+
+	            return self.makePromise({
+	                method: 'configure',
+	                args: [ self.workerConfig ]
+	            }).then(function() {
+	                return worker;
+	            });
+	        } else {
+	            // Our worker is already ready.  Return a Promise that will resolve immediately.
+	            return when.resolve(worker);
+	        }
 	    },
 
 	    _debug: function(msg) {

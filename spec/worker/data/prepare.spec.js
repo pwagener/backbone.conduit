@@ -48,7 +48,7 @@ describe('The data/prepare module', function() {
             var result = context.prepare({
                 indexes: {
                     min: 1,
-                    max: 2
+                    max: 3
                 }
             });
 

@@ -41,7 +41,7 @@ function _createProbePromise(Worker, path, fileName, debugSet) {
             boss.makePromise({
                 method: 'ping',
                 autoTerminate: true,
-                arguments: [
+                args: [
                     { debug: debugSet }
                 ]
             }).then(function(response) {

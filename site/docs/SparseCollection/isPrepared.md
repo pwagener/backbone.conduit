@@ -6,9 +6,9 @@ The method accepts the same aruments as [prepare(...)](prepare.html), allowing y
 indexes
 
 ```javascript
-// Check a range of indexes
+// Check the first 100 (note 'max' is exclusive)
 var prepared = collection.isPrepared({
-    indexes: { min: 0, max: 99 }
+    indexes: { min: 0, max: 100 }
 });
 
 // Check one specific index
