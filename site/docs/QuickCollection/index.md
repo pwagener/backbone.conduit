@@ -16,9 +16,9 @@ improvements in performance:
 
 Backbone Method | Conduit.QuickCollection | Improvement
 -------------------------- | ------------------ | -----------------------
-`refill(data, options)` | `reset(data, options)` | ~ 47%
-`fill(data, options)` | `set(data, options)` | ~ 54%
-`new Conduit.QuickCollection(data)` | `new Collection(data)` | ~ 49%
+`reset(data, options)` | `refill(data, options)` | ~ 47%
+`set(data, options)` | `fill(data, options)` | ~ 54%
+`new Collection(data)` | `new Conduit.QuickCollection(data)` | ~ 49%
 
 Check out the comparison in [this demo](http://conduit.wagener.org).
 
