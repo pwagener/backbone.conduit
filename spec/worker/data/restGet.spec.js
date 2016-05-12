@@ -5,7 +5,6 @@
  */
 
 var _ = require('underscore');
-var when = require('when');
 
 var restTestUtil = require('./restTestUtil');
 
@@ -37,7 +36,7 @@ describe('The rest/get module', function() {
         });
 
         it('returns a promise', function () {
-            expect(when.isPromiseLike(promise)).to.be.true;
+            expect(promise.then).to.be.a('function');
         });
 
         it('made one request', function () {

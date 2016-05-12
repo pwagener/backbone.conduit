@@ -5,7 +5,7 @@
  */
 
 var _ = require('underscore');
-var when = require('when');
+var Promise = require('es6-promise').Promise;
 var dataUtils = require('./../data/dataUtils');
 var nanoAjax = require('nanoajax');
 
@@ -24,7 +24,7 @@ module.exports = {
      *   - headers Any headers to include with the request.
      */
     method: function(data, options) {
-        return when.promise(function(resolve, reject) {
+        return new Promise(function(resolve, reject) {
             if (!options.baseUrl) {
                 reject(new Error('Destroy requires a "baseUrl"'));
                 return;

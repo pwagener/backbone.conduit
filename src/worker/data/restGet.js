@@ -1,7 +1,7 @@
 'use strict';
 
 var _ = require('underscore');
-var when = require('when');
+var Promise = require('es6-promise').Promise;
 var dataUtils = require('./../data/dataUtils');
 var nanoAjax = require('nanoajax');
 
@@ -11,7 +11,7 @@ module.exports = {
     bindToWorker: true,
 
     method: function(options) {
-        return when.promise(function(resolve, reject) {
+        return new Promise(function(resolve, reject) {
             var headers = _.defaults({}, options.headers, {
                 'Accept': 'application/json, text/javascript, */*; q=0.01'
             });

@@ -4,7 +4,6 @@
  * Tests for the 'destroy' functionality, which is the REST-ful 'DELETE' call.
  */
 var _ = require('underscore');
-var when = require('when');
 
 var restTestUtil = require('./restTestUtil');
 

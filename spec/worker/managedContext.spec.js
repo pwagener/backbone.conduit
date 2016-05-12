@@ -1,7 +1,6 @@
 'use strict';
 
 var _ = require('underscore');
-var when = require('when');
 
 var context = require('../../src/worker/managedContext');
 

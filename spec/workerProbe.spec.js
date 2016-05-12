@@ -5,7 +5,6 @@
  */
 
 var _ = require('underscore');
-var when = require('when');
 
 var workerProbe = require('./../src/workerProbe');
 var Boss = require('./../src/Boss');
@@ -45,7 +44,7 @@ describe('The workerProbe module', function() {
 
             // Stub out the Boss.promise method
             bossPromiseStub = this.sinon.stub(Boss.prototype, 'makePromise', function() {
-                return when.promise(function(resolve, reject) {
+                return new Promise(function(resolve, reject) {
                     var correctPath = '/the/correct/path/workerFile.js';
                     if (currentPath === correctPath) {
                         resolve('a non-date');
@@ -82,7 +81,7 @@ describe('The workerProbe module', function() {
             var promise = workerProbe.searchPaths(fullOptions);
 
             //noinspection BadExpressionStatementJS
-            expect(when.isPromiseLike(promise)).to.be.true;
+            expect(promise.then).to.be.a('function');
         });
 
         it('creates a Boss for each path', function(done) {

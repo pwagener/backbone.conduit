@@ -1,7 +1,7 @@
 'use strict';
 
 var _ = require('underscore');
-var when = require('when');
+var Promise = require('es6-promise').Promise;
 
 /**
  * This object provides an interface to a worker that communicates via promises.
@@ -95,11 +95,20 @@ Boss.prototype = {
             });
 
             // Create the request.
-            var deferred = when.defer();
-            self._requestsInFlight[requestId] = deferred;
+            self._requestsInFlight[requestId] = (function() {
+                var res = {};
+
+                res.promise = new Promise(function(resolve, reject) {
+                    res.resolve = resolve;
+                    res.reject = reject;
+                });
+
+                return res;
+            })();            
+
             worker.postMessage(requestDetails);
 
-            return deferred.promise;
+            return self._requestsInFlight[requestId].promise;
         });
     },
 
@@ -184,7 +193,7 @@ Boss.prototype = {
             });
         } else {
             // Our worker is already ready.  Return a Promise that will resolve immediately.
-            return when.resolve(worker);
+            return Promise.resolve(worker);
         }
     },
 

@@ -10,7 +10,6 @@
  */
 
 var _ = require('underscore');
-var when = require('when');
 
 var config = require('./../../src/config');
 
@@ -30,7 +29,7 @@ describe('The config module', function() {
 
     it('returns a promise from "enableWorker"', function() {
         var enablePromise = config.enableWorker();
-        expect(when.isPromiseLike(enablePromise));
+        expect(enablePromise.then).to.be.a('function');
 
         enablePromise.done(noop, noop);
     });

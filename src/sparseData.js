@@ -6,7 +6,7 @@
  */
 
 var _ = require('underscore');
-var when = require('when');
+var Promise = require('es6-promise').Promise;
 var Backbone = require('backbone');
 
 var config = require('./config');
@@ -343,7 +343,7 @@ function sortAsync(sortSpec) {
 
     // Error if comparator isn't provided correctly.
     if (!sortSpec || (!sortSpec.property && !sortSpec.method)) {
-        return when.reject(new Error('Please provide a sort specification'));
+        return Promise.reject(new Error('Please provide a sort specification'));
     }
 
     return this._boss.makePromise({
@@ -389,7 +389,7 @@ function filterAsync(filterSpec) {
     filterSpec = filterSpec || this.filterSpec;
 
     if (!filterSpec) {
-        return when.reject(new Error('Please provide a filter specification'));
+        return Promise.reject(new Error('Please provide a filter specification'));
     }
 
     // ToDeprecate at the release of 0.7.X
@@ -555,7 +555,7 @@ function cleanDirtyData() {
     _ensureDirtyTracking.call(this);
     var syncsInProgress = _.values(this._dirty.inProgress);
     var promises = _.pluck(syncsInProgress, 'promise');
-    return when.all(promises);
+    return Promise.all(promises);
 }
 
 function _ensureBoss() {

@@ -2,7 +2,7 @@
 
 var Backbone = require('backbone');
 var _ = require('underscore');
-var when = require('when');
+var Promise = require('es6-promise').Promise;
 
 var Conduit = require('src/index');
 
@@ -16,7 +16,7 @@ var FooCollection = Backbone.Collection.extend({
 haul.mixin(FooCollection);
 
 function haulAndWait(collection, options) {
-    return when.promise(function(resolve) {
+    return new Promise(function(resolve) {
         // Ensure we've finished fetching; might not be synchronous
         collection.once('sync', function() {
             resolve(collection);
