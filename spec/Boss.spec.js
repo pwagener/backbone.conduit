@@ -1,9 +1,9 @@
 'use strict';
 
 var _ = require('underscore');
-var when = require('when');
 
 var Boss = require('./../src/Boss');
+var Promise = require('es6-promise').Promise;
 
 /**
  * Method to create a Worker constructor that is mocked out for testing the Boss.
@@ -153,7 +153,7 @@ describe('The Boss module', function() {
             });
 
             //noinspection BadExpressionStatementJS
-            expect(when.isPromiseLike(promise)).to.be.true;
+            expect(promise.then).to.be.a('function');
         });
 
         it('has an associated worker once the promise is created', function () {

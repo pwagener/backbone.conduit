@@ -2,7 +2,6 @@
 
 var _ = require('underscore');
 var Backbone = require('backbone');
-var when = require('when');
 
 var config = require('./config');
 var fill = require('./fill');

@@ -9,7 +9,6 @@
 
 var _ = require('underscore');
 var util = require('util');
-var when = require('when');
 
 var managedContext;
 
@@ -88,7 +87,7 @@ function _onMessage(event) {
 
             // If a promise is returned from a handler we want
             // to wait for it to resolve, so ...
-            if (when.isPromiseLike(result)) {
+            if (result && typeof result.then === 'function') {
                 result.then(function(promiseResult) {
                     _onCallComplete(event.data, promiseResult);
                 }).catch(function(error) {

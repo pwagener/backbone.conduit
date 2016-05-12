@@ -4,7 +4,7 @@
 'use strict';
 
 var _ = require('underscore');
-var when = require('when');
+var Promise = require('es6-promise').Promise;
 
 /**
  * Flag that tracks if we've captured an Ajax function yet
@@ -53,7 +53,7 @@ function _handleRequest(xhr) {
 
 function captureAjax($) {
     $['ajax'] = function(opts) {
-        return when(_handleRequest(opts));
+        return Promise.resolve(_handleRequest(opts));
     };
 
     ajaxCaptured = true;
