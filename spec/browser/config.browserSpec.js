@@ -10,7 +10,6 @@
  */
 
 var _ = require('underscore');
-var when = require('when');
 
 var config = require('./../../src/config');
 
@@ -30,9 +29,9 @@ describe('The config module', function() {
 
     it('returns a promise from "enableWorker"', function() {
         var enablePromise = config.enableWorker();
-        expect(when.isPromiseLike(enablePromise));
+        expect(enablePromise.then).to.be.a('function');
 
-        enablePromise.done(noop, noop);
+        enablePromise.then(noop, noop);
     });
 
     describe('when worker is at "' + workerLocation + '"', function() {
@@ -47,7 +46,7 @@ describe('The config module', function() {
             beforeEach(function(done) {
                 config.enableWorker({
                     paths: workerLocation
-                }).done(function() {
+                }).then(function() {
                     done()
                 }, function(err) {
                     console.log('TEST ERROR!  "enableWorker" promise blew up: ' + err);

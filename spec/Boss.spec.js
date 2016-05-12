@@ -1,7 +1,6 @@
 'use strict';
 
 var _ = require('underscore');
-var when = require('when');
 
 var Boss = require('./../src/Boss');
 
@@ -153,7 +152,7 @@ describe('The Boss module', function() {
             });
 
             //noinspection BadExpressionStatementJS
-            expect(when.isPromiseLike(promise)).to.be.true;
+            expect(promise.then).to.be.a('function');
         });
 
         it('has an associated worker once the promise is created', function () {

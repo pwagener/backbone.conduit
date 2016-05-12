@@ -5,7 +5,6 @@
  */
 
 var _ = require('underscore');
-var when = require('when');
 
 var Boss = require('./Boss');
 
@@ -14,7 +13,7 @@ var Boss = require('./Boss');
  * location.
  * @return A promise that will be resolved either with nothing (i.e. the worker
  * was not found), or will resolve with the path (i.e. a functional worker was
- * found).  The promise is never rejected, allowing it to be used in 'when.all(...)'
+ * found).  The promise is never rejected, allowing it to be used in 'Promise.all(...)'
  * and similar structures.
  * @private
  */
@@ -36,7 +35,7 @@ function _createProbePromise(Worker, path, fileName, debugSet) {
     });
 
     //noinspection JSUnresolvedFunction
-    return when.promise(function(resolve) {
+    return new Promise(function(resolve) {
         try {
             boss.makePromise({
                 method: 'ping',
@@ -86,8 +85,8 @@ function searchPaths(options) {
     });
 
     //noinspection JSUnresolvedFunction
-    return when.promise(function(resolve, reject) {
-        when.all(probePromises).then(function(results) {
+    return new Promise(function(resolve, reject) {
+        Promise.all(probePromises).then(function(results) {
             // Find the first result that returned a string path.
             var found;
             for (var i = 0; i < results.length; i++) {

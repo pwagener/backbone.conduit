@@ -4,14 +4,12 @@
 // that can be used in testing w/o using a XHR.
 // TODO:  this needs to die  Not a good testing technique;
 
-var when = require('when');
-
 module.exports = {
     name: 'load',
 
     method: function(options) {
         // TODO:  move this fixture data to its own file
-        return when.resolve([
+        return Promise.resolve([
             {id: 2, name: "two", first: 0, second: 2},
             {id: 1, name: "one", first: 1, second: 0},
             {id: 3, name: "three", first: 1, second: 2}

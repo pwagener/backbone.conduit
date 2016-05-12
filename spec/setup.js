@@ -1,6 +1,5 @@
 'use strict';
 
-var when = require('when');
 var _ = require('underscore');
 
 var sinon = require('sinon');
@@ -24,7 +23,7 @@ function getSampleData() {
 }
 
 function callThenResolve(collection, method) {
-    return when.promise(function(resolve) {
+    return new Promise(function(resolve) {
         collection[method]().then(function() {
             resolve(collection);
         });

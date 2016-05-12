@@ -4,10 +4,9 @@ var mockServer = require('./mockServer');
 var Backbone = require('backbone');
 var _ = require('underscore');
 var haul = require('./../src/haul');
-var when = require('when');
 
 function callThenResolve(collection, method, arg) {
-    return when.promise(function(resolve) {
+    return new Promise(function(resolve) {
         collection[method](arg).then(function() {
             resolve(collection);
         });

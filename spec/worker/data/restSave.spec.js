@@ -5,7 +5,6 @@
  */
 
 var _ = require('underscore');
-var when = require('when');
 
 var restTestUtil = require('./restTestUtil');
 
