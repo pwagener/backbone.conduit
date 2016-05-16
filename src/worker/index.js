@@ -5,6 +5,8 @@
  * 'backbone.conduit-worker.js', which is loaded in a Worker context.
  */
 
+require('es6-promise').polyfill();
+
 var managedContext = require('./managedContext');
 
 if (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScope) {
