@@ -29,7 +29,7 @@ describe('The config module', function() {
 
     it('returns a promise from "enableWorker"', function() {
         var enablePromise = config.enableWorker();
-        expect(enablePromise.then).to.be.a('function');
+        expect(enablePromise).to.be.an.instanceof(Promise);
 
         enablePromise.then(noop, noop);
     });

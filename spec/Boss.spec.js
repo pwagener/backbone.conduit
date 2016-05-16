@@ -152,7 +152,7 @@ describe('The Boss module', function() {
             });
 
             //noinspection BadExpressionStatementJS
-            expect(promise.then).to.be.a('function');
+            expect(promise).to.be.an.instanceof(Promise);
         });
 
         it('has an associated worker once the promise is created', function () {

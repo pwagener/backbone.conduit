@@ -36,7 +36,7 @@ describe('The rest/get module', function() {
         });
 
         it('returns a promise', function () {
-            expect(promise.then).to.be.a('function');
+            expect(promise).to.be.an.instanceof(Promise);
         });
 
         it('made one request', function () {

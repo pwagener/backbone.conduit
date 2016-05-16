@@ -23,7 +23,7 @@ describe("The config module", function() {
             Worker: this.sinon.spy()
         });
         //noinspection BadExpressionStatementJS
-        expect(promise.then).to.be.a('function');
+        expect(promise).to.be.an.instanceof(Promise);
 
         // Squash the failing promise
         promise.then(noop, noop);

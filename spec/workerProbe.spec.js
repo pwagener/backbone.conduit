@@ -81,7 +81,7 @@ describe('The workerProbe module', function() {
             var promise = workerProbe.searchPaths(fullOptions);
 
             //noinspection BadExpressionStatementJS
-            expect(promise.then).to.be.a('function');
+            expect(promise).to.be.an.instanceof(Promise);
         });
 
         it('creates a Boss for each path', function(done) {
