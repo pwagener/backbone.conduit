@@ -24,6 +24,7 @@
   ],
   "dependencies": {
     "backbone": "^1.0.0",
+    "es6-promise": "^3.2.1",
     "underscore": "^1.8.3"
   },
   "devDependencies": {
@@ -54,8 +55,10 @@
     "sinon": "^1.15.4",
     "sinon-chai": "^2.5.0",
     "text-encoding": "^0.5.2",
-    "when": "^3.6.4",
     "yargs": "^3.15.0"
+  },
+  "engines": {
+    "node": ">=4.4.4"
   },
   "bugs": {
     "url": "https://github.com/pwagener/backbone.conduit/issues"

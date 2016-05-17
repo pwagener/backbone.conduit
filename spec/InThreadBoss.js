@@ -5,7 +5,6 @@
  * implementation
  */
 
-var when = require('when');
 var _ = require('underscore');
 var mockConduitWorker = require('./worker/mockConduitWorker');
 
@@ -17,7 +16,7 @@ function InThreadBoss(sinon, workerHandlers) {
         }
     });
 
-    this.createWorkerNow = sinon.stub().returns(when.resolve());
+    this.createWorkerNow = sinon.stub().returns(Promise.resolve());
     this.terminate = sinon.stub();
     this.makePromise = sinon.spy(this.makePromise);
 }
@@ -39,7 +38,7 @@ InThreadBoss.prototype.makePromise = function(details) {
     }
 
     var result = method.apply(this, details.args);
-    return when.resolve(result);
+    return Promise.resolve(result);
 };
 
 

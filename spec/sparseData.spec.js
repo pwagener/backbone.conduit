@@ -2,7 +2,6 @@
 
 var _ = require('underscore');
 var Backbone = require('backbone');
-var when = require('when');
 
 var InThreadBoss = require('./InThreadBoss');
 
@@ -48,7 +47,7 @@ describe("The sparseData module", function() {
         // Then prepare some subset of that data
         collection.prepare({
             ids: [1, 3]
-        }).done(function() {
+        }).then(function() {
             done();
         }, function(err) {
             console.log('Test Error: ' + err);
@@ -285,7 +284,7 @@ describe("The sparseData module", function() {
         it('resolves a request for a model by ID', function(done) {
             collection.prepare({
                 id: 2
-            }).done(function(result) {
+            }).then(function(result) {
                 expect(result).to.be.instanceOf(Backbone.Model);
                 done();
             }, function(err) {
@@ -296,7 +295,7 @@ describe("The sparseData module", function() {
         it('resolves a request for IDs to multiple models', function(done) {
             collection.prepare({
                 ids: [1, 3]
-            }).done(function(result) {
+            }).then(function(result) {
                 expect(result).to.be.instanceOf(Array);
                 expect(result).to.have.length(2);
 
@@ -311,7 +310,7 @@ describe("The sparseData module", function() {
         it('resolves a request for an index to a model', function(done) {
             collection.prepare({
                 index: 0
-            }).done(function(result) {
+            }).then(function(result) {
                 expect(result).to.be.instanceOf(Backbone.Model);
 
                 done();

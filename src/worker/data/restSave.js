@@ -5,7 +5,6 @@
  */
 
 var _ = require('underscore');
-var when = require('when');
 var dataUtils = require('./../data/dataUtils');
 var nanoAjax = require('nanoajax');
 
@@ -15,7 +14,7 @@ module.exports = {
     bindToWorker: true,
 
     method: function(data, options) {
-        return when.promise(function(resolve, reject) {
+        return new Promise(function(resolve, reject) {
 
             var idKey = dataUtils.getIdKey();
 

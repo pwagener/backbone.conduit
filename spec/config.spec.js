@@ -1,7 +1,6 @@
 'use strict';
 
 var _ = require('underscore');
-var when = require('when');
 
 var config = require('./../src/config');
 
@@ -24,10 +23,10 @@ describe("The config module", function() {
             Worker: this.sinon.spy()
         });
         //noinspection BadExpressionStatementJS
-        expect(when.isPromiseLike(promise)).to.be.true;
+        expect(promise).to.be.an.instanceof(Promise);
 
         // Squash the failing promise
-        promise.done(noop, noop);
+        promise.then(noop, noop);
     });
 
     it('can accept a Worker constructor', function() {
@@ -35,7 +34,7 @@ describe("The config module", function() {
 
         config.enableWorker({
             Worker: Worker
-        }).done(noop, noop);
+        }).then(noop, noop);
 
         expect(config.getWorkerConstructor()).to.equal(Worker);
     });
@@ -43,7 +42,7 @@ describe("The config module", function() {
     it('does not report the worker as enabled unless probe succeeded', function() {
         config.enableWorker({
             Worker: this.sinon.spy()
-        }).done(noop, noop);
+        }).then(noop, noop);
 
         expect(config.isWorkerEnabled()).to.be.false;
     });
@@ -51,7 +50,7 @@ describe("The config module", function() {
     it('does not provide a worker path unless probe succeeds', function() {
         config.enableWorker({
             Worker: this.sinon.spy()
-        }).done(noop, noop);
+        }).then(noop, noop);
 
         var bound = _.bind(config.getWorkerPath, config);
         expect(bound).to.throw(Error);

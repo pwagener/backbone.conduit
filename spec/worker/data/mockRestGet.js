@@ -2,7 +2,6 @@
 
 // This module provides a mock implementation of the 'load' module
 // that can be used in testing.
-var when = require('when');
 
 module.exports = {
     name: 'restGet',
@@ -14,7 +13,7 @@ module.exports = {
             {id: 1, name: "one", first: 1, second: 0},
             {id: 3, name: "three", first: 1, second: 2}
         ];
-        return when.resolve({
+        return Promise.resolve({
             length: responseData.length,
             context: undefined
         });
