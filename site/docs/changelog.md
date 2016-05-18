@@ -2,6 +2,7 @@
 
 If you have problems, please [file an issue](https://github.com/pwagener/backbone.conduit/issues).
 
+- *1.0.X* - Moved `SparseCollection` out of Experimental stage.  Leveraged native Promises.
 - *0.6.X* - Added `sparseData` and `SparseCollection` experimental module.  Renamed `Conduit.QuickCollection` to `Conduit.QuickCollection` for clarity.
 - *0.5.X* - Removed `sortAsync` experimental module; removed `fetchJumbo` module, which was replaced by `haul`;
 - *0.4.X* - Renamed `Conduit.fetchJumbo` to the less-awkward `Conduit.haul`; provided experimental `Conduit.sortAsync` module.

@@ -33,6 +33,15 @@ Any scalable solution must be careful to not perform unnecessary work.  The core
 have made some choices about what work is unnecessary when dealing with large data sets.  While Backbone is famously 
 non-opinionated, *Backbone.Conduit* takes an opinion about how to best scale.
 
+## Requirements
+
+Backbone.Conduit requires:
+
+- BackboneJS version 1.0 or greater
+- All browsers that [support Web Workers](http://caniuse.com/#search=web%20worker)
+- All browsers that support [Native Promises](http://caniuse.com/#search=Promises).  If you must support IE 10/11, you can
+initialize a Promise.polyfill prior to loading Backbone.Conduit.
+
 ## Other Links:
 
 * Here's [a pdf](backbone-conduit.pdf) of this documentation
