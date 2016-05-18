@@ -165,17 +165,13 @@ to differentiate themselves from the comparable `Backbone.Collection` synchronou
 
 
 ## Limitations
-This module is experimental largely because of its limitations it has.  The most notable ones are:
+This module has some limitations.  The most notable limitation is any collection leveraging `sparseData` should be
+considered **read-only**.  The models returned from `prepare(...)` are perfectly functional, so feel free to
+update those.  But bear in mind changes to those models will not automatically propagate to the data on the
+worker thread.
 
-- Any collection leveraging `sparseData` should be considered **read-only**.  The models returned from `prepare(...)`
-are perfectly functional, so feel free to update those.  But bear in mind changes to those models will not automatically
-propagate to the data on the worker thread.  You may propagate the data back to the worker yourself via `fill(...)`, but
-that will not synchronize the data automatically with the server.
-- Many of the calling semantics described above will evolve quickly over minor/micro releases.
-
-Current releases are focusing on making the collection act like a proper, writeable Collection, and firming up support for
-any application leveraging Backbone 1.0 an later.  Once we reach that level of stability, `sparseData`/`SparseCollection`
-will move out of Experimental stage and into a supported feature.
+If needed, you may propagate the data back to the worker yourself via `fill(...)`.  Further version of Backbone.Conduit
+may introduce more functionality related to making them fully writeable and automatically synchronizing the data.
 
 If you have feedback on use cases that are important to you, we'd love to hear it.  Please
 [file an issue](https://github.com/pwagener/backbone.conduit/issues) and help make `Backbone.Conduit` a great way to 
