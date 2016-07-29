@@ -6,15 +6,17 @@
 var _ = require('underscore');
 
 var mockConduitWorker = require('../mockConduitWorker');
-var dataUtils = require('../../../src/worker/data/dataUtils');
+var getDataUtils = require('../../../src/worker/data/getDataUtils');
 
 var workerMergeData = require('./../../../src/worker/data/mergeData');
 
 describe('The data/mergeData module', function() {
     var context;
+    var dataUtils;
 
     beforeEach(function() {
         mockConduitWorker.reset();
+        dataUtils = getDataUtils(mockConduitWorker.getCurrentObjectId());
         context = mockConduitWorker.bindModule(workerMergeData);
     });
 

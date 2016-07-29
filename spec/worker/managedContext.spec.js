@@ -118,7 +118,7 @@ describe('The managedContext module', function() {
                     methods: [
                         { name: 'foo' }
                     ]
-                })
+                });
             };
             var bound = _.bind(context.configure, context, {
                 components: [ 'foo' ]
@@ -156,7 +156,7 @@ describe('The managedContext module', function() {
                             return {
                                 catch: function() {
                                 }
-                            }
+                            };
                         }
                     };
                 }

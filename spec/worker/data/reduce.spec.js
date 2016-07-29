@@ -4,7 +4,7 @@ var _ = require('underscore');
 var mockConduitWorker = require('../mockConduitWorker');
 
 var reduce = require('../../../src/worker/data/reduce');
-var dataUtils = require('../../../src/worker/data/dataUtils');
+var getDataUtils = require('../../../src/worker/data/getDataUtils');
 var managedContext = require('../../../src/worker/managedContext');
 
 describe('The data/reduce module', function() {
@@ -15,9 +15,11 @@ describe('The data/reduce module', function() {
 
     describe('when data is available', function() {
         var context;
+        var dataUtils;
 
         beforeEach(function() {
             mockConduitWorker.reset();
+            dataUtils = getDataUtils(mockConduitWorker.getCurrentObjectId());
             context = mockConduitWorker.bindModule(reduce);
             context.registerComponent({
                 name: 'testComponent',

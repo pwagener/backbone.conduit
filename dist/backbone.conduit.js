@@ -7,7 +7,7 @@
 		var a = typeof exports === 'object' ? factory(require("backbone"), require("underscore")) : factory(root["Backbone"], root["_"]);
 		for(var i in a) (typeof exports === 'object' ? exports : root)[i] = a[i];
 	}
-})(this, function(__WEBPACK_EXTERNAL_MODULE_1__, __WEBPACK_EXTERNAL_MODULE_9__) {
+})(this, function(__WEBPACK_EXTERNAL_MODULE_1__, __WEBPACK_EXTERNAL_MODULE_10__) {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
@@ -67,6 +67,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	var QuickCollection = __webpack_require__(7);
 	var SparseCollection = __webpack_require__(8);
 
+	var WrappedWorker = __webpack_require__(9);
+
 	Backbone.Conduit = module.exports = {
 	    config: config,
 
@@ -74,6 +76,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    refill: refill,
 	    haul: haul,
 	    sparseData: sparseData,
+	 
+	    WrappedWorker: WrappedWorker,
 
 	    QuickCollection: QuickCollection,
 	    SparseCollection: SparseCollection
@@ -96,9 +100,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * It is accessible externally via 'Conduit.config'
 	 */
 
-	var _ = __webpack_require__(9);
+	var _ = __webpack_require__(10);
 
-	var workerProbe = __webpack_require__(10);
+	var workerProbe = __webpack_require__(11);
+
+	var WrappedWorker = __webpack_require__(9);
 
 	var _values = {};
 
@@ -106,6 +112,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var workerPathKey = 'workerPath';
 
 	var workerConstructorKey = 'WorkerConstructor';
+	var wrappedWorkerConstructorKey = 'WrappedWorkerConstructor';
 
 	function setValue(key, value) {
 	    _values[key] = value;
@@ -160,8 +167,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	function enableWorker(options) {
 	    options = options || {};
 
-	    var WorkerConstructor = options.Worker ? options.Worker : Worker;
+	    // allow passing in a constructor for the WrappedWorker, which
+	    // is a simple interface that instantiates a worker and has
+	    // a "send" method that will return a promise that resolves when
+	    // a response is received.
+	    var WrappedWorkerConstructor = options.WrappedWorker || WrappedWorker;
+	    // allow passing in a mock or proxy Worker constructor
+	    // which will get passed to the WrappedWorker instance
+	    var WorkerConstructor = options.Worker || Worker;
+	 
 	    setValue(workerConstructorKey, WorkerConstructor);
+	    setValue(wrappedWorkerConstructorKey, WrappedWorkerConstructor);
 
 	    var debug = options.debug;
 	    setValue('debug', debug);
@@ -173,6 +189,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	    var searchOptions = {
 	        Worker: WorkerConstructor,
+	        WrappedWorker: WrappedWorkerConstructor,
 	        fileName: workerFileName,
 	        paths: paths,
 	        debug: debug
@@ -203,6 +220,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	function getWorkerConstructor() {
 	    ensureValue(workerConstructorKey);
 	    return getValue(workerConstructorKey);
+	}
+
+	function getWrappedWorkerConstructor() {
+	    ensureValue(wrappedWorkerConstructorKey);
+	    return getValue(wrappedWorkerConstructorKey);
 	}
 
 	module.exports = {
@@ -255,6 +277,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	     */
 	    getWorkerConstructor: getWorkerConstructor,
 
+	    /**
+	     * Get the constructor to use to create a "Wrapped" worker instance. This is used
+	     * to "promisify" the interface for workers and support extensions that add other
+	     * features. One built in alternative is the "Shared" WrappedWorker, where all
+	     * instances will use the same worker "under the hood".
+	     */
+	    getWrappedWorkerConstructor: getWrappedWorkerConstructor,
+
 	    getDebug: function() {
 	        return getValue('debug');
 	    },
@@ -268,15 +298,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	};
 
+
 /***/ },
 /* 3 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
-	var _ = __webpack_require__(9);
-	var Backbone = __webpack_require__(1);
-	var shortCircuit = __webpack_require__(11);
+	var _ = __webpack_require__(10);
+	var shortCircuit = __webpack_require__(12);
 
 	function fill(models, options) {
 	    // Create the short-circuit
@@ -284,7 +314,6 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    // Silence any add/change/remove events
 	    options = options ? _.clone(options) : {};
-	    var requestedEvents = !options.silent;
 	    options.silent = true;
 
 	    // Call set
@@ -311,6 +340,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	};
 
+
 /***/ },
 /* 4 */
 /***/ function(module, exports, __webpack_require__) {
@@ -321,9 +351,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * 'Collection.reset(...)' in some circumstances.
 	 */
 
-	var _ = __webpack_require__(9);
-	var Backbone = __webpack_require__(1);
-	var shortCircuit = __webpack_require__(11);
+	var _ = __webpack_require__(10);
+	var shortCircuit = __webpack_require__(12);
 
 	/**
 	 * Implementation of the refill function as an alternative to Backbone.Collection.reset
@@ -364,10 +393,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	'use strict';
 
-	var _ = __webpack_require__(9);
-	var Backbone = __webpack_require__(1);
+	var _ = __webpack_require__(10);
 
-	var config = __webpack_require__(2);
 	var fill = __webpack_require__(3);
 	var refill = __webpack_require__(4);
 
@@ -407,9 +434,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	    options = options ? _.clone(options) : {};
 	    if (options.parse === void 0) options.parse = true;
 	    var success = options.success;
-	    var collection = this;
+	    var self = this;
 	    options.success = function(resp) {
-	        collection._onHaulSuccess(resp, options, success);
+	        self._onHaulSuccess(resp, options, success);
 	    };
 	    wrapError(this, options);
 	    return this.sync('read', this, options);
@@ -448,11 +475,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * not the main one.
 	 */
 
-	var _ = __webpack_require__(9);
+	var _ = __webpack_require__(10);
 	var Backbone = __webpack_require__(1);
 
 	var config = __webpack_require__(2);
-	var Boss = __webpack_require__(12);
+	var Boss = __webpack_require__(13);
 
 	var refillModule = __webpack_require__(4);
 	var fillModule = __webpack_require__(3);
@@ -1009,6 +1036,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	            './conduit.worker.data.js'
 	        ];
 
+	        // create a unique identifier for each sparse collection/boss
+	        // that can be used in workers to make sure that the collection
+	        // is accessing its own data
+	        this._sparseCollectionId = _.uniqueId('cscId');
+
 	        // Components specified in the base Conduit configuration, plus
 	        // components specified for this Collection type
 
@@ -1021,8 +1053,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	        components = _.compact(_.union(components, config.getComponents(), _.result(this.conduit, 'components')));
 
 	        this._boss = new Boss({
+	            WrappedWorker: config.getWrappedWorkerConstructor(),
 	            Worker: config.getWorkerConstructor(),
 	            fileLocation: config.getWorkerPath(),
+
+	            objectId: this._sparseCollectionId,
 
 	            // We never want the worker for this collection to terminate, as it holds all our data!
 	            autoTerminate: false,
@@ -1171,7 +1206,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	_.each(notSupportedConduitMethods, function(methodObj) {
 	    mixinObj[methodObj.called] = function() {
 	        throw new Error('Cannot call "' + methodObj.called + '".  Collections with sparse data must use "' + methodObj.use + '" instead.');
-	    }
+	    };
 	});
 
 
@@ -1197,6 +1232,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	};
 
+
 /***/ },
 /* 7 */
 /***/ function(module, exports, __webpack_require__) {
@@ -1209,7 +1245,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	 */
 
 	var Backbone = __webpack_require__(1);
-	var _ = __webpack_require__(9);
+	var _ = __webpack_require__(10);
 
 	var fill = __webpack_require__(3);
 	var refill = __webpack_require__(4);
@@ -1259,10 +1295,256 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 9 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = __WEBPACK_EXTERNAL_MODULE_9__;
+	"use strict";
+
+	var _ = __webpack_require__(10);
+
+	function makeDeferred() {
+	    var dfd = {};
+	    dfd.promise = new Promise(function (resolve, reject) {
+	        dfd.resolve = resolve;
+	        dfd.reject = reject;
+	    });
+	    return dfd;
+	}
+
+	/**
+	 * Wrapper around the global "Worker" thread constructor
+	 * that only allows one message to the worker at a time.
+	 * Will wait until previous message has received a 
+	 * "response" before posting a mew message.
+	 * 
+	 * Example usage:
+	 * var worker = new WrappedWorker({ workerFilePath: 'path/to/file' });
+	 * worker.send({ someMessage: 'foo' })
+	 *      .then(function (event) {
+	 *          console.log('response from worker', event.data);
+	 *      });
+	 *
+	 * 
+	 * @class WrappedWorker
+	 * @param {object} options
+	 * @param {string} options.workerFilePath
+	 *      The path to the file that should be loaded when the 
+	 *      worker is created
+	 * @param {string} [options.Worker]
+	 *      The worker constructor you want to use. Defaults
+	 *      to window.Worker. This is primarily intended for
+	 *      testing.
+	 */
+	function WrappedWorker(options) {
+	    this.initialize(options);
+	}
+
+	// accessible for testing
+	if (typeof Worker !== "undefined") {
+	    WrappedWorker._Worker = Worker;
+	}
+
+	var ctor = function () {};
+
+	// make WrappedWorker extend-able with a function that is
+	// essentially a carbon copy of Backbone's extend method
+	WrappedWorker.extend = function(protoProps, staticProps) {
+	    var parent = this;
+	    var child;
+	    if (protoProps && protoProps.hasOwnProperty('constructor')) {
+	        child = protoProps.constructor;
+	    } else {
+	        child = function(){ parent.apply(this, arguments); };
+	    }
+	    _.extend(child, parent);
+	    ctor.prototype = parent.prototype;
+	    child.prototype = new ctor();
+	    if (protoProps) { _.extend(child.prototype, protoProps); }
+	    if (staticProps) { _.extend(child, staticProps); }
+	    child.prototype.constructor = child;
+	    if (typeof parent.extended === "function") { parent.extended(child); }
+	    child.__super__ = parent.prototype;
+	    return child; // a new constructor that pseudo-classically inherits from the extended parent
+	};
+
+	_.extend(WrappedWorker.prototype, {
+
+	    initialize: function (options) {
+	        options = options || {};
+	        this.Worker = options.Worker || WrappedWorker._Worker;
+	        if (!options.workerFilePath) {
+	            throw new Error('A "workerFilePath" is required');
+	        }
+	        this._worker = this._spawn(options.workerFilePath);
+	    },
+
+	    send: function (messageData) {
+	        var self = this;
+	        // do not allow any further messages to be sent if this worker has
+	        // been terminated
+	        if (self.isTerminated()) {
+	            return Promise.reject(new Error('worker is terminated'));
+	        }
+	        self._sendingPromise = self._sendingPromise || Promise.resolve();
+	        self._sendingPromise = self._sendingPromise.then(function () {
+	            return self._handleSendMessage(messageData);
+	        });
+	        return self._sendingPromise;
+	    },
+	 
+	    isTerminated: function () {
+	        return this._terminated;
+	    },
+	    
+	    terminate: function () {
+	        this._terminated = true;
+	        var sendingPromise = this._sendingPromise || Promise.resolve();
+	        var terminate = _.bind(this._handleTermination, this);
+	        return sendingPromise.then(terminate, terminate);
+	    },
+	    
+	    _handleTermination: function () {
+	        if (_.isFunction(this._worker.terminate)) {
+	            this._worker.terminate();
+	        }
+	    },
+
+	    _bindThreadEventHandlers: function () {
+	        WrappedWorker._bindWorkerHandlers(this._worker);
+	    },
+
+	    _handleSendMessage: function (messageData) {
+	        var dfd = makeDeferred();
+	        WrappedWorker._sendMessage(this._worker, dfd, messageData);
+	        return dfd.promise;
+	    },
+
+	    _spawn: function (workerFilePath) {
+	        var worker = new this.Worker(workerFilePath);
+	        WrappedWorker._bindWorkerHandlers(worker);
+	        return worker;
+	    }
+	    
+	});
+
+	// a list of objects that contain a worker and an associated queue of messages
+	WrappedWorker._workerQueueList = [];
+
+	// each worker is paired with a message queue. 
+	// this function will return the queue for a given
+	// worker. if one does not exist, then it is created
+	WrappedWorker._getWorkerOutgoingQueue = function (worker) {
+	    var i = 0;
+	    var list = WrappedWorker._workerQueueList;
+	    for (i; i < list.length; i++) {
+	        if (list[i].worker === worker) {
+	            return list[i].queue;
+	        }
+	    }
+	    var queue = [];
+	    list.push({
+	        queue: queue,
+	        worker: worker
+	    });
+	    return queue;
+	};
+
+	// bind the onmessage and onsuccess handlers to a worker instance,
+	// assumes that these handlers have not already been bound
+	WrappedWorker._bindWorkerHandlers = function (worker) {
+	    var outgoingQueue = WrappedWorker._getWorkerOutgoingQueue(worker);
+	    // on success or error, remove the first item in the queue
+	    // since we are now done with it, and resolve the deferred
+	    // with the message/error
+	    worker.onmessage = function (incomingMessage) {
+	        if (!outgoingQueue.length) {
+	            return;
+	        }
+	        var outgoingQueueItem = outgoingQueue.shift();
+	        outgoingQueueItem.deferred.resolve(incomingMessage);
+	        WrappedWorker._sendNextMessage(outgoingQueue);
+	    };
+	    worker.onerror = function (error) {
+	        var outgoingQueueItem = outgoingQueue.shift();
+	        outgoingQueueItem.deferred.reject(error);
+	        WrappedWorker._sendNextMessage(outgoingQueue);
+	    };
+	};
+
+	// add a message to a queue that will be sent when that worker
+	// has no outstanding messages waiting
+	WrappedWorker._sendMessage = function (worker, deferred, message) {
+	    var outgoingQueue = WrappedWorker._getWorkerOutgoingQueue(worker);
+	    outgoingQueue.push({
+	        deferred: deferred,
+	        message: message,
+	        worker: worker
+	    });
+	    if (outgoingQueue.length === 1) {
+	        // post a message to a worker if that queue only has one item
+	        // because it had no outstanding message that it was waiting 
+	        // for a response to in the queue
+	        WrappedWorker._sendNextMessage(outgoingQueue);
+	    }
+	};
+
+	WrappedWorker._getOutgoingQueueSize = function (worker) {
+	    return WrappedWorker._getWorkerOutgoingQueue(worker).queue.length;
+	};
+
+	// send the next message that is in the outgoing queue
+	WrappedWorker._sendNextMessage = function (outgoingQueue) {
+	    var outgoingQueueItem = outgoingQueue[0];
+	    if (outgoingQueueItem) {
+	        outgoingQueueItem.worker.postMessage(outgoingQueueItem.message);
+	    }
+	};
+
+	/**
+	 * Extension of WrappedWorker that will share the same actual worker
+	 * under the hood. This will have the effect of ensuring that creating
+	 * lots of SparseCollection instances will not result in more than one
+	 * thread, the downside being that you will slow down the amount of
+	 * processing that can be done per thread. Every message sent to the
+	 * wrapped worker will wait until the previous message sent to the 
+	 * worker gets a response.
+	 * 
+	 * @class WrappedPoolWorker
+	 * @extends WrappedWorker
+	 */
+	var WrappedSharedWorker = WrappedWorker.extend({
+
+	    // overrides WrappedWorker.prototype.spawn
+	    _spawn: function (workerFilePath) {
+	        return WrappedSharedWorker._getSharedInstance(workerFilePath);
+	    },
+
+	    // overrides WrappedWorker.prototype._handleTermination
+	    _handleTermination: function () {
+	        // noop - we do not terminate the shared worker
+	    }
+	    
+	});
+
+	// expose subclass as static property
+	WrappedWorker.SharedWorker = WrappedSharedWorker;
+
+	WrappedSharedWorker._getSharedInstance = function (workerFilePath) {
+	    if (!WrappedSharedWorker._sharedWorker) {
+	        var pool = WrappedSharedWorker._sharedWorker = new WrappedWorker._Worker(workerFilePath);
+	        WrappedWorker._bindWorkerHandlers(pool);
+	    }
+	    return WrappedSharedWorker._sharedWorker;
+	};
+
+	module.exports = WrappedWorker;
+
 
 /***/ },
 /* 10 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = __WEBPACK_EXTERNAL_MODULE_10__;
+
+/***/ },
+/* 11 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -1271,9 +1553,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * This module attempts to load the worker file from a variety of paths
 	 */
 
-	var _ = __webpack_require__(9);
+	var _ = __webpack_require__(10);
 
-	var Boss = __webpack_require__(12);
+	var Boss = __webpack_require__(13);
 
 	/**
 	 * Creates a promise that will attempt to find the worker at a specific
@@ -1284,20 +1566,21 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * and similar structures.
 	 * @private
 	 */
-	function _createProbePromise(Worker, path, fileName, debugSet) {
+	function _createProbePromise(Worker, WrappedWorker, path, fileName, debugSet) {
 	    var debug;
 	    if (debugSet) {
 	        debug = function(msg) {
-	            console.log(msg)
-	        }
+	            console.log(msg);
+	        };
 	    } else {
-	        debug = function() { }
+	        debug = function() { };
 	    }
 
 	    var fullPath = path + '/' + fileName;
 	    debug('Probing for worker at "' + fullPath + '"');
 	    var boss = new Boss({
 	        Worker: Worker,
+	        WrappedWorker: WrappedWorker,
 	        fileLocation: fullPath
 	    });
 
@@ -1347,7 +1630,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    var probePromises = [];
 	    _.each(paths, function(path) {
-	        var probePromise = _createProbePromise(options.Worker, path, fileName, options.debug);
+	        var probePromise = _createProbePromise(options.Worker, options.WrappedWorker, path, fileName, options.debug);
 	        probePromises.push(probePromise);
 	    });
 
@@ -1390,7 +1673,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 11 */
+/* 12 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -1399,7 +1682,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * This module is shared between 'fill' and 'refill' as where the short-circuit method
 	 * implementations live.
 	 */
-	var _ = __webpack_require__(9);
+	var _ = __webpack_require__(10);
 	var Backbone = __webpack_require__(1);
 
 
@@ -1543,20 +1826,23 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 12 */
+/* 13 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
-	var _ = __webpack_require__(9);
+	var _ = __webpack_require__(10);
+	var WrappedWorker = __webpack_require__(9);
 
 	/**
 	 * This object provides an interface to a worker that communicates via promises.
 	 * Still conflicted about whether this should be an external module or not
 	 * @param options which includes:
+	 *   o WrappedWorker The WrappedWorker constructor to use. The WrappedWorker is a simple
+	 *   interface that has a "send" method that returns a promise that will resolve to the worker's response
 	 *   o fileLocation (required):  The location of the Worker JS file to load
 	 *   o Worker (required): The Worker constructor to use.  Typically will be window.Worker
-	 *     unless writing tests
+	 *     unless writing tests. This gets passed to the WrappedWorker instance when it is created.
 	 *   o autoTerminate (optional):  If boolean false, the worker will never be terminated.  If boolean true,
 	 *     the worker will be terminated immediately.  If a number, the worker will be terminated after that many
 	 *     milliseconds.  Note that the worker will always be recreated when necessary (i.e. when calling
@@ -1572,12 +1858,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	    initialize: function(options) {
 	        options = options || {};
 
+	        this.objectId = options.objectId;
+	 
 	        this.WorkerFileLocation = options.fileLocation;
 	        if (!this.WorkerFileLocation) {
 	            throw new Error("You must provide 'fileLocation'");
 	        }
 
-	        this.WorkerConstructor = options.Worker;
+	        this.WrappedWorkerConstructor = options.WrappedWorker || WrappedWorker;
+	        if (!this.WrappedWorkerConstructor) {
+	            throw new Error("You must provide 'WrappedWorker'");
+	        }
+	        this.WorkerConstructor = options.Worker || Worker;
 	        if (!this.WorkerConstructor) {
 	            throw new Error("You must provide 'Worker'");
 	        }
@@ -1634,28 +1926,18 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	        var self = this;
 
-	        return this._ensureWorker().then(function(worker) {
+	        return this._ensureWorker().then(function (worker) {
 	            var requestId = _.uniqueId('cReq');
 
 	            var requestDetails = _.extend({}, details, {
-	                requestId: requestId
+	                requestId: requestId,
+	                objectId: self.objectId
 	            });
 
-	            // Create the request.
-	            self._requestsInFlight[requestId] = (function() {
-	                var res = {};
+	            return worker.send(requestDetails).then(function (response) {
+	                return self._onWorkerMessage(response);
+	            });
 
-	                res.promise = new Promise(function(resolve, reject) {
-	                    res.resolve = resolve;
-	                    res.reject = reject;
-	                });
-
-	                return res;
-	            })();            
-
-	            worker.postMessage(requestDetails);
-
-	            return self._requestsInFlight[requestId].promise;
 	        });
 	    },
 
@@ -1665,22 +1947,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	     * @private
 	     */
 	    _onWorkerMessage: function(event) {
-	        var requestId = event.data.requestId;
-
-	        var deferred = this._requestsInFlight[requestId];
-	        if (deferred) {
-	            var result = event.data.result;
-	            if (result instanceof Error) {
-	                // Reject if we get an error
-	                deferred.reject(result);
-	            } else {
-	                deferred.resolve(result);
-	            }
+	        var result = event.data.result;
+	        var prom;
+	        if (result instanceof Error) {
+	            // Reject if we get an error
+	            prom = Promise.reject(result);
 	        } else {
-	            this._debug('Worker did not provide requestId: ' + event.data);
+	            prom = Promise.resolve(result);
 	        }
-
-	        this._scheduleTermination();
+	        var scheduleTermination = _.bind(this._scheduleTermination, this);
+	        prom.then(scheduleTermination, scheduleTermination);
+	        return prom;
 	    },
 
 	    /**
@@ -1690,13 +1967,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	     */
 	    _onWorkerError: function(err) {
 	        this._debug('Worker call failed: ' + err.message);
-
+	    
 	        _.each(_.keys(this._requestsInFlight), function(requestId) {
 	            var deferred = this._requestsInFlight[requestId];
-
+	    
 	            deferred.reject(new Error('Worker error: ' + err));
 	        }, this);
-
+	    
 	        this.terminate();
 	    },
 
@@ -1708,8 +1985,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	            this._debug('Terminating worker');
 	            if (_.isFunction(this.worker.terminate)) {
 	                this.worker.terminate();
+	                this.worker = null;
 	            }
-	            this.worker = null;
 	        }
 	    },
 
@@ -1727,10 +2004,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	            // Note this will never throw an error; construction always succeeds
 	            // regardless of whether the path is valid or not
 	            self._debug('Creating new worker (autoTerminate: ' + self.autoTerminate + ')');
-	            worker = self.worker = new self.WorkerConstructor(self.WorkerFileLocation);
-
-	            worker.onmessage = _.bind(self._onWorkerMessage, self);
-	            worker.onerror = _.bind(self._onWorkerError, self);
+	            // Initialize the WrappedWorker, which provides a simple abstraction around
+	            // actual worker instances. The wrapped worker instance should have a "send"
+	            // method that returns a promise that resolves to the worker's response.
+	            worker = self.worker = new self.WrappedWorkerConstructor({
+	                workerFilePath: self.WorkerFileLocation,
+	                Worker: self.WorkerConstructor
+	            });
 
 	            return self.makePromise({
 	                method: 'configure',
@@ -1751,7 +2031,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	                + currentdate.getMinutes() + ":"
 	                + currentdate.getSeconds() + '-' + currentdate.getMilliseconds();
 
-	            console.log(now + ' conduit.boss: ' + msg)
+	            console.log(now + ' conduit.boss: ' + msg);
 	        }
 	    }
 	};

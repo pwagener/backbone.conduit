@@ -8,12 +8,15 @@ var _ = require('underscore');
 
 var workerProbe = require('./workerProbe');
 
+var WrappedWorker = require('./WrappedWorker');
+
 var _values = {};
 
 var workerFileName = 'backbone.conduit-worker.js';
 var workerPathKey = 'workerPath';
 
 var workerConstructorKey = 'WorkerConstructor';
+var wrappedWorkerConstructorKey = 'WrappedWorkerConstructor';
 
 function setValue(key, value) {
     _values[key] = value;
@@ -68,8 +71,17 @@ function findDefaultWorkerPath() {
 function enableWorker(options) {
     options = options || {};
 
-    var WorkerConstructor = options.Worker ? options.Worker : Worker;
+    // allow passing in a constructor for the WrappedWorker, which
+    // is a simple interface that instantiates a worker and has
+    // a "send" method that will return a promise that resolves when
+    // a response is received.
+    var WrappedWorkerConstructor = options.WrappedWorker || WrappedWorker;
+    // allow passing in a mock or proxy Worker constructor
+    // which will get passed to the WrappedWorker instance
+    var WorkerConstructor = options.Worker || Worker;
+ 
     setValue(workerConstructorKey, WorkerConstructor);
+    setValue(wrappedWorkerConstructorKey, WrappedWorkerConstructor);
 
     var debug = options.debug;
     setValue('debug', debug);
@@ -81,6 +93,7 @@ function enableWorker(options) {
     }
     var searchOptions = {
         Worker: WorkerConstructor,
+        WrappedWorker: WrappedWorkerConstructor,
         fileName: workerFileName,
         paths: paths,
         debug: debug
@@ -111,6 +124,11 @@ function getWorkerPath() {
 function getWorkerConstructor() {
     ensureValue(workerConstructorKey);
     return getValue(workerConstructorKey);
+}
+
+function getWrappedWorkerConstructor() {
+    ensureValue(wrappedWorkerConstructorKey);
+    return getValue(wrappedWorkerConstructorKey);
 }
 
 module.exports = {
@@ -162,6 +180,14 @@ module.exports = {
      * false.
      */
     getWorkerConstructor: getWorkerConstructor,
+
+    /**
+     * Get the constructor to use to create a "Wrapped" worker instance. This is used
+     * to "promisify" the interface for workers and support extensions that add other
+     * features. One built in alternative is the "Shared" WrappedWorker, where all
+     * instances will use the same worker "under the hood".
+     */
+    getWrappedWorkerConstructor: getWrappedWorkerConstructor,
 
     getDebug: function() {
         return getValue('debug');

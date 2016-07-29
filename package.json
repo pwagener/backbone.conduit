@@ -1,7 +1,7 @@
 {
   "name": "backbone.conduit",
   "description": "Moving data through backbone",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "scripts": {
     "clean": "rm -rf target",
     "build-site": "bin/build-site.js",

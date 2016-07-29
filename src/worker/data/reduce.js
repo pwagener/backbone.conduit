@@ -4,7 +4,7 @@
  * This worker module provides a 'reduce(...)' method.
  */
 var _ = require('underscore');
-var dataUtils = require('./dataUtils');
+var getDataUtils = require('./getDataUtils');
 
 module.exports = {
 
@@ -19,7 +19,7 @@ module.exports = {
 
             var initialValue = reduceSpec.memo;
             var reduceContext = reduceSpec.context || {};
-            var data = dataUtils.getData();
+            var data = getDataUtils(this._currentObjectId).getData();
 
             return _.reduce(data, reducer, initialValue, reduceContext);
         } else {

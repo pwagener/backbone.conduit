@@ -5,7 +5,7 @@
  */
 
 var mockConduitWorker = require('../mockConduitWorker');
-var dataUtils = require('../../../src/worker/data/dataUtils');
+var getDataUtils = require('../../../src/worker/data/getDataUtils');
 
 var defaultResponseHeaders = {
     'Content-Type': 'application/json'
@@ -15,7 +15,7 @@ var defaultResponseHeaders = {
 // able to respond to those requests easily.
 var setupContext = function(setupOptions) {
     setupOptions = setupOptions || {};
-
+    
     var requests = [];
     global.XMLHttpRequest.onCreate = function(request) {
         requests.push(request);
@@ -23,13 +23,14 @@ var setupContext = function(setupOptions) {
 
     mockConduitWorker.reset();
     var context = mockConduitWorker.bindModule(setupOptions.moduleToBind);
-    dataUtils.initStore({reset: true});
+    var dataUtils = getDataUtils(mockConduitWorker.getCurrentObjectId());
 
     if (setupOptions.initialData) {
         dataUtils.addTo(setupOptions.initialData);
     }
 
     return {
+        dataUtils: dataUtils,
         context: context,
         requests: requests,
 

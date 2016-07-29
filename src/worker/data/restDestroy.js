@@ -5,7 +5,7 @@
  */
 
 var _ = require('underscore');
-var dataUtils = require('./../data/dataUtils');
+var getDataUtils = require('./getDataUtils');
 var nanoAjax = require('nanoajax');
 
 module.exports = {
@@ -23,6 +23,7 @@ module.exports = {
      *   - headers Any headers to include with the request.
      */
     method: function(data, options) {
+        var dataUtils = getDataUtils(this._currentObjectId);
         return new Promise(function(resolve, reject) {
             if (!options.baseUrl) {
                 reject(new Error('Destroy requires a "baseUrl"'));

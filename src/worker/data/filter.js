@@ -4,7 +4,7 @@
  * This module provides filtering for the worker.
  */
 var _ = require('underscore');
-var dataUtils = require('./dataUtils');
+var getDataUtils = require('./getDataUtils');
 
 module.exports = {
     name: 'filter',
@@ -16,6 +16,7 @@ module.exports = {
      */
     method: function(filterSpec) {
 
+        var dataUtils = getDataUtils(this._currentObjectId);
         var filterFunc;
         if (_.isString(filterSpec.method)) {
             // Find the evaluator from the registered components

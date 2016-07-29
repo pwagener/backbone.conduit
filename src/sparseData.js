@@ -566,6 +566,11 @@ function _ensureBoss() {
             './conduit.worker.data.js'
         ];
 
+        // create a unique identifier for each sparse collection/boss
+        // that can be used in workers to make sure that the collection
+        // is accessing its own data
+        this._sparseCollectionId = _.uniqueId('cscId');
+
         // Components specified in the base Conduit configuration, plus
         // components specified for this Collection type
 
@@ -578,8 +583,11 @@ function _ensureBoss() {
         components = _.compact(_.union(components, config.getComponents(), _.result(this.conduit, 'components')));
 
         this._boss = new Boss({
+            WrappedWorker: config.getWrappedWorkerConstructor(),
             Worker: config.getWorkerConstructor(),
             fileLocation: config.getWorkerPath(),
+
+            objectId: this._sparseCollectionId,
 
             // We never want the worker for this collection to terminate, as it holds all our data!
             autoTerminate: false,
@@ -728,7 +736,7 @@ var notSupportedConduitMethods = [
 _.each(notSupportedConduitMethods, function(methodObj) {
     mixinObj[methodObj.called] = function() {
         throw new Error('Cannot call "' + methodObj.called + '".  Collections with sparse data must use "' + methodObj.use + '" instead.');
-    }
+    };
 });
 
 

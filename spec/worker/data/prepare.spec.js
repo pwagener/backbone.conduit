@@ -1,8 +1,7 @@
 'use strict';
 
-var _ = require('underscore');
 var mockConduitWorker = require('../mockConduitWorker');
-var dataUtils = require('../../../src/worker/data/dataUtils');
+var getDataUtils = require('../../../src/worker/data/getDataUtils');
 
 var workerPrepare = require('./../../../src/worker/data/prepare');
 
@@ -14,9 +13,11 @@ describe('The data/prepare module', function() {
 
     describe('when data is available added', function() {
         var context;
+        var dataUtils;
 
         beforeEach(function() {
             mockConduitWorker.reset();
+            dataUtils = getDataUtils(mockConduitWorker.getCurrentObjectId());
             dataUtils.initStore({ reset: true });
             dataUtils.addTo(this.getSampleData());
 

@@ -6,7 +6,7 @@
 
 var _ = require('underscore');
 
-var dataUtils = require('./dataUtils');
+var getDataUtils = require('./getDataUtils');
 
 module.exports = {
 
@@ -26,6 +26,7 @@ module.exports = {
      */
     method: function(options) {
         var found;
+        var dataUtils = getDataUtils(this._currentObjectId);
 
         if (!_.isUndefined(options.id)) {
             found = dataUtils.findById(options.id);

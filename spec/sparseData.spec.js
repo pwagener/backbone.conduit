@@ -24,7 +24,7 @@ function makeInThreadBoss(sinon) {
         require('./../src/worker/data/map'),
         require('./../src/worker/data/reduce')
     ]);
-
+    
     // Extra methods that may be referred to by handlers.
     inThreadBoss.registerOther(require('./worker/data/addFirstAndSecond'));
     inThreadBoss.registerOther(require('./worker/data/sumOfFirstAndSecondProperties'));

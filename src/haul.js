@@ -1,9 +1,7 @@
 'use strict';
 
 var _ = require('underscore');
-var Backbone = require('backbone');
 
-var config = require('./config');
 var fill = require('./fill');
 var refill = require('./refill');
 
@@ -43,9 +41,9 @@ function haul(options) {
     options = options ? _.clone(options) : {};
     if (options.parse === void 0) options.parse = true;
     var success = options.success;
-    var collection = this;
+    var self = this;
     options.success = function(resp) {
-        collection._onHaulSuccess(resp, options, success);
+        self._onHaulSuccess(resp, options, success);
     };
     wrapError(this, options);
     return this.sync('read', this, options);

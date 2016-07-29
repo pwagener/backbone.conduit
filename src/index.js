@@ -11,6 +11,8 @@ var sparseData = require('./sparseData');
 var QuickCollection = require('./QuickCollection');
 var SparseCollection = require('./SparseCollection');
 
+var WrappedWorker = require('./WrappedWorker');
+
 Backbone.Conduit = module.exports = {
     config: config,
 
@@ -18,6 +20,8 @@ Backbone.Conduit = module.exports = {
     refill: refill,
     haul: haul,
     sparseData: sparseData,
+ 
+    WrappedWorker: WrappedWorker,
 
     QuickCollection: QuickCollection,
     SparseCollection: SparseCollection
