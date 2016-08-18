@@ -1325,7 +1325,7 @@
 	}).call(this);
 
 	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(8), (function() { return this; }()), __webpack_require__(11)(module)))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(9), (function() { return this; }()), __webpack_require__(11)(module)))
 
 /***/ },
 /* 5 */
@@ -1856,7 +1856,7 @@
 	}
 	exports.isPrimitive = isPrimitive;
 
-	exports.isBuffer = __webpack_require__(9);
+	exports.isBuffer = __webpack_require__(8);
 
 	function objectToString(o) {
 	  return Object.prototype.toString.call(o);
@@ -1918,7 +1918,7 @@
 	  return Object.prototype.hasOwnProperty.call(obj, prop);
 	}
 	
-	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(8)))
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(9)))
 
 /***/ },
 /* 6 */
@@ -3484,6 +3484,17 @@
 /* 8 */
 /***/ function(module, exports, __webpack_require__) {
 
+	module.exports = function isBuffer(arg) {
+	  return arg && typeof arg === 'object'
+	    && typeof arg.copy === 'function'
+	    && typeof arg.fill === 'function'
+	    && typeof arg.readUInt8 === 'function';
+	}
+
+/***/ },
+/* 9 */
+/***/ function(module, exports, __webpack_require__) {
+
 	// shim for using process in browser
 
 	var process = module.exports = {};
@@ -3543,17 +3554,6 @@
 	};
 	process.umask = function() { return 0; };
 
-
-/***/ },
-/* 9 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = function isBuffer(arg) {
-	  return arg && typeof arg === 'object'
-	    && typeof arg.copy === 'function'
-	    && typeof arg.fill === 'function'
-	    && typeof arg.readUInt8 === 'function';
-	}
 
 /***/ },
 /* 10 */

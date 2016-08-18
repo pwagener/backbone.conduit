@@ -12,4 +12,3 @@ Javascript thread free to do what it should always be doing: interacting with th
 You can see how effective this is, even with large data sets, in the [demo app](http://conduit.wagener.org).
 
 Please be aware this implementation has some limitations; see [the Usage section](usage.html) for details.
-Also expect this module to have breaking changes over minor releases; it is under active development.

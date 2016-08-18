@@ -42,7 +42,7 @@
     "gulp-rename": "^1.2.0",
     "gulp-webpack": "^0.4.1",
     "jquery": "^2.1.4",
-    "karma": "^0.12.28",
+    "karma": "0.13.22",
     "karma-benchmark": "^0.4.0",
     "karma-benchmark-reporter": "^0.1.1",
     "karma-chrome-launcher": "^0.1.5",
