@@ -13,12 +13,13 @@ function InThreadBoss(sinon, workerHandlers) {
     _.each(workerHandlers, function(methodDefinition) {
         self[methodDefinition.name] = function() {
             return methodDefinition.method.apply(self, arguments);
-        }
+        };
     });
 
     this.createWorkerNow = sinon.stub().returns(Promise.resolve());
     this.terminate = sinon.stub();
     this.makePromise = sinon.spy(this.makePromise);
+    this._currentObjectId = mockConduitWorker.getCurrentObjectId();
 }
 
 InThreadBoss.prototype.registerOther = function(otherHandler) {

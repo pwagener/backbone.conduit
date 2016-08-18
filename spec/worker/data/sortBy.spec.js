@@ -4,7 +4,7 @@ var _ = require('underscore');
 var mockConduitWorker = require('../mockConduitWorker');
 
 var workerSort = require('./../../../src/worker/data/sortBy');
-var dataUtils = require('../../../src/worker/data/dataUtils');
+var getDataUtils = require('../../../src/worker/data/getDataUtils');
 
 describe("The data/sortBy module", function() {
     it('provides the name as "sortBy"', function() {
@@ -13,8 +13,10 @@ describe("The data/sortBy module", function() {
 
     describe('when data is available', function() {
         var context;
+        var dataUtils;
         beforeEach(function() {
             mockConduitWorker.reset();
+            dataUtils = getDataUtils(mockConduitWorker.getCurrentObjectId());
             context = mockConduitWorker.bindModule(workerSort);
 
             dataUtils.initStore({ reset: true });

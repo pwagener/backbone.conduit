@@ -81,15 +81,15 @@
 	/**
 	 * This worker method handler stores data on the worker.
 	 */
-	var _ = __webpack_require__(15);
 
-	var dataUtils = __webpack_require__(12);
+	var getDataUtils = __webpack_require__(12);
 
 	module.exports = {
 	    name: 'setData',
 	    bindToWorker: true,
 	    method: function(argument) {
 	        argument = argument || {};
+	        var dataUtils = getDataUtils(this._currentObjectId);
 	        var data = argument.data || [];
 	        data = dataUtils.parseData(data);
 
@@ -98,11 +98,20 @@
 	            reset: true,
 	            idKey: argument.idKey
 	        });
+	        
+	        // if a cache key is provided, make the  data 
+	        // available to other modules that want to use
+	        // that data with the same key
+	        if (argument.cacheKey) {
+	            dataUtils.setCachedData(argument.cacheKey, data);
+	        }
 
+	        // we use add to because it builds internal maps
 	        dataUtils.addTo(data);
 	        return dataUtils.length();
 	    }
 	};
+
 
 /***/ },
 /* 2 */
@@ -116,7 +125,7 @@
 
 	var _ = __webpack_require__(15);
 
-	var dataUtils = __webpack_require__(12);
+	var getDataUtils = __webpack_require__(12);
 
 	module.exports = {
 
@@ -124,6 +133,7 @@
 	    bindToWorker: true,
 	    method: function(argument) {
 	        argument = argument || {};
+	        var dataUtils = getDataUtils(this._currentObjectId);
 	        var data = argument.data || [];
 	        data = dataUtils.parseData(data);
 
@@ -139,6 +149,7 @@
 
 	};
 
+
 /***/ },
 /* 3 */
 /***/ function(module, exports, __webpack_require__) {
@@ -151,7 +162,7 @@
 
 	var _ = __webpack_require__(15);
 
-	var dataUtils = __webpack_require__(12);
+	var getDataUtils = __webpack_require__(12);
 
 	module.exports = {
 
@@ -171,6 +182,7 @@
 	     */
 	    method: function(options) {
 	        var found;
+	        var dataUtils = getDataUtils(this._currentObjectId);
 
 	        if (!_.isUndefined(options.id)) {
 	            found = dataUtils.findById(options.id);
@@ -186,6 +198,7 @@
 	    }
 	};
 
+
 /***/ },
 /* 4 */
 /***/ function(module, exports, __webpack_require__) {
@@ -196,13 +209,14 @@
 	 * This module provides sorting for the worker
 	 */
 	var _ = __webpack_require__(15);
-	var dataUtils = __webpack_require__(12);
+	var getDataUtils = __webpack_require__(12);
 
 	module.exports = {
 	    name: 'sortBy',
 	    bindToWorker: true,
 
 	    method: function(sortSpec) {
+	        var dataUtils = getDataUtils(this._currentObjectId);
 	        var property = sortSpec.property;
 	        var direction = sortSpec.direction || 'asc';
 
@@ -233,6 +247,7 @@
 	    }
 	};
 
+
 /***/ },
 /* 5 */
 /***/ function(module, exports, __webpack_require__) {
@@ -243,7 +258,7 @@
 	 * This module provides filtering for the worker.
 	 */
 	var _ = __webpack_require__(15);
-	var dataUtils = __webpack_require__(12);
+	var getDataUtils = __webpack_require__(12);
 
 	module.exports = {
 	    name: 'filter',
@@ -255,6 +270,7 @@
 	     */
 	    method: function(filterSpec) {
 
+	        var dataUtils = getDataUtils(this._currentObjectId);
 	        var filterFunc;
 	        if (_.isString(filterSpec.method)) {
 	            // Find the evaluator from the registered components
@@ -285,6 +301,7 @@
 	    }
 	};
 
+
 /***/ },
 /* 6 */
 /***/ function(module, exports, __webpack_require__) {
@@ -293,7 +310,7 @@
 
 
 	var _ = __webpack_require__(15);
-	var dataUtils = __webpack_require__(12);
+	var getDataUtils = __webpack_require__(12);
 
 	module.exports = {
 	    name: 'map',
@@ -313,7 +330,7 @@
 	                return _.map(toMap, mapper, mapContext);
 	            };
 
-	            dataUtils.applyProjection(mapFunction);
+	            getDataUtils(this._currentObjectId).applyProjection(mapFunction);
 	            return {
 	                context: mapContext
 	            };
@@ -322,6 +339,7 @@
 	        }
 	    }
 	};
+
 
 /***/ },
 /* 7 */
@@ -333,7 +351,7 @@
 	 * This worker module provides a 'reduce(...)' method.
 	 */
 	var _ = __webpack_require__(15);
-	var dataUtils = __webpack_require__(12);
+	var getDataUtils = __webpack_require__(12);
 
 	module.exports = {
 
@@ -348,7 +366,7 @@
 
 	            var initialValue = reduceSpec.memo;
 	            var reduceContext = reduceSpec.context || {};
-	            var data = dataUtils.getData();
+	            var data = getDataUtils(this._currentObjectId).getData();
 
 	            return _.reduce(data, reducer, initialValue, reduceContext);
 	        } else {
@@ -356,6 +374,7 @@
 	        }
 	    }
 	};
+
 
 /***/ },
 /* 8 */
@@ -367,16 +386,17 @@
 	 * This method simply resets the worker's projection back to the original data.
 	 */
 
-	var dataUtils = __webpack_require__(12);
+	var getDataUtils = __webpack_require__(12);
 
 	module.exports = {
 	    name: 'resetProjection',
 	    bindToWorker: true,
 
 	    method: function() {
-	        dataUtils.resetProjection();
+	        getDataUtils(this._currentObjectId).resetProjection();
 	    }
 	};
+
 
 /***/ },
 /* 9 */
@@ -385,7 +405,7 @@
 	'use strict';
 
 	var _ = __webpack_require__(15);
-	var dataUtils = __webpack_require__(12);
+	var getDataUtils = __webpack_require__(12);
 	var nanoAjax = __webpack_require__(14);
 
 	module.exports = {
@@ -394,6 +414,35 @@
 	    bindToWorker: true,
 
 	    method: function(options) {
+	        var dataUtils = getDataUtils(this._currentObjectId);
+
+	        // set the fetched data on the data utility for the current context,
+	        // and then return the summary object that is used to resolve the 
+	        // promise
+	        function addDataGetResolution(data, cacheUrl, reset, postFetchTransformContext) {
+	            if (reset) {
+	                dataUtils.initStore({ reset: true });
+	            }
+	            if (cacheUrl) {
+	                dataUtils.setCachedData(cacheUrl, data);
+	            }
+	            dataUtils.addTo(data);
+	            return {
+	                length: dataUtils.length(),
+	                context: postFetchTransformContext
+	            };
+	        }
+
+	        // if the user wants to use cached data for the url,
+	        // we can do that here.
+	        if (options.useCache) {
+	            var cachedData = dataUtils.getCachedData(options.url);
+	            if (cachedData) {
+	                return Promise.resolve(addDataGetResolution(cachedData, null, options.reset));
+	            }
+	            // if there is no cache, go ahead and make the request to get the data
+	        }
+
 	        return new Promise(function(resolve, reject) {
 	            var headers = _.defaults({}, options.headers, {
 	                'Accept': 'application/json, text/javascript, */*; q=0.01'
@@ -425,20 +474,19 @@
 	                        }
 	                    }
 
-	                    if (options.reset) {
-	                        dataUtils.initStore({ reset: true });
-	                    }
-	                    dataUtils.addTo(data);
-
-	                    resolve({
-	                        length: dataUtils.length(),
-	                        context: context
-	                    });
+	                    // if useCache is true, we will use the url to cache the response
+	                    // so that the next request to the same url will not need to make
+	                    // another request.
+	                    var cacheUrl = options.useCache ? options.url : null;
+	 
+	                    // add/reset the data for the current data context and resolve the promise
+	                    resolve(addDataGetResolution(data, cacheUrl, options.reset, context));
 	                }
 	            });
 	        });
 	    }
 	};
+
 
 /***/ },
 /* 10 */
@@ -451,7 +499,7 @@
 	 */
 
 	var _ = __webpack_require__(15);
-	var dataUtils = __webpack_require__(12);
+	var getDataUtils = __webpack_require__(12);
 	var nanoAjax = __webpack_require__(14);
 
 	module.exports = {
@@ -460,6 +508,7 @@
 	    bindToWorker: true,
 
 	    method: function(data, options) {
+	        var dataUtils = getDataUtils(this._currentObjectId);
 	        return new Promise(function(resolve, reject) {
 
 	            var idKey = dataUtils.getIdKey();
@@ -503,6 +552,7 @@
 	    }
 	};
 
+
 /***/ },
 /* 11 */
 /***/ function(module, exports, __webpack_require__) {
@@ -514,7 +564,7 @@
 	 */
 
 	var _ = __webpack_require__(15);
-	var dataUtils = __webpack_require__(12);
+	var getDataUtils = __webpack_require__(12);
 	var nanoAjax = __webpack_require__(14);
 
 	module.exports = {
@@ -532,6 +582,7 @@
 	     *   - headers Any headers to include with the request.
 	     */
 	    method: function(data, options) {
+	        var dataUtils = getDataUtils(this._currentObjectId);
 	        return new Promise(function(resolve, reject) {
 	            if (!options.baseUrl) {
 	                reject(new Error('Destroy requires a "baseUrl"'));
@@ -587,6 +638,7 @@
 	    }
 	};
 
+
 /***/ },
 /* 12 */
 /***/ function(module, exports, __webpack_require__) {
@@ -595,7 +647,12 @@
 
 	/**
 	 * This module provides the utility methods for managing data on the worker.
-	 * Typically shared amongst several core worker modules.
+	 * Typically shared amongst several core worker modules. The data is added
+	 * and retrieved through a "context", which is identified with a key. That
+	 * way, the worker can handle data for multiple "contexts", which are primarily
+	 * the sparse collections (identified by a unique object id). So if you have
+	 * multiple sparse collections using the same worker thread, their data does
+	 * not have to interfere with one another.
 	 *
 	 * Much of the logic here is in managing the quick lookup collections (i.e. _byId)
 	 * that allow us to not constantly iterate over the whole set.
@@ -604,50 +661,52 @@
 	var _ = __webpack_require__(15);
 	var managedContext = __webpack_require__(13);
 
-	function _getContext(skipInit) {
-	    if (!ConduitWorker._data && !skipInit) {
+	// The "TopContext" will just be the ConduitWorker object
+	function _getTopContext() {
+	    var topLevelContext = _getTopContextAsIs();
+
+	    if (!topLevelContext._contexts) {
 	        // We haven't been initialized yet
-	        initStore();
+	        topLevelContext._contexts = {}; // support multiple contexts
+	        topLevelContext._cachedDataMap = {};
 	    }
 
+	    return _getTopContextAsIs();
+	}
+
+	function _getTopContextAsIs() {
 	    return ConduitWorker;
 	}
 
-	function initStore(options) {
-	    var context = _getContext(true);
-	    options = options || {};
-
-	    if (options.reset || !context._data) {
-	        context._data = [];
-	        context._idKey = options.idKey || 'id';
-	        context._byId = {};
-	        resetProjection();
+	function _getContextForKey(key) {
+	    var topLevelContext = _getTopContext();
+	    var context = topLevelContext._contexts[key];
+	    if (!context) {
+	        context = topLevelContext._contexts[key] = {
+	            _key: key
+	        };
+	        _initStoreForContext(context);
 	    }
-
-	    if (context._idKey && options.idKey && (context._idKey != options.idKey)) {
-	        throw new Error('Cannot change the ID key of existing data');
-	    }
+	    return context;
 	}
 
-	function getData() {
-	    var context = _getContext();
-	    return context._projectedData;
-	}
-
-	function getIdKey() {
-	    var context = _getContext();
-	    return context._idKey;
+	function _getRawDataForKey(key) {
+	    return _getContextForKey(key)._data;
 	}
 
 	function _reapplyAllProjections(context) {
-	    context._projectedData = context._data;
+	    context._projectedData = _getRawDataForKey(context._key);
 	    _.each(context._projections, function(projection) {
 	        context._projectedData = projection(context._projectedData);
 	    });
 	}
 
+	function _getDataForContext(context) {
+	    return context._projectedData;
+	}
+
 	function _rebuildIdsAndIndexes(context) {
-	    var data = getData();
+	    var data = _getDataForContext(context);
 
 	    context._byId = {};
 	    var index = 0;
@@ -668,26 +727,92 @@
 	    });
 	}
 
-	function applyProjection(toApply) {
-	    var context = _getContext();
-	    context._projections.push(toApply);
-
-	    context._projectedData = toApply(getData());
-	    _rebuildIdsAndIndexes(context);
-	}
-
-	function resetProjection() {
-	    var context = _getContext();
-	    context._projectedData = context._data;
+	function _resetProjectionForContext(context) {
+	    context._projectedData = _getRawDataForKey(context._key);
 	    context._projections = [];
 	    _rebuildIdsAndIndexes(context);
 	}
 
+	function _initStoreForContext(context, options) {
+	    options = options || {};
+	    var data;
+	 
+	    if (options.reset || !context._data) {
+	        data = [];
+	        context._data = data;
+	        // if there is a cache key for this data, we set
+	        // the data as the cached data.
+	        if (options.cacheKey) {
+	            _setCacheData(options.cacheKey, data);
+	            context._cacheKey = options.cacheKey;
+	        }
+	        context._projectedData = {};
+	        context._idKey = options.idKey || 'id';
+	        context._byId = {};
+	        _resetProjectionForContext(context);
+	    }
+
+	    if (context._idKey && options.idKey && (context._idKey != options.idKey)) {
+	        throw new Error('Cannot change the ID key of existing data');
+	    }
+	}
+
+	// Methods for the context data utility object
+
+	function _getContext() {
+	    return _getContextForKey(this._contextKey);
+	}
+
+	function initStore(options) {
+	    return _initStoreForContext(this._getContext(), options);
+	}
+
+	function getData() {
+	    return _getDataForContext(this._getContext());
+	}
+
+	function getIdKey() {
+	    var context = this._getContext();
+	    return context._idKey;
+	}
+
+	function applyProjection(toApply) {
+	    var context = this._getContext();
+	    context._projections.push(toApply);
+
+	    context._projectedData = toApply(this.getData());
+	    _rebuildIdsAndIndexes(context);
+	}
+
+	function resetProjection() {
+	    _resetProjectionForContext(this._getContext());
+	}
+
+	function getCachedData(cacheKey) {
+	    var topContext = _getTopContext();
+	    var cached = topContext._cachedDataMap[cacheKey];
+	    // make sure that two objects are not using
+	    // the same dataset
+	    return cached ? cached.slice(0) : null;
+	}
+
+	function setCachedData(cacheKey, data) {
+	    var topContext = _getTopContext();
+	    topContext._cachedDataMap[cacheKey] = data;
+	}
+
+	function removeCachedData(cacheKey) {
+	    var topContext = _getTopContext();
+	    delete topContext._cachedDataMap[cacheKey];
+	}
+
 	function addTo(data, options) {
 	    options = options || {};
-	    var context = _getContext();
+	    var context = this._getContext();
+	    var existingRawData = _getRawDataForKey(this._contextKey);
 
 	    data = data || [];
+
 	    if (!_.isArray(data)) {
 	        throw new Error('"addTo" requires data in an array');
 	    }
@@ -704,9 +829,9 @@
 	            if (existing) {
 	                if (options.replace) {
 	                    // Replace item properties
-	                    var existingIndex = context._data.indexOf(existing);
+	                    var existingIndex = existingRawData.indexOf(existing);
 	                    if (existingIndex !== void 0) {
-	                        context._data[existingIndex] = item;
+	                        existingRawData[existingIndex] = item;
 	                    }
 
 	                    existingIndex = context._projectedData.indexOf(existing);
@@ -722,11 +847,11 @@
 	            } else {
 	                // Add the brand new element.  Note that '_dataIndex' and '_conduitId' will be
 	                // calculated after projections are applied
-	                context._data.push(item);
+	                existingRawData.push(item);
 	            }
 	        } else {
 	            // Add the null or undefined item regardless
-	            context._data.push(item);
+	            existingRawData.push(item);
 	        }
 	    });
 
@@ -736,17 +861,18 @@
 	    // We also rebuild the _byId map and recalculate the _dataIndex properties
 	    _rebuildIdsAndIndexes(context);
 
-	    managedContext.debug('Added ' + data.length + ' items.  Total length: ' + context._data.length);
+	    managedContext.debug('Added ' + data.length + ' items.  Total length: ' + existingRawData.length);
 	}
 
 	function removeById(id) {
-	    var context = _getContext();
+	    var context = this._getContext();
+	    var entireData = _getRawDataForKey(context._key);
 
 	    var item = context._byId[id];
 	    if (item !== void 0  && item !== null) {
-	        var index = context._data.indexOf(item);
+	        var index = entireData.indexOf(item);
 	        if (index >= 0) {
-	            context._data.splice(index, 1);
+	            entireData.splice(index, 1);
 	            _reapplyAllProjections(context);
 	            _rebuildIdsAndIndexes(context);
 	        }
@@ -754,14 +880,14 @@
 	}
 
 	function findById(id) {
-	    var context = _getContext();
+	    var context = this._getContext();
 	    return context._byId[id];
 	}
 
 	function findByIds(idArray) {
 	    var matches = [];
 
-	    var context = _getContext();
+	    var context = this._getContext();
 	    for (var i = 0; i < idArray.length; i++) {
 	        var match = context._byId[idArray[i]];
 	        if (_.isUndefined(match)) {
@@ -775,13 +901,13 @@
 	}
 
 	function findByIndex(index) {
-	    var data = getData();
+	    var data = this.getData();
 	    return data[index];
 	}
 
 	function findByIndexes(indexes) {
 	    var found = [];
-	    var allData = getData();
+	    var allData = this.getData();
 	    for (var i = indexes.min; i < indexes.max; i++) {
 	        var data = allData[i];
 	        if (!_.isUndefined(data)) {
@@ -815,65 +941,84 @@
 	}
 
 	function length() {
-	    var data = getData();
+	    var data = this.getData();
 	    return data.length;
 	}
 
-	module.exports = {
+	module.exports = function (contextKey) {
+	    
+	    if (!contextKey) {
+	        throw new Error('Must provide a context "key" to be able to read and write data');
+	    }
+	 
+	    return {
+	        
+	        _contextKey: contextKey,
+	        
+	        _getContext: _getContext,
 
-	    initStore: initStore,
+	        initStore: initStore,
 
-	    /**
-	     * Get the current view of the data we are exposing.  If the data has not been
-	     * sorted/filtered/mapped, then this is the full, original data set.  Otherwise,
-	     * this is the version of the data that has gone through those projections.
-	     *
-	     * Note for performance reasons, this is a reference to the internally-stored array.
-	     * You should not modify it directly.
-	     */
-	    getData: getData,
+	        /**
+	         * Get the current view of the data we are exposing.  If the data has not been
+	         * sorted/filtered/mapped, then this is the full, original data set.  Otherwise,
+	         * this is the version of the data that has gone through those projections.
+	         *
+	         * Note for performance reasons, this is a reference to the internally-stored array.
+	         * You should not modify it directly.
+	         */
+	        getData: getData,
 
-	    /**
-	     * Retrieve the in-use ID key for this data set
-	     */
-	    getIdKey: getIdKey,
+	        /**
+	         * Retrieve the in-use ID key for this data set
+	         */
+	        getIdKey: getIdKey,
 
-	    /**
-	     * Apply a given function to the data.
-	     * @param toApply The function that will receive the full data set, and should return the projected data
-	     * set.
-	     */
-	    applyProjection: applyProjection,
+	        /**
+	         * Apply a given function to the data.
+	         * @param toApply The function that will receive the full data set, and should return the projected data
+	         * set.
+	         */
+	        applyProjection: applyProjection,
 
-	    /**
-	     * Remove any projections.  After calling this, then 'getCurrentData' will return
-	     * the original data set.
-	     */
-	    resetProjection: resetProjection,
+	        /**
+	         * Remove any projections.  After calling this, then 'getCurrentData' will return
+	         * the original data set.
+	         */
+	        resetProjection: resetProjection,
 
-	    /**
-	     * Add data to the existing data set.  Note that if any projections have been applied, they will be re-applied
-	     * in-order after the addition.
-	     */
-	    addTo: addTo,
+	        /**
+	         * Add data to the existing data set.  Note that if any projections have been applied, they will be re-applied
+	         * in-order after the addition.
+	         */
+	        addTo: addTo,
 
-	    /**
-	     * Remove data from the existing data set that matches the given ID.
-	     */
-	    removeById: removeById,
+	        /**
+	         * Remove data from the existing data set that matches the given ID.
+	         */
+	        removeById: removeById,
 
-	    findById: findById,
+	        findById: findById,
 
-	    findByIds: findByIds,
+	        findByIds: findByIds,
 
-	    findByIndex: findByIndex,
+	        findByIndex: findByIndex,
 
-	    findByIndexes: findByIndexes,
+	        findByIndexes: findByIndexes,
 
-	    parseData: parseData,
+	        parseData: parseData,
+	        
+	        getCachedData: getCachedData,
+	        
+	        setCachedData: setCachedData,
+	        
+	        removeCachedData: removeCachedData,
 
-	    length: length
+	        length: length
+	    };
+	        
 	};
+
 
 /***/ },
 /* 13 */
@@ -953,9 +1098,26 @@
 	function _onMessage(event) {
 	    var method = event.data.method;
 	    var args = event.data.args;
-
+	 
 	    var ConduitWorker = _getConduitWorker();
 	    var handler = ConduitWorker.handlers[method];
+
+	    // Messages should provide an object id if they want to
+	    // access data associated with that object.
+	    // 
+	    // The current object id is essentially the identity of the 
+	    // object making the request to the worker thread. This allows
+	    // the worker to isolate the data that object uses by using the
+	    // object id as the "context key" for the data. So if multiple
+	    // objects are sharing the same worker, they can have their
+	    // own data.
+	    ConduitWorker._currentObjectId = event.data.objectId;
+	    if (ConduitWorker._currentObjectId) {
+	        debug('Current object id is: ' + ConduitWorker._currentObjectId);
+	    } else {
+	        debug('There is no current object id');
+	    }
+	 
 	    if (handler) {
 	        debug('Executing "' + method + '"');
 
@@ -1116,6 +1278,7 @@
 	    debug: debug
 
 	};
+	
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },

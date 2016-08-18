@@ -9,7 +9,8 @@ var _ = require('underscore');
 var restTestUtil = require('./restTestUtil');
 
 var getModule = require('../../../src/worker/data/restGet');
-var dataUtils = require('../../../src/worker/data/dataUtils');
+var getDataUtils = require('../../../src/worker/data/getDataUtils');
+var mockConduitWorker = require('../mockConduitWorker');
 
 describe('The rest/get module', function() {
     var testUtil, promise;
@@ -19,6 +20,7 @@ describe('The rest/get module', function() {
     });
 
     describe('when requesting data', function () {
+        var dataUtils;
 
         beforeEach(function () {
             testUtil = restTestUtil.setup({
@@ -26,6 +28,7 @@ describe('The rest/get module', function() {
                 moduleToBind: getModule,
                 dataToRespond: this.getSampleData()
             });
+            dataUtils = testUtil.dataUtils;
 
             promise = testUtil.context.restGet({
                 url: '/foo',
@@ -79,7 +82,7 @@ describe('The rest/get module', function() {
                 expect(_.findWhere(data, { id: 5 })).to.have.property('name', 'five');
 
                 done();
-            });
+            }).catch(done);
 
             testUtil.respond();
         });
@@ -98,6 +101,7 @@ describe('The rest/get module', function() {
     });
 
     describe('when requesting data with reset', function () {
+        var dataUtils;
 
         beforeEach(function() {
             // Set it up with one entry in the data
@@ -106,6 +110,7 @@ describe('The rest/get module', function() {
                 moduleToBind: getModule,
                 dataToRespond: this.getSampleData()
             });
+            dataUtils = testUtil.dataUtils;
 
             // Request a reset
             promise = testUtil.context.restGet({ url: '/foo', reset: true });
@@ -126,11 +131,13 @@ describe('The rest/get module', function() {
     });
 
     describe('when requesting data with a transform', function() {
+        var dataUtils;
         beforeEach(function() {
             testUtil = restTestUtil.setup({
                 moduleToBind: getModule,
                 dataToRespond: this.getSampleData()
             });
+            dataUtils = testUtil.dataUtils;
 
             // TODO:  this should be mocked out in a better way
             testUtil.context.handlers['calculateSums'] = function(rawData) {
@@ -183,6 +190,7 @@ describe('The rest/get module', function() {
                     theData: this.getSampleData()
                 }
             });
+            dataUtils = testUtil.dataUtils;
 
             testUtil.context.restGet({
                 url: '/foo',
@@ -194,9 +202,75 @@ describe('The rest/get module', function() {
                 expect(data).to.have.length(3);
 
                 done();
-            });
+            }).catch(done);
 
             testUtil.respond();
         });
     });
+
+    describe('when requesting data with rest and a cacheKey', function () {
+        var dataUtils;
+        var data;
+        var url;
+
+        beforeEach(function () {
+            data = this.getSampleData();
+            // Set it up with one entry in the data
+            testUtil = restTestUtil.setup({
+                initialData: [{id: 5, name: 'five', first: 2, second: 3}],
+                moduleToBind: getModule,
+                dataToRespond: data
+            });
+            dataUtils = testUtil.dataUtils;
+
+            url = '/foo';
+
+            // Request a reset
+            promise = testUtil.context.restGet({
+                url: url,
+                useCache: true,
+                reset: true
+            });
+        });
+        afterEach(function () {
+            dataUtils.removeCachedData(url);
+        });
+
+        it('requests and makes the data accessible as a cached value with the data utils for that context', function (done) {
+            expect(testUtil.requests).to.have.length(1);
+            expect(testUtil.requests[0]).to.have.property('method', 'GET');
+            promise.then(function (result) {
+                expect(result.length).to.equal(data.length);
+                expect(dataUtils.getCachedData(url)).to.have.length(data.length);
+                expect(dataUtils.getCachedData(url)[0].name).to.equal(data[0].name);
+                done();
+            }).catch(done);
+
+            testUtil.respond();
+        });
+ 
+        it('resolves with the cached data for additional requests to the same url', function (done) {
+            expect(testUtil.requests).to.have.length(1);
+            promise.then(function (result) {
+                expect(result.length).to.equal(data.length);
+                expect(dataUtils.getCachedData(url)).to.have.length(data.length);
+                expect(dataUtils.getCachedData(url)[0].name).to.equal(data[0].name);
+                return testUtil.context.restGet({
+                    url: url,
+                    useCache: true,
+                    reset: true
+                });
+            }).then(function (result) {
+                expect(testUtil.requests).to.have.length(1); // no further requests should have been made
+                expect(result.length).to.equal(data.length);
+                expect(dataUtils.getCachedData(url)).to.have.length(data.length);
+                done();
+            }).catch(done);
+
+            testUtil.respond();
+        });
+ 
+
+    });
+
 });

@@ -5,7 +5,6 @@
  */
 
 var _ = require('underscore');
-var Backbone = require('backbone');
 var shortCircuit = require('./shortCircuit');
 
 /**

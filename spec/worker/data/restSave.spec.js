@@ -9,7 +9,7 @@ var _ = require('underscore');
 var restTestUtil = require('./restTestUtil');
 
 var saveModule = require('../../../src/worker/data/restSave');
-var dataUtils = require('../../../src/worker/data/dataUtils');
+var getDataUtils = require('../../../src/worker/data/getDataUtils');
 
 
 describe('The rest/save module', function() {
@@ -20,6 +20,7 @@ describe('The rest/save module', function() {
     });
 
     describe('when saving data without an ID', function() {
+        var dataUtils;
 
         beforeEach(function() {
             testUtil = restTestUtil.setup({
@@ -27,6 +28,7 @@ describe('The rest/save module', function() {
                 moduleToBind: saveModule,
                 dataToRespond: { id: 5, name: 'five', first: 3, second: 2 }
             });
+            dataUtils = testUtil.dataUtils;
 
             requestData = { name: 'five', first: 3, second: 2 };
             promise = testUtil.context.restSave(requestData, { rootUrl: '/foo' });
@@ -90,6 +92,7 @@ describe('The rest/save module', function() {
     });
 
     describe('when saving data with an ID', function() {
+        var dataUtils;
 
         beforeEach(function() {
             testUtil = restTestUtil.setup({
@@ -97,6 +100,7 @@ describe('The rest/save module', function() {
                 moduleToBind: saveModule,
                 dataToRespond: { id: 3, name: 'five', first: 0, second: 3 }
             });
+            dataUtils = testUtil.dataUtils;
 
             requestData = { id: 3, name: 'three', first: 1, second: 2};
             promise = testUtil.context.restSave(requestData, { rootUrl: '/foo' });

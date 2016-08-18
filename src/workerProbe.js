@@ -17,20 +17,21 @@ var Boss = require('./Boss');
  * and similar structures.
  * @private
  */
-function _createProbePromise(Worker, path, fileName, debugSet) {
+function _createProbePromise(Worker, WrappedWorker, path, fileName, debugSet) {
     var debug;
     if (debugSet) {
         debug = function(msg) {
-            console.log(msg)
-        }
+            console.log(msg);
+        };
     } else {
-        debug = function() { }
+        debug = function() { };
     }
 
     var fullPath = path + '/' + fileName;
     debug('Probing for worker at "' + fullPath + '"');
     var boss = new Boss({
         Worker: Worker,
+        WrappedWorker: WrappedWorker,
         fileLocation: fullPath
     });
 
@@ -80,7 +81,7 @@ function searchPaths(options) {
 
     var probePromises = [];
     _.each(paths, function(path) {
-        var probePromise = _createProbePromise(options.Worker, path, fileName, options.debug);
+        var probePromise = _createProbePromise(options.Worker, options.WrappedWorker, path, fileName, options.debug);
         probePromises.push(probePromise);
     });
 

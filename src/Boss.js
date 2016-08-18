@@ -1,14 +1,17 @@
 'use strict';
 
 var _ = require('underscore');
+var WrappedWorker = require('./WrappedWorker');
 
 /**
  * This object provides an interface to a worker that communicates via promises.
  * Still conflicted about whether this should be an external module or not
  * @param options which includes:
+ *   o WrappedWorker The WrappedWorker constructor to use. The WrappedWorker is a simple
+ *   interface that has a "send" method that returns a promise that will resolve to the worker's response
  *   o fileLocation (required):  The location of the Worker JS file to load
  *   o Worker (required): The Worker constructor to use.  Typically will be window.Worker
- *     unless writing tests
+ *     unless writing tests. This gets passed to the WrappedWorker instance when it is created.
  *   o autoTerminate (optional):  If boolean false, the worker will never be terminated.  If boolean true,
  *     the worker will be terminated immediately.  If a number, the worker will be terminated after that many
  *     milliseconds.  Note that the worker will always be recreated when necessary (i.e. when calling
@@ -24,12 +27,18 @@ Boss.prototype = {
     initialize: function(options) {
         options = options || {};
 
+        this.objectId = options.objectId;
+ 
         this.WorkerFileLocation = options.fileLocation;
         if (!this.WorkerFileLocation) {
             throw new Error("You must provide 'fileLocation'");
         }
 
-        this.WorkerConstructor = options.Worker;
+        this.WrappedWorkerConstructor = options.WrappedWorker || WrappedWorker;
+        if (!this.WrappedWorkerConstructor) {
+            throw new Error("You must provide 'WrappedWorker'");
+        }
+        this.WorkerConstructor = options.Worker || Worker;
         if (!this.WorkerConstructor) {
             throw new Error("You must provide 'Worker'");
         }
@@ -86,28 +95,18 @@ Boss.prototype = {
 
         var self = this;
 
-        return this._ensureWorker().then(function(worker) {
+        return this._ensureWorker().then(function (worker) {
             var requestId = _.uniqueId('cReq');
 
             var requestDetails = _.extend({}, details, {
-                requestId: requestId
+                requestId: requestId,
+                objectId: self.objectId
             });
 
-            // Create the request.
-            self._requestsInFlight[requestId] = (function() {
-                var res = {};
+            return worker.send(requestDetails).then(function (response) {
+                return self._onWorkerMessage(response);
+            });
 
-                res.promise = new Promise(function(resolve, reject) {
-                    res.resolve = resolve;
-                    res.reject = reject;
-                });
-
-                return res;
-            })();            
-
-            worker.postMessage(requestDetails);
-
-            return self._requestsInFlight[requestId].promise;
         });
     },
 
@@ -117,22 +116,17 @@ Boss.prototype = {
      * @private
      */
     _onWorkerMessage: function(event) {
-        var requestId = event.data.requestId;
-
-        var deferred = this._requestsInFlight[requestId];
-        if (deferred) {
-            var result = event.data.result;
-            if (result instanceof Error) {
-                // Reject if we get an error
-                deferred.reject(result);
-            } else {
-                deferred.resolve(result);
-            }
+        var result = event.data.result;
+        var prom;
+        if (result instanceof Error) {
+            // Reject if we get an error
+            prom = Promise.reject(result);
         } else {
-            this._debug('Worker did not provide requestId: ' + event.data);
+            prom = Promise.resolve(result);
         }
-
-        this._scheduleTermination();
+        var scheduleTermination = _.bind(this._scheduleTermination, this);
+        prom.then(scheduleTermination, scheduleTermination);
+        return prom;
     },
 
     /**
@@ -142,13 +136,13 @@ Boss.prototype = {
      */
     _onWorkerError: function(err) {
         this._debug('Worker call failed: ' + err.message);
-
+    
         _.each(_.keys(this._requestsInFlight), function(requestId) {
             var deferred = this._requestsInFlight[requestId];
-
+    
             deferred.reject(new Error('Worker error: ' + err));
         }, this);
-
+    
         this.terminate();
     },
 
@@ -160,8 +154,8 @@ Boss.prototype = {
             this._debug('Terminating worker');
             if (_.isFunction(this.worker.terminate)) {
                 this.worker.terminate();
+                this.worker = null;
             }
-            this.worker = null;
         }
     },
 
@@ -179,10 +173,13 @@ Boss.prototype = {
             // Note this will never throw an error; construction always succeeds
             // regardless of whether the path is valid or not
             self._debug('Creating new worker (autoTerminate: ' + self.autoTerminate + ')');
-            worker = self.worker = new self.WorkerConstructor(self.WorkerFileLocation);
-
-            worker.onmessage = _.bind(self._onWorkerMessage, self);
-            worker.onerror = _.bind(self._onWorkerError, self);
+            // Initialize the WrappedWorker, which provides a simple abstraction around
+            // actual worker instances. The wrapped worker instance should have a "send"
+            // method that returns a promise that resolves to the worker's response.
+            worker = self.worker = new self.WrappedWorkerConstructor({
+                workerFilePath: self.WorkerFileLocation,
+                Worker: self.WorkerConstructor
+            });
 
             return self.makePromise({
                 method: 'configure',
@@ -203,7 +200,7 @@ Boss.prototype = {
                 + currentdate.getMinutes() + ":"
                 + currentdate.getSeconds() + '-' + currentdate.getMilliseconds();
 
-            console.log(now + ' conduit.boss: ' + msg)
+            console.log(now + ' conduit.boss: ' + msg);
         }
     }
 };

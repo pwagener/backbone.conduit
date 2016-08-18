@@ -1,7 +1,6 @@
 'use strict';
 
 var _ = require('underscore');
-var Backbone = require('backbone');
 var shortCircuit = require('./shortCircuit');
 
 function fill(models, options) {
@@ -10,7 +9,6 @@ function fill(models, options) {
 
     // Silence any add/change/remove events
     options = options ? _.clone(options) : {};
-    var requestedEvents = !options.silent;
     options.silent = true;
 
     // Call set

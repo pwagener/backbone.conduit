@@ -15,7 +15,7 @@ chai.use(sinonChai);
 
 
 function getSampleData() {
-    return[
+    return [
         {id: 2, name: "two", first: 0, second: 2},
         {id: 1, name: "one", first: 1, second: 0},
         {id: 3, name: "three", first: 1, second: 2}

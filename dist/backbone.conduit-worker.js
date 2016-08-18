@@ -139,9 +139,26 @@
 	function _onMessage(event) {
 	    var method = event.data.method;
 	    var args = event.data.args;
-
+	 
 	    var ConduitWorker = _getConduitWorker();
 	    var handler = ConduitWorker.handlers[method];
+
+	    // Messages should provide an object id if they want to
+	    // access data associated with that object.
+	    // 
+	    // The current object id is essentially the identity of the 
+	    // object making the request to the worker thread. This allows
+	    // the worker to isolate the data that object uses by using the
+	    // object id as the "context key" for the data. So if multiple
+	    // objects are sharing the same worker, they can have their
+	    // own data.
+	    ConduitWorker._currentObjectId = event.data.objectId;
+	    if (ConduitWorker._currentObjectId) {
+	        debug('Current object id is: ' + ConduitWorker._currentObjectId);
+	    } else {
+	        debug('There is no current object id');
+	    }
+	 
 	    if (handler) {
 	        debug('Executing "' + method + '"');
 
@@ -302,6 +319,7 @@
 	    debug: debug
 
 	};
+	
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
@@ -1307,7 +1325,7 @@
 	}).call(this);
 
 	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(9), (function() { return this; }()), __webpack_require__(11)(module)))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(8), (function() { return this; }()), __webpack_require__(11)(module)))
 
 /***/ },
 /* 5 */
@@ -1838,7 +1856,7 @@
 	}
 	exports.isPrimitive = isPrimitive;
 
-	exports.isBuffer = __webpack_require__(8);
+	exports.isBuffer = __webpack_require__(9);
 
 	function objectToString(o) {
 	  return Object.prototype.toString.call(o);
@@ -1900,7 +1918,7 @@
 	  return Object.prototype.hasOwnProperty.call(obj, prop);
 	}
 	
-	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(9)))
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(8)))
 
 /***/ },
 /* 6 */
@@ -3466,17 +3484,6 @@
 /* 8 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = function isBuffer(arg) {
-	  return arg && typeof arg === 'object'
-	    && typeof arg.copy === 'function'
-	    && typeof arg.fill === 'function'
-	    && typeof arg.readUInt8 === 'function';
-	}
-
-/***/ },
-/* 9 */
-/***/ function(module, exports, __webpack_require__) {
-
 	// shim for using process in browser
 
 	var process = module.exports = {};
@@ -3536,6 +3543,17 @@
 	};
 	process.umask = function() { return 0; };
 
+
+/***/ },
+/* 9 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = function isBuffer(arg) {
+	  return arg && typeof arg === 'object'
+	    && typeof arg.copy === 'function'
+	    && typeof arg.fill === 'function'
+	    && typeof arg.readUInt8 === 'function';
+	}
 
 /***/ },
 /* 10 */

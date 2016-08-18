@@ -8,17 +8,21 @@ var _ = require('underscore');
 var restTestUtil = require('./restTestUtil');
 
 var destroyModule = require('./../../../src/worker/data/restDestroy');
-var dataUtils = require('../../../src/worker/data/dataUtils');
+var getDataUtils = require('../../../src/worker/data/getDataUtils');
 
+var mockConduitWorker = require('../mockConduitWorker');
 
 describe('The rest/destroy module', function() {
     var testUtil, promise;
+    var dataUtils;
 
     beforeEach(function() {
+        mockConduitWorker.reset();
         testUtil = restTestUtil.setup({
             initialData: this.getSampleData(),
             moduleToBind: destroyModule
         });
+        dataUtils = testUtil.dataUtils;
 
         promise = testUtil.context.restDestroy({ id: 3 }, { baseUrl: '/foo' });
     });
@@ -56,7 +60,7 @@ describe('The rest/destroy module', function() {
             expect(data).to.have.length(2);
             expect(_.findWhere(data, { id: 3 })).to.be.undefined;
             done();
-        });
+        }).catch(done);
 
         testUtil.respond();
     });

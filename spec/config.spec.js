@@ -38,6 +38,17 @@ describe("The config module", function() {
 
         expect(config.getWorkerConstructor()).to.equal(Worker);
     });
+    
+    it('can accept a WrappedWorker constructor', function () {
+        var WrappedWorker = this.sinon.spy();
+        var Worker = this.sinon.spy();
+        config.enableWorker({
+            Worker: Worker,
+            WrappedWorker: WrappedWorker
+        }).then(noop, noop);
+ 
+        expect(config.getWrappedWorkerConstructor()).to.equal(WrappedWorker);
+    });
 
     it('does not report the worker as enabled unless probe succeeded', function() {
         config.enableWorker({

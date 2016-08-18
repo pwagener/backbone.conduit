@@ -8,20 +8,30 @@ var _ = require('underscore');
 
 var mockConduitWorker = require('../mockConduitWorker');
 
-var dataUtils = require('./../../../src/worker/data/dataUtils');
+var getDataUtils = require('../../../src/worker/data/getDataUtils');
 
 describe('The worker/dataUtils module', function() {
     var context;
+    var dataUtils;
+
+    // fake projection filter function
+    var mustEndWithE = function(data) {
+        return _.filter(data, function(item) {
+            return item.name[item.name.length - 1] == 'e';
+        });
+    };
 
     beforeEach(function() {
         mockConduitWorker.reset();
         context = mockConduitWorker.get();
+        dataUtils = getDataUtils('data-utils-test-context-key');
     });
 
     it('initializes the context to have an empty data', function() {
         dataUtils.initStore();
         var initial = dataUtils.getData();
         expect(initial).to.be.an('array');
+        expect(initial.length).to.equal(0);
     });
 
     it('will not recreate the data store by default', function() {
@@ -231,11 +241,6 @@ describe('The worker/dataUtils module', function() {
         it('applies projections in sequence', function() {
             expect(projectionSpy.callCount).to.equal(1);
 
-            var mustEndWithE = function(data) {
-                return _.filter(data, function(item) {
-                    return item.name[item.name.length - 1] == 'e';
-                });
-            };
             var secondProjectionSpy = this.sinon.spy(mustEndWithE);
             dataUtils.applyProjection(secondProjectionSpy);
 
@@ -245,6 +250,72 @@ describe('The worker/dataUtils module', function() {
 
             expect(projectionSpy.callCount).to.equal(1);
             expect(secondProjectionSpy.callCount).to.equal(1);
+        });
+    });
+    
+    describe('when the utils are created with a different context key', function () {
+        
+        describe('when setting and resetting data', function () {
+            var otherDataUtils;
+            beforeEach(function () {
+                otherDataUtils = getDataUtils('another-test-context-key');
+            });
+            afterEach(function () {
+                otherDataUtils.initStore({ reset: true });
+            });
+            it('should not modify the other data utils instance', function () {
+                dataUtils.addTo(this.getSampleData());
+                otherDataUtils.initStore({ reset: true });
+                expect(dataUtils.getData()).to.have.length(3);
+                otherDataUtils.addTo([{ foo: 1 }]);
+                expect(dataUtils.getData()).to.have.length(3);
+                expect(otherDataUtils.getData()).to.have.length(1);
+                expect(otherDataUtils.getData()[0].foo).to.equal(1);
+            });
+            it('should not apply projections on the other utils intance', function () {
+                dataUtils.addTo(this.getSampleData());
+                otherDataUtils.addTo([
+                    { name: 'tom' },
+                    { name: 'steve' },
+                    { name: 'carrie' },
+                    { name: 'david' }
+                ]);
+                expect(dataUtils.getData()).to.have.length(3);
+                expect(otherDataUtils.getData()).to.have.length(4);
+                otherDataUtils.applyProjection(mustEndWithE);
+                expect(dataUtils.getData()).to.have.length(3);
+                expect(otherDataUtils.getData()).to.have.length(2);
+                expect(otherDataUtils.getData()[0].name).to.equal('steve');
+            });
+        });
+
+        describe('setting cached data', function () {
+            var cacheKey;
+            var data;
+            beforeEach(function () {
+                cacheKey = 'some-cache-key';
+                data = this.getSampleData();
+                dataUtils.initStore({
+                    reset: true
+                });
+            });
+            afterEach(function () {
+                dataUtils.removeCachedData(cacheKey);
+            });
+            it('should be available only when asking specifically for cached data with the same key', function () {
+                expect(dataUtils.getCachedData(cacheKey)).to.equal(null);
+                dataUtils.addTo(data);
+                dataUtils.setCachedData(cacheKey, data);
+                expect(dataUtils.getCachedData(cacheKey)).to.have.length(3);
+                expect(dataUtils.getCachedData(cacheKey)[0].name).to.equal(data[0].name);
+            });
+            it('should make the cached data available to data util instances for other contexts', function () {
+                dataUtils.setCachedData(cacheKey, data);
+                var otherDataUtils = getDataUtils('another-test-context-key');
+                var otherData = otherDataUtils.getCachedData(cacheKey);
+                expect(otherData).to.have.length(3);
+                expect(otherData[0].name).to.equal(data[0].name);
+            });
         });
     });
 });

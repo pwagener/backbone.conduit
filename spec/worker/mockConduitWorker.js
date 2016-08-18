@@ -6,6 +6,8 @@
 var managedContext = require('../../src/worker/managedContext');
 var _ = require('underscore');
 
+var objectId = 1;
+
 function _reset(global) {
     delete global.ConduitWorker;
     managedContext.setAsGlobal(global);
@@ -16,10 +18,15 @@ module.exports = {
     // of recreating the global.
     reset: function(){
         _reset(global);
+        global.ConduitWorker._currentObjectId = 'fake-object-id' + (objectId++);
     },
 
     get: function() {
         return global.ConduitWorker;
+    },
+    
+    getCurrentObjectId: function () {
+        return this.get()._currentObjectId;
     },
 
     bindModule: function(module) {

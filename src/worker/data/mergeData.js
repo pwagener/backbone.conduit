@@ -6,7 +6,7 @@
 
 var _ = require('underscore');
 
-var dataUtils = require('./dataUtils');
+var getDataUtils = require('./getDataUtils');
 
 module.exports = {
 
@@ -14,6 +14,7 @@ module.exports = {
     bindToWorker: true,
     method: function(argument) {
         argument = argument || {};
+        var dataUtils = getDataUtils(this._currentObjectId);
         var data = argument.data || [];
         data = dataUtils.parseData(data);
 

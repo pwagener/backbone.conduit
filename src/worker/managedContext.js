@@ -72,9 +72,26 @@ function _enableHandlers(context, handlerModules) {
 function _onMessage(event) {
     var method = event.data.method;
     var args = event.data.args;
-
+ 
     var ConduitWorker = _getConduitWorker();
     var handler = ConduitWorker.handlers[method];
+
+    // Messages should provide an object id if they want to
+    // access data associated with that object.
+    // 
+    // The current object id is essentially the identity of the 
+    // object making the request to the worker thread. This allows
+    // the worker to isolate the data that object uses by using the
+    // object id as the "context key" for the data. So if multiple
+    // objects are sharing the same worker, they can have their
+    // own data.
+    ConduitWorker._currentObjectId = event.data.objectId;
+    if (ConduitWorker._currentObjectId) {
+        debug('Current object id is: ' + ConduitWorker._currentObjectId);
+    } else {
+        debug('There is no current object id');
+    }
+ 
     if (handler) {
         debug('Executing "' + method + '"');
 

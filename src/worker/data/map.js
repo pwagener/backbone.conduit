@@ -2,7 +2,7 @@
 
 
 var _ = require('underscore');
-var dataUtils = require('./dataUtils');
+var getDataUtils = require('./getDataUtils');
 
 module.exports = {
     name: 'map',
@@ -22,7 +22,7 @@ module.exports = {
                 return _.map(toMap, mapper, mapContext);
             };
 
-            dataUtils.applyProjection(mapFunction);
+            getDataUtils(this._currentObjectId).applyProjection(mapFunction);
             return {
                 context: mapContext
             };

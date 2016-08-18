@@ -4,13 +4,14 @@
  * This module provides sorting for the worker
  */
 var _ = require('underscore');
-var dataUtils = require('./dataUtils');
+var getDataUtils = require('./getDataUtils');
 
 module.exports = {
     name: 'sortBy',
     bindToWorker: true,
 
     method: function(sortSpec) {
+        var dataUtils = getDataUtils(this._currentObjectId);
         var property = sortSpec.property;
         var direction = sortSpec.direction || 'asc';
 
