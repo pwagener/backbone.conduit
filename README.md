@@ -1,4 +1,9 @@
-# Backbone.Conduit
+# Backbone.Conduit (Archived)
+
+## ==> ARCHIVED 
+This repository is now archived, and the NPM package is deprecated.
+
+
 ## Moving Data Through Backbone
 
 Conduit is a Backbone plugin that improves the ability of Backbone to handle large scale data sets.  
